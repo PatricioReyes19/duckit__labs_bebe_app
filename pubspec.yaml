@@ -1,0 +1,41 @@
+name: duckit_bebe_app_workspace
+publish_to: none
+
+environment:
+  sdk: ">=3.6.0 <4.0.0"
+
+workspace:
+  - apps/bebe_app
+  - packages/app_base
+  - packages/core
+  - packages/design_system
+  - packages/app_layout
+
+dev_dependencies:
+  melos: ^7.0.0
+
+melos:
+  scripts:
+    analyze:
+      description: Analyze all packages.
+      run: melos exec -- dart analyze .
+
+    format:
+      description: Format all Dart files.
+      run: melos exec -- dart format .
+
+    test:
+      description: Run tests in all packages.
+      run: melos exec -- flutter test
+
+    clean:
+      description: Clean all Flutter packages.
+      run: melos exec -- flutter clean
+
+    pub-get:
+      description: Run flutter pub get in all packages.
+      run: melos exec -- flutter pub get
+
+    build-runner:
+      description: Run build_runner in packages that use it.
+      run: melos exec --depends-on=build_runner -- dart run build_runner build --delete-conflicting-outputs
