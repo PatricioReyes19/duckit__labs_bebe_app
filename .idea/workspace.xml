@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="NONE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="b12d1ae6-2233-419b-afe8-308bbad9f71a" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/apps/bebe_app/lib/main.dart" beforeDir="false" afterPath="$PROJECT_DIR$/apps/bebe_app/lib/main.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/bebe_app/pubspec.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/apps/bebe_app/pubspec.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/bebe_app/test/widget_test.dart" beforeDir="false" afterPath="$PROJECT_DIR$/apps/bebe_app/test/widget_test.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/melos_duckit_bebe_app_workspace.iml" beforeDir="false" afterPath="$PROJECT_DIR$/melos_duckit_bebe_app_workspace.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/app_base/lib/app_base.dart" beforeDir="false" afterPath="$PROJECT_DIR$/packages/app_base/lib/app_base.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/app_base/pubspec.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/packages/app_base/pubspec.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/app_base/test/app_base_test.dart" beforeDir="false" afterPath="$PROJECT_DIR$/packages/app_base/test/app_base_test.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/app_layout/test/app_layout_test.dart" beforeDir="false" afterPath="$PROJECT_DIR$/packages/app_layout/test/app_layout_test.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/core/test/core_test.dart" beforeDir="false" afterPath="$PROJECT_DIR$/packages/core/test/core_test.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/design_system/lib/design_system.dart" beforeDir="false" afterPath="$PROJECT_DIR$/packages/design_system/lib/design_system.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/design_system/test/design_system_test.dart" beforeDir="false" afterPath="$PROJECT_DIR$/packages/design_system/test/design_system_test.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pubspec.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/pubspec.yaml" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ClangdSettings">
+    <option name="formatViaClangd" value="false" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "associatedIndex": 6,
+  "fromUser": false
+}]]></component>
+  <component name="ProjectId" id="3FsgoqB7T3ltrBE0aI2gSI1r58w" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Flutter.Flutter Run -> 'bebe_app'.executor": "Run",
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.cidr.known.project.marker": "true",
+    "RunOnceActivity.readMode.enableVisualFormatting": "true",
+    "cf.first.check.clang-format": "false",
+    "cidr.known.project.marker": "true",
+    "dart.analysis.tool.window.visible": "false",
+    "git-widget-placeholder": "main",
+    "io.flutter.project.isFirstOpen": "true",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "C:/Users/reyes/OneDrive/Documentos/DuckIT Labs/duckit__labs_bebe_app",
+    "settings.editor.selected.configurable": "preferences.pluginManager",
+    "show.migrate.to.gradle.popup": "false"
+  }
+}]]></component>
+  <component name="RunManager" selected="Flutter.Flutter Run -&gt; 'bebe_app'" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="b12d1ae6-2233-419b-afe8-308bbad9f71a" name="Changes" comment="" />
+      <created>1782869370777</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1782869370777</updated>
+    </task>
+    <servers />
+  </component>
+</project>
