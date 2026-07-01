@@ -6,6 +6,7 @@ environment:
 
 workspace:
   - apps/bebe_app
+  - apps/widgetbook
   - packages/app_base
   - packages/core
   - packages/design_system

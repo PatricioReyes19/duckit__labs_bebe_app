@@ -1,0 +1,77 @@
+{
+    "folders": [
+        {
+            "name": "💼 workspace",
+            "path": "."
+        },
+        {
+            "name": "📱 BebéApp",
+            "path": "apps/bebe_app"
+        },
+        {
+            "name": "👨🏼‍🎨 Widgetbook",
+            "path": "apps/widgetbook_app"
+        },
+        {
+            "name": "🧩 App Base",
+            "path": "packages/app_base"
+        },
+        {
+            "name": "⚛️ Core",
+            "path": "packages/core"
+        },
+        {
+            "name": "🎨 Design System",
+            "path": "packages/design_system"
+        },
+        {
+            "name": "🏗️ App Layout",
+            "path": "packages/app_layout"
+        },
+    ],
+    "settings": {
+        "files.autoSave": "afterDelay",
+        "files.autoSaveDelay": 1000,
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+        },
+        "makefile.configureOnOpen": false
+    },
+    "extensions": {
+        "recommendations": [
+            "dart-code.dart-code",
+            "dart-code.flutter",
+            "felixangelov.bloc"
+        ]
+    },
+    "launch": {
+        "version": "0.2.0",
+        "configurations": [
+            {
+                "name": "📱 BebéApp Android",
+                "cwd": "${workspaceFolder:📱 BebéApp}",
+                "request": "launch",
+                "type": "dart",
+                "program": "lib/main.dart",
+                "args": []
+            },
+            {
+                "name": "📱 BebéApp iOS",
+                "cwd": "${workspaceFolder:📱 BebéApp}",
+                "request": "launch",
+                "type": "dart",
+                "program": "lib/main.dart",
+                "args": []
+            },
+            {
+                "name": "👨🏼‍🎨 Widgetbook",
+                "cwd": "${workspaceFolder:👨🏼‍🎨 Widgetbook}",
+                "request": "launch",
+                "type": "dart",
+                "program": "lib/main.dart",
+                "args": []
+            }
+        ]
+    }
+}
