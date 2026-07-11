@@ -9,13 +9,19 @@ workspace:
   - packages/app_base
 
 dev_dependencies:
-  melos: ^8.0.0
+  melos: ^8.2.0
 
 melos:
   scripts:
-    bs:
-      description: Bootstrap workspace.
-      run: melos bootstrap
+
+    build_runner:
+      description: Generate source code.
+      run: >
+        melos exec
+        --depends-on=build_runner
+        --
+        dart run build_runner build
+        --delete-conflicting-outputs
 
     list:
       description: List packages.

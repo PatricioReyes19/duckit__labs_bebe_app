@@ -9,6 +9,7 @@ Future<void> bootstrap() async {
   await runZonedGuarded(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
+      await configureDependencies();
 
       await SystemChrome.setPreferredOrientations([
         DeviceOrientation.portraitUp,
@@ -18,14 +19,18 @@ Future<void> bootstrap() async {
         FlutterError.presentError(details);
 
         if (kDebugMode) {
-          debugPrint('Flutter error: ${details.exception}');
+          debugPrint(
+            '[BebéApp][Flutter] ${details.exceptionAsString()}',
+          );
           debugPrintStack(stackTrace: details.stack);
         }
       };
 
       PlatformDispatcher.instance.onError = (error, stack) {
         if (kDebugMode) {
-          debugPrint('Platform error: $error');
+          debugPrint(
+            '[BebéApp][Platform] $error',
+          );
           debugPrintStack(stackTrace: stack);
         }
 

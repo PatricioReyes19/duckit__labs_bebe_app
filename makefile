@@ -1,5 +1,5 @@
 bootstrap:
-	melos bootstrap
+	melos bs
 
 analyze:
 	melos run analyze
