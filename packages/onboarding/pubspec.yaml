@@ -1,0 +1,29 @@
+name: onboarding
+description: "A new Flutter package project."
+version: 0.0.1
+homepage:
+
+resolution: workspace
+
+environment:
+  sdk: '^3.12.2'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_bloc:
+  freezed_annotation:
+  injectable:
+  go_router:
+  app_base:
+  core:
+  design_system:
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  bloc_test:
+  mocktail:
+  build_runner:
+  freezed:
+  injectable_generator:

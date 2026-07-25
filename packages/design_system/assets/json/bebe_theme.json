@@ -1,0 +1,687 @@
+{
+    "metadata": {
+        "name": "BebeApp",
+        "version": "0.2.0",
+        "colorModel": "sRGB",
+        "accessibilityTarget": "WCAG 2.2 AA",
+        "font": "PlusJakartaSans",
+        "visualSource": "Laboratorio visual BebéApp: onboarding, Inicio liviano, Salud, Agenda de salud, registros, autoría de cuidadores y estados offline-first"
+    },
+    "Colors": {
+        "Light": {
+            "Text": {
+                "Brand": {
+                    "brand-default": "#24536F",
+                    "brand-alternative": "#2D6689",
+                    "brand-subtle": "#EFF7FB"
+                },
+                "Accent": {
+                    "accent-default": "#22666A",
+                    "accent-alternative": "#31989E",
+                    "accent-subtle": "#F0FAFB"
+                },
+                "Neutrals": {
+                    "neutral-display": "#17242C",
+                    "neutral-headline": "#17242C",
+                    "neutral-title": "#202F38",
+                    "neutral-body": "#505D65",
+                    "neutral-link": "#24536F",
+                    "neutral-label": "#68757D",
+                    "neutral-caption": "#68757D",
+                    "neutral-disabled": "#9AA6AD",
+                    "neutral-subtle": "#F8FAFB"
+                },
+                "Warning": {
+                    "warning-default": "#A43B25"
+                },
+                "Info": {
+                    "info-default": "#24536F"
+                },
+                "Success": {
+                    "success-default": "#247D41"
+                },
+                "Error": {
+                    "error-default": "#942A2A"
+                },
+                "Basics": {
+                    "White": "#FFFFFF",
+                    "Black": "#111A20"
+                }
+            },
+            "Background": {
+                "brand": {
+                    "bg-brand-surface": "#EFF7FB",
+                    "bg-brand-default": "#2D6689",
+                    "bg-brand-pressed": "#1B4057"
+                },
+                "accent": {
+                    "bg-accent-surface": "#F0FAFB",
+                    "bg-accent-default": "#31989E",
+                    "bg-accent-pressed": "#22666A"
+                },
+                "neutrals": {
+                    "bg-neutral-page": "#F8FAFB",
+                    "bg-neutral-surface": "#FFFFFF",
+                    "bg-neutral-disabled": "#F1F4F6",
+                    "bg-neutral-active": "#E3E8EB",
+                    "bg-neutral-default": "#68757D",
+                    "bg-neutral-skeleton": "#E3E8EB",
+                    "bg-neutral-feedback": "#202F38"
+                },
+                "warning": {
+                    "bg-warning-surface": "#FFF5F1",
+                    "bg-warning-default": "#C24C30",
+                    "bg-warning-pressed": "#A43B25"
+                },
+                "info": {
+                    "bg-info-surface": "#EFF7FB",
+                    "bg-info-default": "#2D6689"
+                },
+                "success": {
+                    "bg-success-surface": "#F1FAF4",
+                    "bg-success-default": "#247D41"
+                },
+                "error": {
+                    "bg-error-surface": "#FFF2F2",
+                    "bg-error-default": "#B93434",
+                    "bg-error-pressed": "#942A2A"
+                },
+                "basics": {
+                    "bg-basics-white": "#FFFFFF"
+                },
+                "splash": {
+                    "bg-splash": "#2D6689"
+                }
+            },
+            "icons": {
+                "icon-brand-default": "#2D6689",
+                "icon-brand-subtle": "#EFF7FB",
+                "icon-accent-default": "#22666A",
+                "icon-accent-subtle": "#F0FAFB",
+                "icon-neutral-default": "#505D65",
+                "icon-neutral-disabled": "#9AA6AD",
+                "icon-neutral-alternative": "#68757D",
+                "icon-neutral-subtle": "#F1F4F6",
+                "icon-error-default": "#942A2A",
+                "icon-warning-default": "#A43B25",
+                "icon-info-default": "#24536F",
+                "icon-success-default": "#247D41"
+            },
+            "Border": {
+                "border-brand-default": "#24536F",
+                "border-brand-focus": "#3D82A5",
+                "border-brand-alternative": "#B9DCEB",
+                "border-accent-default": "#22666A",
+                "border-accent-focus": "#31989E",
+                "border-accent-alternative": "#B7E5E7",
+                "border-neutral-disabled": "#E3E8EB",
+                "border-neutral-focus": "#68757D",
+                "border-neutral-default": "#CBD3D8",
+                "border-error-default": "#EA6262",
+                "border-warning-default": "#FBA98D",
+                "border-info-default": "#5F9FBD",
+                "border-success-default": "#50B972",
+                "border-basics-white": "#FFFFFF"
+            },
+            "OnPrimary": {
+                "on-primary-neutral-body": "#FFFFFF",
+                "on-primary-neutral-default": "#FFFFFF"
+            },
+            "Interactive": {
+                "interactive-primary-default": "#2D6689",
+                "interactive-primary-hover": "#24536F",
+                "interactive-primary-pressed": "#1B4057",
+                "interactive-primary-focus": "#3D82A5",
+                "interactive-primary-disabled-bg": "#DCE8EE",
+                "interactive-primary-disabled-content": "#687780",
+                "interactive-secondary-default": "#FFFFFF",
+                "interactive-secondary-pressed": "#EFF7FB",
+                "interactive-secondary-border": "#2D6689",
+                "interactive-secondary-content": "#24536F"
+            },
+            "Synchronization": {
+                "sync-local-surface": "#FFF8E8",
+                "sync-local-content": "#76520A",
+                "sync-local-border": "#E8C96A",
+                "sync-pending-surface": "#FFF5F1",
+                "sync-pending-content": "#8B3A27",
+                "sync-pending-border": "#F3A189",
+                "sync-syncing-surface": "#EFF7FB",
+                "sync-syncing-content": "#24536F",
+                "sync-syncing-border": "#8FC5DB",
+                "sync-synced-surface": "#F1FAF4",
+                "sync-synced-content": "#247D41",
+                "sync-synced-border": "#83CF9A",
+                "sync-offline-surface": "#F1F4F6",
+                "sync-offline-content": "#505D65",
+                "sync-offline-border": "#CBD3D8",
+                "sync-error-surface": "#FFF2F2",
+                "sync-error-content": "#942A2A",
+                "sync-error-border": "#F89191"
+            },
+            "Clinical": {
+                "clinical-feeding-surface": "#FFF8E8",
+                "clinical-feeding-content": "#76520A",
+                "clinical-feeding-accent": "#D7A62D",
+                "clinical-sleep-surface": "#F3F1FF",
+                "clinical-sleep-content": "#50458A",
+                "clinical-sleep-accent": "#8074C8",
+                "clinical-diaper-surface": "#F0FAFB",
+                "clinical-diaper-content": "#22666A",
+                "clinical-diaper-accent": "#31989E",
+                "clinical-medication-surface": "#F8F1FB",
+                "clinical-medication-content": "#69407A",
+                "clinical-medication-accent": "#9A67AF",
+                "clinical-health-surface": "#EFF7FB",
+                "clinical-health-content": "#24536F",
+                "clinical-health-accent": "#3D82A5",
+                "clinical-growth-surface": "#F1FAF4",
+                "clinical-growth-content": "#247D41",
+                "clinical-growth-accent": "#50A86D",
+                "clinical-observation-surface": "#F1F4F6",
+                "clinical-observation-content": "#505D65",
+                "clinical-observation-accent": "#68757D"
+            },
+            "Caregiver": {
+                "caregiver-primary-surface": "#EFF7FB",
+                "caregiver-primary-content": "#24536F",
+                "caregiver-secondary-surface": "#F8F1FB",
+                "caregiver-secondary-content": "#69407A",
+                "caregiver-tertiary-surface": "#FFF8E8",
+                "caregiver-tertiary-content": "#76520A",
+                "caregiver-neutral-surface": "#F1F4F6",
+                "caregiver-neutral-content": "#505D65"
+            },
+            "DataVisualization": {
+                "data-series-1": "#2D6689",
+                "data-series-2": "#31989E",
+                "data-series-3": "#8074C8",
+                "data-series-4": "#D18B22",
+                "data-series-5": "#4B9664",
+                "data-series-6": "#B85D78",
+                "data-grid": "#D7E0E5",
+                "data-axis": "#68757D",
+                "data-reference": "#505D65",
+                "data-selection": "#1B4057"
+            }
+        },
+        "Dark": {
+            "Text": {
+                "Brand": {
+                    "brand-default": "#8CC7E0",
+                    "brand-alternative": "#77B7D3",
+                    "brand-subtle": "#172A34"
+                },
+                "Accent": {
+                    "accent-default": "#83D8DB",
+                    "accent-alternative": "#65C8CC",
+                    "accent-subtle": "#163033"
+                },
+                "Neutrals": {
+                    "neutral-display": "#F3F7F9",
+                    "neutral-headline": "#F3F7F9",
+                    "neutral-title": "#E7EEF2",
+                    "neutral-body": "#B8C4CB",
+                    "neutral-link": "#9CCFE6",
+                    "neutral-label": "#94A3AC",
+                    "neutral-caption": "#94A3AC",
+                    "neutral-disabled": "#687780",
+                    "neutral-subtle": "#182126"
+                },
+                "Warning": {
+                    "warning-default": "#FFB59E"
+                },
+                "Info": {
+                    "info-default": "#9CCFE6"
+                },
+                "Success": {
+                    "success-default": "#8BD8A4"
+                },
+                "Error": {
+                    "error-default": "#FFB3B3"
+                },
+                "Basics": {
+                    "White": "#F7FAFC",
+                    "Black": "#0A0F12"
+                }
+            },
+            "Background": {
+                "brand": {
+                    "bg-brand-surface": "#172A34",
+                    "bg-brand-default": "#77B7D3",
+                    "bg-brand-pressed": "#8CC7E0"
+                },
+                "accent": {
+                    "bg-accent-surface": "#163033",
+                    "bg-accent-default": "#65C8CC",
+                    "bg-accent-pressed": "#83D8DB"
+                },
+                "neutrals": {
+                    "bg-neutral-page": "#10181D",
+                    "bg-neutral-surface": "#182126",
+                    "bg-neutral-disabled": "#222C32",
+                    "bg-neutral-active": "#29353C",
+                    "bg-neutral-default": "#687780",
+                    "bg-neutral-skeleton": "#29353C",
+                    "bg-neutral-feedback": "#E7EEF2"
+                },
+                "warning": {
+                    "bg-warning-surface": "#3B2018",
+                    "bg-warning-default": "#FF9B7D",
+                    "bg-warning-pressed": "#FFB59E"
+                },
+                "info": {
+                    "bg-info-surface": "#172A34",
+                    "bg-info-default": "#77B7D3"
+                },
+                "success": {
+                    "bg-success-surface": "#173022",
+                    "bg-success-default": "#70C88E"
+                },
+                "error": {
+                    "bg-error-surface": "#3A1919",
+                    "bg-error-default": "#F08787",
+                    "bg-error-pressed": "#FFB3B3"
+                },
+                "basics": {
+                    "bg-basics-white": "#182126"
+                },
+                "splash": {
+                    "bg-splash": "#10181D"
+                }
+            },
+            "icons": {
+                "icon-brand-default": "#8CC7E0",
+                "icon-brand-subtle": "#172A34",
+                "icon-accent-default": "#83D8DB",
+                "icon-accent-subtle": "#163033",
+                "icon-neutral-default": "#B8C4CB",
+                "icon-neutral-disabled": "#687780",
+                "icon-neutral-alternative": "#94A3AC",
+                "icon-neutral-subtle": "#222C32",
+                "icon-error-default": "#FFB3B3",
+                "icon-warning-default": "#FFB59E",
+                "icon-info-default": "#9CCFE6",
+                "icon-success-default": "#8BD8A4"
+            },
+            "Border": {
+                "border-brand-default": "#77B7D3",
+                "border-brand-focus": "#A8D8EA",
+                "border-brand-alternative": "#315161",
+                "border-accent-default": "#65C8CC",
+                "border-accent-focus": "#83D8DB",
+                "border-accent-alternative": "#285154",
+                "border-neutral-disabled": "#29353C",
+                "border-neutral-focus": "#94A3AC",
+                "border-neutral-default": "#35434B",
+                "border-error-default": "#F08787",
+                "border-warning-default": "#FF9B7D",
+                "border-info-default": "#77B7D3",
+                "border-success-default": "#70C88E",
+                "border-basics-white": "#182126"
+            },
+            "OnPrimary": {
+                "on-primary-neutral-body": "#10202A",
+                "on-primary-neutral-default": "#10202A"
+            },
+            "Interactive": {
+                "interactive-primary-default": "#77B7D3",
+                "interactive-primary-hover": "#8CC7E0",
+                "interactive-primary-pressed": "#A8D8EA",
+                "interactive-primary-focus": "#A8D8EA",
+                "interactive-primary-disabled-bg": "#29353C",
+                "interactive-primary-disabled-content": "#7C8A93",
+                "interactive-secondary-default": "#182126",
+                "interactive-secondary-pressed": "#22313A",
+                "interactive-secondary-border": "#77B7D3",
+                "interactive-secondary-content": "#9CCFE6"
+            },
+            "Synchronization": {
+                "sync-local-surface": "#332B16",
+                "sync-local-content": "#F2D27D",
+                "sync-local-border": "#967B34",
+                "sync-pending-surface": "#3B2018",
+                "sync-pending-content": "#FFB59E",
+                "sync-pending-border": "#B86D57",
+                "sync-syncing-surface": "#172A34",
+                "sync-syncing-content": "#9CCFE6",
+                "sync-syncing-border": "#4C7D93",
+                "sync-synced-surface": "#173022",
+                "sync-synced-content": "#8BD8A4",
+                "sync-synced-border": "#477B58",
+                "sync-offline-surface": "#222C32",
+                "sync-offline-content": "#B8C4CB",
+                "sync-offline-border": "#4B5961",
+                "sync-error-surface": "#3A1919",
+                "sync-error-content": "#FFB3B3",
+                "sync-error-border": "#A75454"
+            },
+            "Clinical": {
+                "clinical-feeding-surface": "#332B16",
+                "clinical-feeding-content": "#F2D27D",
+                "clinical-feeding-accent": "#D7A62D",
+                "clinical-sleep-surface": "#26233A",
+                "clinical-sleep-content": "#C7C0F4",
+                "clinical-sleep-accent": "#9E94DC",
+                "clinical-diaper-surface": "#163033",
+                "clinical-diaper-content": "#83D8DB",
+                "clinical-diaper-accent": "#65C8CC",
+                "clinical-medication-surface": "#302238",
+                "clinical-medication-content": "#DAB9E7",
+                "clinical-medication-accent": "#B78AC8",
+                "clinical-health-surface": "#172A34",
+                "clinical-health-content": "#9CCFE6",
+                "clinical-health-accent": "#77B7D3",
+                "clinical-growth-surface": "#173022",
+                "clinical-growth-content": "#8BD8A4",
+                "clinical-growth-accent": "#70C88E",
+                "clinical-observation-surface": "#222C32",
+                "clinical-observation-content": "#B8C4CB",
+                "clinical-observation-accent": "#94A3AC"
+            },
+            "Caregiver": {
+                "caregiver-primary-surface": "#172A34",
+                "caregiver-primary-content": "#9CCFE6",
+                "caregiver-secondary-surface": "#302238",
+                "caregiver-secondary-content": "#DAB9E7",
+                "caregiver-tertiary-surface": "#332B16",
+                "caregiver-tertiary-content": "#F2D27D",
+                "caregiver-neutral-surface": "#222C32",
+                "caregiver-neutral-content": "#B8C4CB"
+            },
+            "DataVisualization": {
+                "data-series-1": "#8CC7E0",
+                "data-series-2": "#83D8DB",
+                "data-series-3": "#C7C0F4",
+                "data-series-4": "#F2C66D",
+                "data-series-5": "#8BD8A4",
+                "data-series-6": "#E8A2B6",
+                "data-grid": "#35434B",
+                "data-axis": "#94A3AC",
+                "data-reference": "#B8C4CB",
+                "data-selection": "#D2EDF7"
+            }
+        }
+    },
+    "spacing": {
+        "spacing-none": 0,
+        "spacing-xs": 2,
+        "spacing-s": 4,
+        "spacing-m": 8,
+        "spacing-l": 12,
+        "spacing-xl": 16,
+        "spacing-2xl": 20,
+        "spacing-3xl": 24,
+        "spacing-4xl": 32,
+        "spacing-5xl": 40,
+        "spacing-6xl": 48,
+        "spacing-7xl": 56,
+        "spacing-8xl": 64
+    },
+    "Typography": {
+        "fontFamily": "PlusJakartaSans",
+        "styles": {
+            "Display": {
+                "lg": {
+                    "semibold": {
+                        "fontWeight": "600",
+                        "fontStyle": "normal",
+                        "size": "40px",
+                        "lineHeight": "48px",
+                        "letterSpacing": "-0.4px",
+                        "decoration": "none",
+                        "fontFamily": "PlusJakartaSans"
+                    }
+                }
+            },
+            "Headline": {
+                "lg": {
+                    "semibold": {
+                        "fontWeight": "600",
+                        "fontStyle": "normal",
+                        "size": "32px",
+                        "lineHeight": "40px",
+                        "letterSpacing": "-0.2px",
+                        "decoration": "none",
+                        "fontFamily": "PlusJakartaSans"
+                    }
+                },
+                "md": {
+                    "semibold": {
+                        "fontWeight": "600",
+                        "fontStyle": "normal",
+                        "size": "28px",
+                        "lineHeight": "36px",
+                        "letterSpacing": "0px",
+                        "decoration": "none",
+                        "fontFamily": "PlusJakartaSans"
+                    }
+                },
+                "sm": {
+                    "semibold": {
+                        "fontWeight": "600",
+                        "fontStyle": "normal",
+                        "size": "24px",
+                        "lineHeight": "32px",
+                        "letterSpacing": "0px",
+                        "decoration": "none",
+                        "fontFamily": "PlusJakartaSans"
+                    }
+                }
+            },
+            "Title": {
+                "lg": {
+                    "semibold": {
+                        "fontWeight": "600",
+                        "fontStyle": "normal",
+                        "size": "20px",
+                        "lineHeight": "28px",
+                        "letterSpacing": "0px",
+                        "decoration": "none",
+                        "fontFamily": "PlusJakartaSans"
+                    }
+                },
+                "md": {
+                    "semibold": {
+                        "fontWeight": "600",
+                        "fontStyle": "normal",
+                        "size": "16px",
+                        "lineHeight": "24px",
+                        "letterSpacing": "0px",
+                        "decoration": "none",
+                        "fontFamily": "PlusJakartaSans"
+                    }
+                },
+                "sm": {
+                    "semibold": {
+                        "fontWeight": "600",
+                        "fontStyle": "normal",
+                        "size": "14px",
+                        "lineHeight": "20px",
+                        "letterSpacing": "0px",
+                        "decoration": "none",
+                        "fontFamily": "PlusJakartaSans"
+                    }
+                }
+            },
+            "Body": {
+                "lg": {
+                    "regular": {
+                        "fontWeight": "400",
+                        "fontStyle": "normal",
+                        "size": "16px",
+                        "lineHeight": "24px",
+                        "letterSpacing": "0px",
+                        "decoration": "none",
+                        "fontFamily": "PlusJakartaSans"
+                    },
+                    "semibold": {
+                        "fontWeight": "600",
+                        "fontStyle": "normal",
+                        "size": "16px",
+                        "lineHeight": "24px",
+                        "letterSpacing": "0px",
+                        "decoration": "none",
+                        "fontFamily": "PlusJakartaSans"
+                    }
+                },
+                "md": {
+                    "regular": {
+                        "fontWeight": "400",
+                        "fontStyle": "normal",
+                        "size": "14px",
+                        "lineHeight": "20px",
+                        "letterSpacing": "0px",
+                        "decoration": "none",
+                        "fontFamily": "PlusJakartaSans"
+                    },
+                    "semibold": {
+                        "fontWeight": "600",
+                        "fontStyle": "normal",
+                        "size": "14px",
+                        "lineHeight": "20px",
+                        "letterSpacing": "0px",
+                        "decoration": "none",
+                        "fontFamily": "PlusJakartaSans"
+                    }
+                },
+                "sm": {
+                    "regular": {
+                        "fontWeight": "400",
+                        "fontStyle": "normal",
+                        "size": "12px",
+                        "lineHeight": "16px",
+                        "letterSpacing": "0px",
+                        "decoration": "none",
+                        "fontFamily": "PlusJakartaSans"
+                    },
+                    "semibold": {
+                        "fontWeight": "600",
+                        "fontStyle": "normal",
+                        "size": "12px",
+                        "lineHeight": "16px",
+                        "letterSpacing": "0px",
+                        "decoration": "none",
+                        "fontFamily": "PlusJakartaSans"
+                    }
+                }
+            },
+            "Label": {
+                "lg": {
+                    "semibold": {
+                        "fontWeight": "600",
+                        "fontStyle": "normal",
+                        "size": "14px",
+                        "lineHeight": "20px",
+                        "letterSpacing": "0.1px",
+                        "decoration": "none",
+                        "fontFamily": "PlusJakartaSans"
+                    }
+                },
+                "md": {
+                    "semibold": {
+                        "fontWeight": "600",
+                        "fontStyle": "normal",
+                        "size": "12px",
+                        "lineHeight": "16px",
+                        "letterSpacing": "0.2px",
+                        "decoration": "none",
+                        "fontFamily": "PlusJakartaSans"
+                    }
+                }
+            },
+            "Caption": {
+                "md": {
+                    "regular": {
+                        "fontWeight": "400",
+                        "fontStyle": "normal",
+                        "size": "11px",
+                        "lineHeight": "16px",
+                        "letterSpacing": "0.2px",
+                        "decoration": "none",
+                        "fontFamily": "PlusJakartaSans"
+                    }
+                }
+            }
+        }
+    },
+    "border-radius": {
+        "radius-none": "0px",
+        "radius-xs": "2px",
+        "radius-s": "4px",
+        "radius-m": "8px",
+        "radius-l": "12px",
+        "radius-xl": "16px",
+        "radius-2xl": "20px",
+        "radius-3xl": "24px",
+        "radius-full": "9999px"
+    },
+    "stroke": {
+        "stroke-1": "1px solid",
+        "stroke-2": "2px solid",
+        "stroke-3": "3px solid"
+    },
+    "stroke-dash": {
+        "stroke-dash-1": "1px dashed",
+        "stroke-dash-2": "2px dashed",
+        "stroke-dash-3": "3px dashed"
+    },
+    "elevation": {
+        "elevation-1": {
+            "offset": [
+                0,
+                2
+            ],
+            "blurRadius": 6,
+            "spreadRadius": 0,
+            "colorRef": "overlay-dark-1",
+            "opacity": "8%"
+        },
+        "elevation-2": {
+            "offset": [
+                0,
+                4
+            ],
+            "blurRadius": 12,
+            "spreadRadius": -2,
+            "colorRef": "overlay-dark-2",
+            "opacity": "12%"
+        },
+        "elevation-3": {
+            "offset": [
+                0,
+                10
+            ],
+            "blurRadius": 24,
+            "spreadRadius": -4,
+            "colorRef": "overlay-dark-2",
+            "opacity": "16%"
+        }
+    },
+    "overlays": {
+        "Light": {
+            "dark": {
+                "overlay-dark-1": "#202F3814",
+                "overlay-dark-2": "#202F3829",
+                "overlay-dark-3": "#202F384D"
+            },
+            "light": {
+                "overlay-light-1": "#FFFFFF14",
+                "overlay-light-2": "#FFFFFF29",
+                "overlay-light-3": "#FFFFFF4D"
+            }
+        },
+        "Dark": {
+            "dark": {
+                "overlay-dark-1": "#00000024",
+                "overlay-dark-2": "#0000003D",
+                "overlay-dark-3": "#0000005C"
+            },
+            "light": {
+                "overlay-light-1": "#FFFFFF14",
+                "overlay-light-2": "#FFFFFF29",
+                "overlay-light-3": "#FFFFFF4D"
+            }
+        }
+    }
+}
