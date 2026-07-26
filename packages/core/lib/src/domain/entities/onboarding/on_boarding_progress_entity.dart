@@ -1,0 +1,3 @@
+class OnBoardingProgressEntity {
+  const OnBoardingProgressEntity();
+}
