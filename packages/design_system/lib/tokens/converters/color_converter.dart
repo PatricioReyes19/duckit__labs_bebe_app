@@ -9,9 +9,7 @@ class ColorConverter implements JsonConverter<Color, String> {
     final normalized = json.trim().replaceFirst('#', '');
 
     if (normalized.length == 6) {
-      return Color(
-        int.parse('FF$normalized', radix: 16),
-      );
+      return Color(int.parse('FF$normalized', radix: 16));
     }
 
     if (normalized.length == 8) {
@@ -20,9 +18,7 @@ class ColorConverter implements JsonConverter<Color, String> {
       final blue = normalized.substring(4, 6);
       final alpha = normalized.substring(6, 8);
 
-      return Color(
-        int.parse('$alpha$red$green$blue', radix: 16),
-      );
+      return Color(int.parse('$alpha$red$green$blue', radix: 16));
     }
 
     throw FormatException(
@@ -38,7 +34,8 @@ class ColorConverter implements JsonConverter<Color, String> {
     final blue = (color.b * 255).round();
     final alpha = (color.a * 255).round();
 
-    final rgb = '${_toHex(red)}'
+    final rgb =
+        '${_toHex(red)}'
         '${_toHex(green)}'
         '${_toHex(blue)}';
 

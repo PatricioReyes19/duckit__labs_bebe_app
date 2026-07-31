@@ -2,14 +2,15 @@ name: duckit_labs_bebe_app_workspace
 publish_to: none
 
 environment:
-  sdk: ">=3.6.0 <4.0.0"
+  sdk: ">=3.11.0 <4.0.0"
 
 workspace:
   - apps/bebe_app
-  - packages/app_base
+  - apps/widgetbook
+  - packages/app_layout
   - packages/core
   - packages/design_system
-  - packages/onboarding
+  - packages/home
 
 dev_dependencies:
   melos: ^8.2.0

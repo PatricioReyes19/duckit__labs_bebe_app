@@ -6,3 +6,4 @@ export 'bebe_elevation.dart';
 export 'bebe_overlays.dart';
 export 'converters/converters.dart';
 export 'colors/colors.dart';
+export 'typography_styles.dart';

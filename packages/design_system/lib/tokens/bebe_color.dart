@@ -3,16 +3,12 @@ import 'tokens.dart';
 
 class BebeColor extends ThemeExtension<BebeColor> {
   const BebeColor._({
-    required Map<String, Color> textColors,
-    required Map<String, Color> backgroundColors,
-    required Map<String, Color> iconColors,
-    required Map<String, Color> borderColors,
-    required Map<String, Color> onPrimaryColors,
-  }) : _textColors = textColors,
-       _backgroundColors = backgroundColors,
-       _iconColors = iconColors,
-       _borderColors = borderColors,
-       _onPrimaryColors = onPrimaryColors;
+    required this._textColors,
+    required this._backgroundColors,
+    required this._iconColors,
+    required this._borderColors,
+    required this._onPrimaryColors,
+  });
 
   factory BebeColor.fromJson(Map<String, dynamic> json) {
     return BebeColor._(
