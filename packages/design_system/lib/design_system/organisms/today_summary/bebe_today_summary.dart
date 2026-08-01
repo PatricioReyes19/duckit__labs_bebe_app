@@ -1,8 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-import 'summary_card_variant.dart';
-
 class BebeTodayMetricData {
   const BebeTodayMetricData({
     required this.type,

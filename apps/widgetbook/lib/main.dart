@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:widgetbook/widgetbook.dart';
 import 'package:widgetbook_annotation/widgetbook_annotation.dart' as widgetbook;
-
+import 'package:intl/date_symbol_data_local.dart';
 import 'main.directories.g.dart';
 
 class BebeThemeItem {
@@ -21,6 +21,7 @@ const _bebeThemeAssetPath =
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('es_CL');
 
   try {
     final bebeTheme = await loadBebeTheme(

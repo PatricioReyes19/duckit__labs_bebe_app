@@ -9,6 +9,7 @@ class BebeSelectableDateCell extends StatelessWidget {
     required this.value,
     this.indicators = const [],
     this.variant = BebeSelectableDateCellVariant.brand,
+    this.emphasis = BebeSelectableDateCellEmphasis.regular,
     this.isSelected = false,
     this.isToday = false,
     this.enabled = true,
@@ -21,11 +22,16 @@ class BebeSelectableDateCell extends StatelessWidget {
   final String value;
   final List<Widget> indicators;
   final BebeSelectableDateCellVariant variant;
+  final BebeSelectableDateCellEmphasis emphasis;
   final bool isSelected;
   final bool isToday;
   final bool enabled;
   final VoidCallback? onPressed;
   final String? semanticLabel;
+
+  static const double _minimumTouchTarget = 48;
+  static const double _regularMinimumHeight = 72;
+  static const double _prominentMinimumHeight = 96;
 
   bool get _isInteractive => enabled && onPressed != null;
 
@@ -42,7 +48,16 @@ class BebeSelectableDateCell extends StatelessWidget {
       variant: variant,
     );
 
-    final surface = isSelected ? palette.selectedSurface : palette.surface;
+    final effectiveEmphasis = isSelected
+        ? BebeSelectableDateCellEmphasis.prominent
+        : emphasis;
+
+    final minimumHeight = switch (effectiveEmphasis) {
+      BebeSelectableDateCellEmphasis.regular => _regularMinimumHeight,
+      BebeSelectableDateCellEmphasis.prominent => _prominentMinimumHeight,
+    };
+
+    final surface = isSelected ? palette.selectedSurface : Colors.transparent;
 
     final labelColor = !enabled
         ? palette.disabledContent
@@ -56,7 +71,14 @@ class BebeSelectableDateCell extends StatelessWidget {
         ? palette.selectedContent
         : palette.value;
 
-    final content = Material(
+    final valueStyle = switch (effectiveEmphasis) {
+      BebeSelectableDateCellEmphasis.regular =>
+        typography.styles.title.sm.semibold,
+      BebeSelectableDateCellEmphasis.prominent =>
+        typography.styles.title.lg.bold,
+    };
+
+    final card = Material(
       color: surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(radius.radius3xl),
@@ -84,11 +106,11 @@ class BebeSelectableDateCell extends StatelessWidget {
         }),
         child: Padding(
           padding: EdgeInsets.symmetric(
-            horizontal: spacing.spacingM,
-            vertical: spacing.spacingL,
+            horizontal: spacing.spacingS,
+            vertical: spacing.spacingM,
           ),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
                 label,
@@ -102,16 +124,11 @@ class BebeSelectableDateCell extends StatelessWidget {
               Text(
                 value,
                 maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: typography.styles.title.md.semibold.copyWith(
-                  color: valueColor,
-                ),
+                softWrap: false,
+                style: valueStyle.copyWith(color: valueColor),
               ),
               SizedBox(height: spacing.spacingS),
-              ConstrainedBox(
-                constraints: BoxConstraints(minHeight: 6 / 2),
-                child: _DateCellIndicators(indicators: indicators),
-              ),
+              _SelectableDateIndicators(indicators: indicators),
             ],
           ),
         ),
@@ -131,16 +148,19 @@ class BebeSelectableDateCell extends StatelessWidget {
       label: effectiveSemanticLabel,
       child: ExcludeSemantics(
         child: ConstrainedBox(
-          constraints: BoxConstraints(minWidth: 48, minHeight: 48),
-          child: content,
+          constraints: BoxConstraints(
+            minWidth: _minimumTouchTarget,
+            minHeight: minimumHeight,
+          ),
+          child: card,
         ),
       ),
     );
   }
 }
 
-class _DateCellIndicators extends StatelessWidget {
-  const _DateCellIndicators({required this.indicators});
+class _SelectableDateIndicators extends StatelessWidget {
+  const _SelectableDateIndicators({required this.indicators});
 
   final List<Widget> indicators;
 
@@ -149,14 +169,21 @@ class _DateCellIndicators extends StatelessWidget {
     final spacing = context.theme.spacing;
 
     if (indicators.isEmpty) {
-      return const SizedBox.shrink();
+      return const SizedBox(height: 6);
     }
 
-    return Wrap(
-      alignment: WrapAlignment.center,
-      spacing: spacing.spacingXs,
-      runSpacing: spacing.spacingXs,
-      children: indicators,
+    return SizedBox(
+      height: 8,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var index = 0; index < indicators.length; index++) ...[
+            indicators[index],
+            if (index != indicators.length - 1)
+              SizedBox(width: spacing.spacingXs),
+          ],
+        ],
+      ),
     );
   }
 }

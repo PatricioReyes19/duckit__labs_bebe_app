@@ -8,7 +8,7 @@ import '../../support/use_case_frame.dart';
 @widgetbook.UseCase(
   name: 'Playground',
   type: BebeBabySelector,
-  path: '[Moléculas]/Contexto activo',
+  path: '[Moleculas]/Contexto activo',
 )
 Widget bebeBabySelectorPlayground(BuildContext context) {
   final name = context.knobs.string(
@@ -42,7 +42,7 @@ Widget bebeBabySelectorPlayground(BuildContext context) {
 @widgetbook.UseCase(
   name: 'Nombre extenso',
   type: BebeBabySelector,
-  path: '[Moléculas]/Accesibilidad',
+  path: '[Moleculas]/Accesibilidad',
 )
 Widget bebeBabySelectorLongName(BuildContext context) {
   return UseCaseFrame(

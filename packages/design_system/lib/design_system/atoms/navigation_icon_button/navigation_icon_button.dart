@@ -9,6 +9,7 @@ class BebeNavigationIconButton extends StatelessWidget {
     this.variant = BebeNavigationIconButtonVariant.neutral,
     this.size = BebeNavigationIconButtonSize.medium,
     this.enabled = true,
+    this.showSurface = false,
     super.key,
   });
 
@@ -18,6 +19,12 @@ class BebeNavigationIconButton extends StatelessWidget {
   final BebeNavigationIconButtonVariant variant;
   final BebeNavigationIconButtonSize size;
   final bool enabled;
+  final bool showSurface;
+
+  static const double _minimumTouchTarget = 48;
+  static const double _smallIconSize = 18;
+  static const double _mediumIconSize = 22;
+  static const double _largeIconSize = 26;
 
   bool get _isInteractive => enabled && onPressed != null;
 
@@ -28,23 +35,32 @@ class BebeNavigationIconButton extends StatelessWidget {
     final overlays = theme.overlays;
 
     final foregroundColor = enabled
-        ? _resolveForegroundColor(colors, variant)
+        ? _resolveForegroundColor(colors)
         : colors.text.neutralDisabled;
 
     final iconSize = switch (size) {
-      BebeNavigationIconButtonSize.small => 20,
-      BebeNavigationIconButtonSize.medium => 24,
+      BebeNavigationIconButtonSize.small => _smallIconSize,
+      BebeNavigationIconButtonSize.medium => _mediumIconSize,
+      BebeNavigationIconButtonSize.large => _largeIconSize,
     };
+
+    final surfaceColor = showSurface
+        ? colors.background.neutralsSurface
+        : Colors.transparent;
 
     return Semantics(
       button: true,
       enabled: _isInteractive,
       label: semanticLabel,
       child: ConstrainedBox(
-        constraints: BoxConstraints(minWidth: 40, minHeight: 40),
+        constraints: const BoxConstraints(
+          minWidth: _minimumTouchTarget,
+          minHeight: _minimumTouchTarget,
+        ),
         child: Material(
-          color: Colors.transparent,
+          color: surfaceColor,
           shape: const CircleBorder(),
+          elevation: showSurface ? 1 : 0,
           clipBehavior: Clip.antiAlias,
           child: InkWell(
             onTap: _isInteractive ? onPressed : null,
@@ -66,10 +82,7 @@ class BebeNavigationIconButton extends StatelessWidget {
             }),
             child: Center(
               child: IconTheme(
-                data: IconThemeData(
-                  size: iconSize.toDouble(),
-                  color: foregroundColor,
-                ),
+                data: IconThemeData(size: iconSize, color: foregroundColor),
                 child: icon,
               ),
             ),
@@ -79,10 +92,7 @@ class BebeNavigationIconButton extends StatelessWidget {
     );
   }
 
-  Color _resolveForegroundColor(
-    BebeColor colors,
-    BebeNavigationIconButtonVariant variant,
-  ) {
+  Color _resolveForegroundColor(BebeColor colors) {
     return switch (variant) {
       BebeNavigationIconButtonVariant.neutral =>
         colors.icons.neutralAlternative,

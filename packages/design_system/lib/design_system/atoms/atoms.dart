@@ -7,5 +7,6 @@ export 'avatar/bebe_avatar.dart';
 export 'leading_icon/bebe_leading_icon.dart';
 export 'card_chevron.dart';
 export 'meta_data_item.dart';
-export 'indicator_dot/indicator_dot.dart';
+export 'indicator_dot/indicator.dart';
 export 'navigation_icon_button/navigation_icon.dart';
+export 'calendar_makers.dart';

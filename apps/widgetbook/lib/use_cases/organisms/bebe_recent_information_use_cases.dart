@@ -7,7 +7,7 @@ import '../../support/use_case_frame.dart';
 @widgetbook.UseCase(
   name: 'Consulta reciente',
   type: BebeRecentInformationSection,
-  path: '[Organismos]/Home',
+  path: '[Organisms]/Home',
 )
 Widget recentInformationDefault(BuildContext context) {
   return UseCaseFrame(

@@ -8,7 +8,7 @@ import '../../support/use_case_frame.dart';
 @widgetbook.UseCase(
   name: 'Dos opciones',
   type: BebeSegmentedSelector<String>,
-  path: '[Moléculas]/Selectores',
+  path: '[Moleculas]/Selectores',
 )
 Widget bebeSegmentedTwoOptions(BuildContext context) {
   final selected = context.knobs.object.dropdown<String>(
@@ -40,7 +40,7 @@ Widget bebeSegmentedTwoOptions(BuildContext context) {
 @widgetbook.UseCase(
   name: 'Texto largo',
   type: BebeSegmentedSelector<String>,
-  path: '[Moléculas]/Accesibilidad',
+  path: '[Moleculas]/Accesibilidad',
 )
 Widget bebeSegmentedLongText(BuildContext context) {
   return UseCaseFrame(

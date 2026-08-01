@@ -22,7 +22,7 @@ class BebeHomeTemplate extends StatelessWidget {
 
   final String title;
 
-  /// El template recibe contenido visual, no organismos concretos.
+  /// El template recibe contenido visual, no Organisms concretos.
   final Widget activeBabyHeader;
   final Widget todaySummary;
   final Widget quickActions;

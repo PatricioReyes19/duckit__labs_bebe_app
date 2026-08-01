@@ -8,7 +8,7 @@ import '../../support/use_case_frame.dart';
 @widgetbook.UseCase(
   name: 'Resumen completo',
   type: BebeTodaySummary,
-  path: '[Organismos]/Home',
+  path: '[Organisms]/Home',
 )
 Widget todaySummaryDefault(BuildContext context) {
   const metrics = [

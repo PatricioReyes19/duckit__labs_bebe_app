@@ -8,7 +8,7 @@ import '../../support/use_case_frame.dart';
 @widgetbook.UseCase(
   name: 'Playground',
   type: CategoryActionTile,
-  path: '[Moléculas]/Acciones rápidas',
+  path: '[Moleculas]/Acciones rápidas',
 )
 Widget bebeCategoryTilePlayground(BuildContext context) {
   final label = context.knobs.string(
@@ -44,7 +44,7 @@ Widget bebeCategoryTilePlayground(BuildContext context) {
 @widgetbook.UseCase(
   name: 'Categorías BebéApp',
   type: CategoryActionTile,
-  path: '[Moléculas]/Acciones rápidas',
+  path: '[Moleculas]/Acciones rápidas',
 )
 Widget bebeCategoryTiles(BuildContext context) {
   return UseCaseFrame(

@@ -1,3 +1,3 @@
 enum BebeNavigationIconButtonVariant { neutral, brand, accent }
 
-enum BebeNavigationIconButtonSize { small, medium }
+enum BebeNavigationIconButtonSize { small, medium, large }

@@ -8,7 +8,7 @@ import '../../support/use_case_frame.dart';
 @widgetbook.UseCase(
   name: 'Playground',
   type: BebeStatusBanner,
-  path: '[Moléculas]/Feedback',
+  path: '[Moleculas]/Feedback',
 )
 Widget bebeStatusBannerPlayground(BuildContext context) {
   final type = context.knobs.object.dropdown<BebeStatusBannerType>(
@@ -42,7 +42,7 @@ Widget bebeStatusBannerPlayground(BuildContext context) {
 @widgetbook.UseCase(
   name: 'Estados de sincronización',
   type: BebeStatusBanner,
-  path: '[Moléculas]/Offline-first',
+  path: '[Moleculas]/Offline-first',
 )
 Widget bebeStatusBannerSyncStates(BuildContext context) {
   return UseCaseFrame(

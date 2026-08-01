@@ -1,0 +1,1 @@
+enum BebeAgendaWeekPickerVariant { brand, accent }

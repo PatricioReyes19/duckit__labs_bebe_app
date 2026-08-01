@@ -8,7 +8,7 @@ import '../../support/use_case_frame.dart';
 @widgetbook.UseCase(
   name: 'Acciones principales',
   type: BebeQuickRegistrationActions,
-  path: '[Organismos]/Home',
+  path: '[Organisms]/Home',
 )
 Widget quickRegistrationActionsDefault(BuildContext context) {
   return UseCaseFrame(

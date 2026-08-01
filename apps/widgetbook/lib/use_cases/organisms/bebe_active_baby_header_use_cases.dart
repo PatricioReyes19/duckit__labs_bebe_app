@@ -8,7 +8,7 @@ import '../../support/use_case_frame.dart';
 @widgetbook.UseCase(
   name: 'Bebé activo',
   type: BebeActiveBabyHeader,
-  path: '[Organismos]/Home',
+  path: '[Organisms]/Home',
 )
 Widget activeBabyHeaderDefault(BuildContext context) {
   final showSibling = context.knobs.boolean(
@@ -39,7 +39,7 @@ Widget activeBabyHeaderDefault(BuildContext context) {
 @widgetbook.UseCase(
   name: 'Contenido extenso',
   type: BebeActiveBabyHeader,
-  path: '[Organismos]/Accesibilidad',
+  path: '[Organisms]/Accesibilidad',
 )
 Widget activeBabyHeaderLongText(BuildContext context) {
   return const UseCaseFrame(

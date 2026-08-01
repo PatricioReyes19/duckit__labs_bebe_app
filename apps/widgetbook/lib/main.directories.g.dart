@@ -23,6 +23,8 @@ import 'package:widgetbook_app/use_cases/atoms/bebe_status_indicator_use_cases.d
     as _widgetbook_app_use_cases_atoms_bebe_status_indicator_use_cases;
 import 'package:widgetbook_app/use_cases/atoms/bebe_text_field_use_cases.dart'
     as _widgetbook_app_use_cases_atoms_bebe_text_field_use_cases;
+import 'package:widgetbook_app/use_cases/atoms/indicator_dot_use_cases.dart'
+    as _widgetbook_app_use_cases_atoms_indicator_dot_use_cases;
 import 'package:widgetbook_app/use_cases/molecules/bebe_baby_selector_use_cases.dart'
     as _widgetbook_app_use_cases_molecules_bebe_baby_selector_use_cases;
 import 'package:widgetbook_app/use_cases/molecules/bebe_category_action_tile_use_cases.dart'
@@ -31,22 +33,51 @@ import 'package:widgetbook_app/use_cases/molecules/bebe_segmented_selector_use_c
     as _widgetbook_app_use_cases_molecules_bebe_segmented_selector_use_cases;
 import 'package:widgetbook_app/use_cases/molecules/bebe_status_banner_use_cases.dart'
     as _widgetbook_app_use_cases_molecules_bebe_status_banner_use_cases;
-import 'package:widgetbook_app/use_cases/organisms/bebe_active_baby_header_use_cases.dart'
-    as _widgetbook_app_use_cases_organisms_bebe_active_baby_header_use_cases;
-import 'package:widgetbook_app/use_cases/organisms/bebe_quick_registration_actions_use_cases.dart'
-    as _widgetbook_app_use_cases_organisms_bebe_quick_registration_actions_use_cases;
-import 'package:widgetbook_app/use_cases/organisms/bebe_recent_information_use_cases.dart'
-    as _widgetbook_app_use_cases_organisms_bebe_recent_information_use_cases;
-import 'package:widgetbook_app/use_cases/organisms/bebe_today_summary_use_cases.dart'
-    as _widgetbook_app_use_cases_organisms_bebe_today_summary_use_cases;
-import 'package:widgetbook_app/use_cases/organisms/bebe_upcoming_health_use_cases.dart'
-    as _widgetbook_app_use_cases_organisms_bebe_upcoming_health_use_cases;
+import 'package:widgetbook_app/use_cases/molecules/caregiver_badge.dart'
+    as _widgetbook_app_use_cases_molecules_caregiver_badge;
+import 'package:widgetbook_app/use_cases/molecules/filter_chip_use_cases.dart'
+    as _widgetbook_app_use_cases_molecules_filter_chip_use_cases;
+import 'package:widgetbook_app/use_cases/molecules/info_banner.dart'
+    as _widgetbook_app_use_cases_molecules_info_banner;
+import 'package:widgetbook_app/use_cases/molecules/selectable_date_cell_use_cases.dart'
+    as _widgetbook_app_use_cases_molecules_selectable_date_cell_use_cases;
+import 'package:widgetbook_app/use_cases/molecules/time_block_uses_cases.dart'
+    as _widgetbook_app_use_cases_molecules_time_block_uses_cases;
+import 'package:widgetbook_app/use_cases/templates/agenda_template.dart'
+    as _widgetbook_app_use_cases_templates_agenda_template;
 import 'package:widgetbook_app/use_cases/templates/bebe_home_template_use_cases.dart'
     as _widgetbook_app_use_cases_templates_bebe_home_template_use_cases;
+import 'package:widgetbook_app/use_cases/templates/salud_template.dart'
+    as _widgetbook_app_use_cases_templates_salud_template;
 
 final directories = <_widgetbook.WidgetbookNode>[
   _widgetbook.WidgetbookCategory(
-    name: 'Moléculas',
+    name: 'Atoms',
+    children: [
+      _widgetbook.WidgetbookFolder(
+        name: 'Indicators',
+        children: [
+          _widgetbook.WidgetbookComponent(
+            name: 'BebeIndicatorDot',
+            useCases: [
+              _widgetbook.WidgetbookUseCase(
+                name: 'Tamaños',
+                builder: _widgetbook_app_use_cases_atoms_indicator_dot_use_cases
+                    .indicatorDotSizes,
+              ),
+              _widgetbook.WidgetbookUseCase(
+                name: 'Variantes',
+                builder: _widgetbook_app_use_cases_atoms_indicator_dot_use_cases
+                    .indicatorDotVariants,
+              ),
+            ],
+          )
+        ],
+      )
+    ],
+  ),
+  _widgetbook.WidgetbookCategory(
+    name: 'Moleculas',
     children: [
       _widgetbook.WidgetbookFolder(
         name: 'Accesibilidad',
@@ -164,117 +195,238 @@ final directories = <_widgetbook.WidgetbookNode>[
     ],
   ),
   _widgetbook.WidgetbookCategory(
-    name: 'Organismos',
+    name: 'Molecules',
     children: [
       _widgetbook.WidgetbookFolder(
-        name: 'Accesibilidad',
+        name: 'Cards',
         children: [
           _widgetbook.WidgetbookComponent(
-            name: 'BebeActiveBabyHeader',
+            name: 'BebeDetailActionCard',
             useCases: [
               _widgetbook.WidgetbookUseCase(
                 name: 'Contenido extenso',
-                builder:
-                    _widgetbook_app_use_cases_organisms_bebe_active_baby_header_use_cases
-                        .activeBabyHeaderLongText,
-              )
+                builder: _widgetbook_app_use_cases_templates_salud_template
+                    .bebeDetailActionCardLongContent,
+              ),
+              _widgetbook.WidgetbookUseCase(
+                name: 'Informativa sin chevron',
+                builder: _widgetbook_app_use_cases_templates_salud_template
+                    .bebeDetailActionCardInformative,
+              ),
+              _widgetbook.WidgetbookUseCase(
+                name: 'Interactiva',
+                builder: _widgetbook_app_use_cases_templates_salud_template
+                    .bebeDetailActionCardInteractive,
+              ),
+              _widgetbook.WidgetbookUseCase(
+                name: 'Variantes',
+                builder: _widgetbook_app_use_cases_templates_salud_template
+                    .bebeDetailActionCardVariants,
+              ),
             ],
           )
         ],
       ),
       _widgetbook.WidgetbookFolder(
-        name: 'Home',
+        name: 'Feedback',
         children: [
           _widgetbook.WidgetbookComponent(
-            name: 'BebeActiveBabyHeader',
+            name: 'BebeInfoBanner',
             useCases: [
               _widgetbook.WidgetbookUseCase(
-                name: 'Bebé activo',
-                builder:
-                    _widgetbook_app_use_cases_organisms_bebe_active_baby_header_use_cases
-                        .activeBabyHeaderDefault,
-              )
-            ],
-          ),
-          _widgetbook.WidgetbookComponent(
-            name: 'BebeQuickRegistrationActions',
-            useCases: [
-              _widgetbook.WidgetbookUseCase(
-                name: 'Acciones principales',
-                builder:
-                    _widgetbook_app_use_cases_organisms_bebe_quick_registration_actions_use_cases
-                        .quickRegistrationActionsDefault,
-              )
-            ],
-          ),
-          _widgetbook.WidgetbookComponent(
-            name: 'BebeRecentInformationSection',
-            useCases: [
-              _widgetbook.WidgetbookUseCase(
-                name: 'Consulta reciente',
-                builder:
-                    _widgetbook_app_use_cases_organisms_bebe_recent_information_use_cases
-                        .recentInformationDefault,
-              )
-            ],
-          ),
-          _widgetbook.WidgetbookComponent(
-            name: 'BebeTodaySummary',
-            useCases: [
-              _widgetbook.WidgetbookUseCase(
-                name: 'Resumen completo',
-                builder:
-                    _widgetbook_app_use_cases_organisms_bebe_today_summary_use_cases
-                        .todaySummaryDefault,
-              )
-            ],
-          ),
-        ],
-      ),
-    ],
-  ),
-  _widgetbook.WidgetbookCategory(
-    name: 'Organisms',
-    children: [
-      _widgetbook.WidgetbookFolder(
-        name: 'Home',
-        children: [
-          _widgetbook.WidgetbookComponent(
-            name: 'BebeUpcomingHealthSection',
-            useCases: [
-              _widgetbook.WidgetbookUseCase(
-                name: 'Mobile',
-                builder:
-                    _widgetbook_app_use_cases_organisms_bebe_upcoming_health_use_cases
-                        .upcomingHealthMobile,
+                name: 'Ancho compacto',
+                builder: _widgetbook_app_use_cases_molecules_info_banner
+                    .bebeInfoBannerCompact,
               ),
               _widgetbook.WidgetbookUseCase(
-                name: 'Sin acciones inferiores',
-                builder:
-                    _widgetbook_app_use_cases_organisms_bebe_upcoming_health_use_cases
-                        .upcomingHealthWithoutFooter,
+                name: 'Con acción',
+                builder: _widgetbook_app_use_cases_molecules_info_banner
+                    .bebeInfoBannerWithAction,
               ),
               _widgetbook.WidgetbookUseCase(
-                name: 'Sin cuidador',
-                builder:
-                    _widgetbook_app_use_cases_organisms_bebe_upcoming_health_use_cases
-                        .upcomingHealthWithoutCaregiver,
+                name: 'Solo descripción',
+                builder: _widgetbook_app_use_cases_molecules_info_banner
+                    .bebeInfoBannerDescriptionOnly,
               ),
               _widgetbook.WidgetbookUseCase(
-                name: 'Wide',
-                builder:
-                    _widgetbook_app_use_cases_organisms_bebe_upcoming_health_use_cases
-                        .upcomingHealthWide,
+                name: 'Variantes',
+                builder: _widgetbook_app_use_cases_molecules_info_banner
+                    .bebeInfoBannerVariants,
               ),
             ],
           )
         ],
-      )
+      ),
+      _widgetbook.WidgetbookFolder(
+        name: 'Filters',
+        children: [
+          _widgetbook.WidgetbookComponent(
+            name: 'BebeFilterChip',
+            useCases: [
+              _widgetbook.WidgetbookUseCase(
+                name: 'Contenido largo',
+                builder:
+                    _widgetbook_app_use_cases_molecules_filter_chip_use_cases
+                        .filterChipLongContent,
+              ),
+              _widgetbook.WidgetbookUseCase(
+                name: 'Estados',
+                builder:
+                    _widgetbook_app_use_cases_molecules_filter_chip_use_cases
+                        .filterChipStates,
+              ),
+              _widgetbook.WidgetbookUseCase(
+                name: 'Seleccionados',
+                builder:
+                    _widgetbook_app_use_cases_molecules_filter_chip_use_cases
+                        .filterChipSelected,
+              ),
+              _widgetbook.WidgetbookUseCase(
+                name: 'Variantes',
+                builder:
+                    _widgetbook_app_use_cases_molecules_filter_chip_use_cases
+                        .filterChipVariants,
+              ),
+            ],
+          )
+        ],
+      ),
+      _widgetbook.WidgetbookFolder(
+        name: 'Identity',
+        children: [
+          _widgetbook.WidgetbookComponent(
+            name: 'BebeCaregiverBadge',
+            useCases: [
+              _widgetbook.WidgetbookUseCase(
+                name: 'Estados',
+                builder: _widgetbook_app_use_cases_molecules_caregiver_badge
+                    .bebeCaregiverBadgeStates,
+              ),
+              _widgetbook.WidgetbookUseCase(
+                name: 'Tamaños',
+                builder: _widgetbook_app_use_cases_molecules_caregiver_badge
+                    .bebeCaregiverBadgeSizes,
+              ),
+              _widgetbook.WidgetbookUseCase(
+                name: 'Variantes',
+                builder: _widgetbook_app_use_cases_molecules_caregiver_badge
+                    .bebeCaregiverBadgeVariants,
+              ),
+            ],
+          )
+        ],
+      ),
+      _widgetbook.WidgetbookFolder(
+        name: 'Information',
+        children: [
+          _widgetbook.WidgetbookComponent(
+            name: 'BebeDetailSummaryCard',
+            useCases: [
+              _widgetbook.WidgetbookUseCase(
+                name: 'Resumen de consulta',
+                builder: _widgetbook_app_use_cases_templates_salud_template
+                    .bebeDetailSummaryCardDefault,
+              ),
+              _widgetbook.WidgetbookUseCase(
+                name: 'Valores extensos',
+                builder: _widgetbook_app_use_cases_templates_salud_template
+                    .bebeDetailSummaryCardLongValues,
+              ),
+            ],
+          ),
+          _widgetbook.WidgetbookComponent(
+            name: 'BebeTimeBlock',
+            useCases: [
+              _widgetbook.WidgetbookUseCase(
+                name: 'Composiciones',
+                builder:
+                    _widgetbook_app_use_cases_molecules_time_block_uses_cases
+                        .bebeTimeBlockCompositions,
+              ),
+              _widgetbook.WidgetbookUseCase(
+                name: 'Tamaños y alineación',
+                builder:
+                    _widgetbook_app_use_cases_molecules_time_block_uses_cases
+                        .bebeTimeBlockSizes,
+              ),
+              _widgetbook.WidgetbookUseCase(
+                name: 'Variantes',
+                builder:
+                    _widgetbook_app_use_cases_molecules_time_block_uses_cases
+                        .bebeTimeBlockVariants,
+              ),
+            ],
+          ),
+        ],
+      ),
+      _widgetbook.WidgetbookFolder(
+        name: 'Selection',
+        children: [
+          _widgetbook.WidgetbookComponent(
+            name: 'BebeSelectableDateCell',
+            useCases: [
+              _widgetbook.WidgetbookUseCase(
+                name: 'Estados',
+                builder:
+                    _widgetbook_app_use_cases_molecules_selectable_date_cell_use_cases
+                        .selectableDateCellStates,
+              ),
+              _widgetbook.WidgetbookUseCase(
+                name: 'Indicadores',
+                builder:
+                    _widgetbook_app_use_cases_molecules_selectable_date_cell_use_cases
+                        .selectableDateCellIndicators,
+              ),
+              _widgetbook.WidgetbookUseCase(
+                name: 'Variantes visuales',
+                builder:
+                    _widgetbook_app_use_cases_molecules_selectable_date_cell_use_cases
+                        .selectableDateCellVariants,
+              ),
+            ],
+          )
+        ],
+      ),
     ],
   ),
   _widgetbook.WidgetbookCategory(
     name: 'Templates',
     children: [
+      _widgetbook.WidgetbookFolder(
+        name: 'Agenda',
+        children: [
+          _widgetbook.WidgetbookComponent(
+            name: 'BebeAgendaTemplate',
+            useCases: [
+              _widgetbook.WidgetbookUseCase(
+                name: 'Agenda vacía',
+                builder: _widgetbook_app_use_cases_templates_agenda_template
+                    .bebeAgendaTemplateEmptyUseCase,
+              ),
+              _widgetbook.WidgetbookUseCase(
+                name: 'Cargando',
+                builder: _widgetbook_app_use_cases_templates_agenda_template
+                    .bebeAgendaTemplateLoadingUseCase,
+              ),
+              _widgetbook.WidgetbookUseCase(
+                name: 'Contenido completo',
+                builder: _widgetbook_app_use_cases_templates_agenda_template
+                    .bebeAgendaTemplateContentUseCase,
+              ),
+              _widgetbook.WidgetbookUseCase(
+                name: 'Error',
+                builder: _widgetbook_app_use_cases_templates_agenda_template
+                    .bebeAgendaTemplateErrorUseCase,
+              ),
+              _widgetbook.WidgetbookUseCase(
+                name: 'Offline con contenido local',
+                builder: _widgetbook_app_use_cases_templates_agenda_template
+                    .bebeAgendaTemplateOfflineUseCase,
+              ),
+            ],
+          )
+        ],
+      ),
       _widgetbook.WidgetbookFolder(
         name: 'Home',
         children: [
@@ -302,7 +454,37 @@ final directories = <_widgetbook.WidgetbookNode>[
             ],
           )
         ],
-      )
+      ),
+      _widgetbook.WidgetbookFolder(
+        name: 'Salud',
+        children: [
+          _widgetbook.WidgetbookComponent(
+            name: 'BebeConsultationDetailTemplate',
+            useCases: [
+              _widgetbook.WidgetbookUseCase(
+                name: 'Ancho móvil',
+                builder: _widgetbook_app_use_cases_templates_salud_template
+                    .bebeConsultationDetailTemplateMobile,
+              ),
+              _widgetbook.WidgetbookUseCase(
+                name: 'Consulta completa',
+                builder: _widgetbook_app_use_cases_templates_salud_template
+                    .bebeConsultationDetailTemplateComplete,
+              ),
+              _widgetbook.WidgetbookUseCase(
+                name: 'Contenido extenso',
+                builder: _widgetbook_app_use_cases_templates_salud_template
+                    .bebeConsultationDetailTemplateLongContent,
+              ),
+              _widgetbook.WidgetbookUseCase(
+                name: 'Solo información',
+                builder: _widgetbook_app_use_cases_templates_salud_template
+                    .bebeConsultationDetailTemplateReadOnly,
+              ),
+            ],
+          )
+        ],
+      ),
     ],
   ),
   _widgetbook.WidgetbookCategory(
