@@ -13,7 +13,7 @@ import '../../support/use_case_frame.dart';
 Widget todaySummaryDefault(BuildContext context) {
   const metrics = [
     BebeTodayMetricData(
-      type: BebeTodayMetricType.feeding,
+      variant: BebeMetricCardVariant.feeding,
       label: 'Alimentación',
       value: '5',
       unit: 'tomas',
@@ -22,7 +22,7 @@ Widget todaySummaryDefault(BuildContext context) {
       icon: Icon(LucideIcons.milk),
     ),
     BebeTodayMetricData(
-      type: BebeTodayMetricType.sleep,
+      variant: BebeMetricCardVariant.sleep,
       label: 'Sueño',
       value: '3',
       unit: 'h 45 min',
@@ -31,7 +31,7 @@ Widget todaySummaryDefault(BuildContext context) {
       icon: Icon(LucideIcons.moon),
     ),
     BebeTodayMetricData(
-      type: BebeTodayMetricType.diaper,
+      variant: BebeMetricCardVariant.diaper,
       label: 'Pañales',
       value: '6',
       unit: 'cambios',
@@ -44,7 +44,8 @@ Widget todaySummaryDefault(BuildContext context) {
     width: double.infinity,
     child: BebeTodaySummary(
       items: metrics,
-      onViewMorePressed: () {},
+      onActionPressed: () {},
+      title: '',
     ),
   );
 }

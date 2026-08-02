@@ -43,8 +43,24 @@ import 'package:widgetbook_app/use_cases/molecules/selectable_date_cell_use_case
     as _widgetbook_app_use_cases_molecules_selectable_date_cell_use_cases;
 import 'package:widgetbook_app/use_cases/molecules/time_block_uses_cases.dart'
     as _widgetbook_app_use_cases_molecules_time_block_uses_cases;
+import 'package:widgetbook_app/use_cases/organisms/bebe_active_baby_header_use_cases.dart'
+    as _widgetbook_app_use_cases_organisms_bebe_active_baby_header_use_cases;
+import 'package:widgetbook_app/use_cases/organisms/bebe_quick_registration_actions_use_cases.dart'
+    as _widgetbook_app_use_cases_organisms_bebe_quick_registration_actions_use_cases;
+import 'package:widgetbook_app/use_cases/organisms/bebe_recent_information_use_cases.dart'
+    as _widgetbook_app_use_cases_organisms_bebe_recent_information_use_cases;
+import 'package:widgetbook_app/use_cases/organisms/bebe_today_summary_use_cases.dart'
+    as _widgetbook_app_use_cases_organisms_bebe_today_summary_use_cases;
+import 'package:widgetbook_app/use_cases/organisms/bebe_upcoming_health_use_cases.dart'
+    as _widgetbook_app_use_cases_organisms_bebe_upcoming_health_use_cases;
+import 'package:widgetbook_app/use_cases/organisms/category_filters.dart'
+    as _widgetbook_app_use_cases_organisms_category_filters;
+import 'package:widgetbook_app/use_cases/organisms/compact_calendar.dart'
+    as _widgetbook_app_use_cases_organisms_compact_calendar;
 import 'package:widgetbook_app/use_cases/templates/agenda_template.dart'
     as _widgetbook_app_use_cases_templates_agenda_template;
+import 'package:widgetbook_app/use_cases/templates/bebe_family_overview_template_use_cases.dart'
+    as _widgetbook_app_use_cases_templates_bebe_family_overview_template_use_cases;
 import 'package:widgetbook_app/use_cases/templates/bebe_home_template_use_cases.dart'
     as _widgetbook_app_use_cases_templates_bebe_home_template_use_cases;
 import 'package:widgetbook_app/use_cases/templates/salud_template.dart'
@@ -198,36 +214,6 @@ final directories = <_widgetbook.WidgetbookNode>[
     name: 'Molecules',
     children: [
       _widgetbook.WidgetbookFolder(
-        name: 'Cards',
-        children: [
-          _widgetbook.WidgetbookComponent(
-            name: 'BebeDetailActionCard',
-            useCases: [
-              _widgetbook.WidgetbookUseCase(
-                name: 'Contenido extenso',
-                builder: _widgetbook_app_use_cases_templates_salud_template
-                    .bebeDetailActionCardLongContent,
-              ),
-              _widgetbook.WidgetbookUseCase(
-                name: 'Informativa sin chevron',
-                builder: _widgetbook_app_use_cases_templates_salud_template
-                    .bebeDetailActionCardInformative,
-              ),
-              _widgetbook.WidgetbookUseCase(
-                name: 'Interactiva',
-                builder: _widgetbook_app_use_cases_templates_salud_template
-                    .bebeDetailActionCardInteractive,
-              ),
-              _widgetbook.WidgetbookUseCase(
-                name: 'Variantes',
-                builder: _widgetbook_app_use_cases_templates_salud_template
-                    .bebeDetailActionCardVariants,
-              ),
-            ],
-          )
-        ],
-      ),
-      _widgetbook.WidgetbookFolder(
         name: 'Feedback',
         children: [
           _widgetbook.WidgetbookComponent(
@@ -320,21 +306,6 @@ final directories = <_widgetbook.WidgetbookNode>[
         name: 'Information',
         children: [
           _widgetbook.WidgetbookComponent(
-            name: 'BebeDetailSummaryCard',
-            useCases: [
-              _widgetbook.WidgetbookUseCase(
-                name: 'Resumen de consulta',
-                builder: _widgetbook_app_use_cases_templates_salud_template
-                    .bebeDetailSummaryCardDefault,
-              ),
-              _widgetbook.WidgetbookUseCase(
-                name: 'Valores extensos',
-                builder: _widgetbook_app_use_cases_templates_salud_template
-                    .bebeDetailSummaryCardLongValues,
-              ),
-            ],
-          ),
-          _widgetbook.WidgetbookComponent(
             name: 'BebeTimeBlock',
             useCases: [
               _widgetbook.WidgetbookUseCase(
@@ -356,7 +327,7 @@ final directories = <_widgetbook.WidgetbookNode>[
                         .bebeTimeBlockVariants,
               ),
             ],
-          ),
+          )
         ],
       ),
       _widgetbook.WidgetbookFolder(
@@ -385,6 +356,135 @@ final directories = <_widgetbook.WidgetbookNode>[
               ),
             ],
           )
+        ],
+      ),
+    ],
+  ),
+  _widgetbook.WidgetbookCategory(
+    name: 'Organisms',
+    children: [
+      _widgetbook.WidgetbookFolder(
+        name: 'Accesibilidad',
+        children: [
+          _widgetbook.WidgetbookComponent(
+            name: 'BebeActiveBabyHeader',
+            useCases: [
+              _widgetbook.WidgetbookUseCase(
+                name: 'Contenido extenso',
+                builder:
+                    _widgetbook_app_use_cases_organisms_bebe_active_baby_header_use_cases
+                        .activeBabyHeaderLongText,
+              )
+            ],
+          )
+        ],
+      ),
+      _widgetbook.WidgetbookFolder(
+        name: 'Agenda',
+        children: [
+          _widgetbook.WidgetbookComponent(
+            name: 'BebeAgendaCategoryFilters',
+            useCases: [
+              _widgetbook.WidgetbookUseCase(
+                name: 'Filtros interactivos',
+                builder: _widgetbook_app_use_cases_organisms_category_filters
+                    .bebeAgendaCategoryFiltersUseCase,
+              )
+            ],
+          )
+        ],
+      ),
+      _widgetbook.WidgetbookFolder(
+        name: 'Calendar',
+        children: [
+          _widgetbook.WidgetbookComponent(
+            name: 'BebeMonthCalendar',
+            useCases: [
+              _widgetbook.WidgetbookUseCase(
+                name: 'Calendario mensual',
+                builder: _widgetbook_app_use_cases_organisms_compact_calendar
+                    .bebeMonthCalendarUseCase,
+              )
+            ],
+          )
+        ],
+      ),
+      _widgetbook.WidgetbookFolder(
+        name: 'Home',
+        children: [
+          _widgetbook.WidgetbookComponent(
+            name: 'BebeActiveBabyHeader',
+            useCases: [
+              _widgetbook.WidgetbookUseCase(
+                name: 'Bebé activo',
+                builder:
+                    _widgetbook_app_use_cases_organisms_bebe_active_baby_header_use_cases
+                        .activeBabyHeaderDefault,
+              )
+            ],
+          ),
+          _widgetbook.WidgetbookComponent(
+            name: 'BebeQuickRegistrationActions',
+            useCases: [
+              _widgetbook.WidgetbookUseCase(
+                name: 'Acciones principales',
+                builder:
+                    _widgetbook_app_use_cases_organisms_bebe_quick_registration_actions_use_cases
+                        .quickRegistrationActionsDefault,
+              )
+            ],
+          ),
+          _widgetbook.WidgetbookComponent(
+            name: 'BebeRecentInformationSection',
+            useCases: [
+              _widgetbook.WidgetbookUseCase(
+                name: 'Consulta reciente',
+                builder:
+                    _widgetbook_app_use_cases_organisms_bebe_recent_information_use_cases
+                        .recentInformationDefault,
+              )
+            ],
+          ),
+          _widgetbook.WidgetbookComponent(
+            name: 'BebeTodaySummary',
+            useCases: [
+              _widgetbook.WidgetbookUseCase(
+                name: 'Resumen completo',
+                builder:
+                    _widgetbook_app_use_cases_organisms_bebe_today_summary_use_cases
+                        .todaySummaryDefault,
+              )
+            ],
+          ),
+          _widgetbook.WidgetbookComponent(
+            name: 'BebeUpcomingHealthSection',
+            useCases: [
+              _widgetbook.WidgetbookUseCase(
+                name: 'Mobile',
+                builder:
+                    _widgetbook_app_use_cases_organisms_bebe_upcoming_health_use_cases
+                        .upcomingHealthMobile,
+              ),
+              _widgetbook.WidgetbookUseCase(
+                name: 'Sin acciones inferiores',
+                builder:
+                    _widgetbook_app_use_cases_organisms_bebe_upcoming_health_use_cases
+                        .upcomingHealthWithoutFooter,
+              ),
+              _widgetbook.WidgetbookUseCase(
+                name: 'Sin cuidador',
+                builder:
+                    _widgetbook_app_use_cases_organisms_bebe_upcoming_health_use_cases
+                        .upcomingHealthWithoutCaregiver,
+              ),
+              _widgetbook.WidgetbookUseCase(
+                name: 'Wide',
+                builder:
+                    _widgetbook_app_use_cases_organisms_bebe_upcoming_health_use_cases
+                        .upcomingHealthWide,
+              ),
+            ],
+          ),
         ],
       ),
     ],
@@ -450,36 +550,6 @@ final directories = <_widgetbook.WidgetbookNode>[
                 builder:
                     _widgetbook_app_use_cases_templates_bebe_home_template_use_cases
                         .homeTemplateLoading,
-              ),
-            ],
-          )
-        ],
-      ),
-      _widgetbook.WidgetbookFolder(
-        name: 'Salud',
-        children: [
-          _widgetbook.WidgetbookComponent(
-            name: 'BebeConsultationDetailTemplate',
-            useCases: [
-              _widgetbook.WidgetbookUseCase(
-                name: 'Ancho móvil',
-                builder: _widgetbook_app_use_cases_templates_salud_template
-                    .bebeConsultationDetailTemplateMobile,
-              ),
-              _widgetbook.WidgetbookUseCase(
-                name: 'Consulta completa',
-                builder: _widgetbook_app_use_cases_templates_salud_template
-                    .bebeConsultationDetailTemplateComplete,
-              ),
-              _widgetbook.WidgetbookUseCase(
-                name: 'Contenido extenso',
-                builder: _widgetbook_app_use_cases_templates_salud_template
-                    .bebeConsultationDetailTemplateLongContent,
-              ),
-              _widgetbook.WidgetbookUseCase(
-                name: 'Solo información',
-                builder: _widgetbook_app_use_cases_templates_salud_template
-                    .bebeConsultationDetailTemplateReadOnly,
               ),
             ],
           )
@@ -630,6 +700,90 @@ final directories = <_widgetbook.WidgetbookNode>[
           )
         ],
       ),
+    ],
+  ),
+  _widgetbook.WidgetbookFolder(
+    name: 'design_system',
+    children: [
+      _widgetbook.WidgetbookFolder(
+        name: 'templates',
+        children: [
+          _widgetbook.WidgetbookFolder(
+            name: 'family',
+            children: [
+              _widgetbook.WidgetbookComponent(
+                name: 'BebeFamilyOverviewTemplate',
+                useCases: [
+                  _widgetbook.WidgetbookUseCase(
+                    name: 'Ancho reducido',
+                    builder:
+                        _widgetbook_app_use_cases_templates_bebe_family_overview_template_use_cases
+                            .bebeFamilyOverviewTemplateCompactUseCase,
+                  ),
+                  _widgetbook.WidgetbookUseCase(
+                    name: 'Completo',
+                    builder:
+                        _widgetbook_app_use_cases_templates_bebe_family_overview_template_use_cases
+                            .bebeFamilyOverviewTemplateCompleteUseCase,
+                  ),
+                  _widgetbook.WidgetbookUseCase(
+                    name: 'Contenido mínimo',
+                    builder:
+                        _widgetbook_app_use_cases_templates_bebe_family_overview_template_use_cases
+                            .bebeFamilyOverviewTemplateMinimumUseCase,
+                  ),
+                  _widgetbook.WidgetbookUseCase(
+                    name: 'Miembro pendiente',
+                    builder:
+                        _widgetbook_app_use_cases_templates_bebe_family_overview_template_use_cases
+                            .bebeFamilyOverviewTemplatePendingInvitationUseCase,
+                  ),
+                ],
+              )
+            ],
+          ),
+          _widgetbook.WidgetbookFolder(
+            name: 'salud',
+            children: [
+              _widgetbook.WidgetbookComponent(
+                name: 'BebeHealthOverviewTemplate',
+                useCases: [
+                  _widgetbook.WidgetbookUseCase(
+                    name: 'Ancho reducido',
+                    builder: _widgetbook_app_use_cases_templates_salud_template
+                        .bebeHealthOverviewTemplateCompactUseCase,
+                  ),
+                  _widgetbook.WidgetbookUseCase(
+                    name: 'Completo',
+                    builder: _widgetbook_app_use_cases_templates_salud_template
+                        .bebeHealthOverviewTemplateCompleteUseCase,
+                  ),
+                  _widgetbook.WidgetbookUseCase(
+                    name: 'Contenido mínimo',
+                    builder: _widgetbook_app_use_cases_templates_salud_template
+                        .bebeHealthOverviewTemplateMinimumUseCase,
+                  ),
+                  _widgetbook.WidgetbookUseCase(
+                    name: 'Eventos próximos cargando',
+                    builder: _widgetbook_app_use_cases_templates_salud_template
+                        .bebeHealthOverviewTemplateLoadingUpcomingUseCase,
+                  ),
+                  _widgetbook.WidgetbookUseCase(
+                    name: 'Sin eventos próximos',
+                    builder: _widgetbook_app_use_cases_templates_salud_template
+                        .bebeHealthOverviewTemplateEmptyUpcomingUseCase,
+                  ),
+                  _widgetbook.WidgetbookUseCase(
+                    name: 'Solo contenido principal',
+                    builder: _widgetbook_app_use_cases_templates_salud_template
+                        .bebeHealthOverviewTemplatePrimaryContentUseCase,
+                  ),
+                ],
+              )
+            ],
+          ),
+        ],
+      )
     ],
   ),
 ];

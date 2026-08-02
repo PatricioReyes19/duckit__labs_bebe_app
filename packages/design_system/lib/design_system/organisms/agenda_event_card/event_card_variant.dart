@@ -6,3 +6,5 @@ enum BebeAgendaEventCardVariant {
   warning,
   success,
 }
+
+enum BebeAgendaEventCardLayout { responsive, carousel }

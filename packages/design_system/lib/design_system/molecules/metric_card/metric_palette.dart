@@ -46,6 +46,36 @@ class BebeMetricCardPalette {
         content: colors.text.neutralTitle,
         border: colors.border.neutralDefault,
       ),
+      BebeMetricCardVariant.brand => BebeMetricCardPalette(
+        surface: colors.background.brandSurface,
+        iconSurface: colors.background.neutralsSurface,
+        content: colors.text.brandDefault,
+        border: colors.border.brandAlternative,
+      ),
+      BebeMetricCardVariant.accent => BebeMetricCardPalette(
+        surface: colors.background.accentSurface,
+        iconSurface: colors.background.neutralsSurface,
+        content: colors.text.accentDefault,
+        border: colors.border.accentAlternative,
+      ),
+      BebeMetricCardVariant.information => BebeMetricCardPalette(
+        surface: colors.background.infoSurface,
+        iconSurface: colors.background.neutralsSurface,
+        content: colors.text.infoDefault,
+        border: colors.border.infoDefault,
+      ),
+      BebeMetricCardVariant.success => BebeMetricCardPalette(
+        surface: colors.background.successSurface,
+        iconSurface: colors.background.neutralsSurface,
+        content: colors.text.successDefault,
+        border: colors.border.successDefault,
+      ),
+      BebeMetricCardVariant.warning => BebeMetricCardPalette(
+        surface: colors.background.warningSurface,
+        iconSurface: colors.background.neutralsSurface,
+        content: colors.text.warningDefault,
+        border: colors.border.warningDefault,
+      ),
     };
   }
 }

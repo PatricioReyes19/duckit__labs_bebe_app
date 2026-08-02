@@ -6,14 +6,16 @@ class BebeAgendaEventCardPalette {
   const BebeAgendaEventCardPalette({
     required this.surface,
     required this.border,
-    required this.leadingIconVariant,
-    required this.chevronVariant,
+    required this.iconSurface,
+    required this.iconContent,
+    required this.chevronContent,
   });
 
   final Color surface;
   final Color border;
-  final BebeLeadingIconVariant leadingIconVariant;
-  final BebeCardChevronVariant chevronVariant;
+  final Color iconSurface;
+  final Color iconContent;
+  final Color chevronContent;
 
   static BebeAgendaEventCardPalette resolve({
     required BebeColor colors,
@@ -22,39 +24,50 @@ class BebeAgendaEventCardPalette {
     return switch (variant) {
       BebeAgendaEventCardVariant.neutral => BebeAgendaEventCardPalette(
         surface: colors.background.neutralsSurface,
-        border: colors.border.accentAlternative,
-        leadingIconVariant: BebeLeadingIconVariant.neutral,
-        chevronVariant: BebeCardChevronVariant.neutral,
+        border: colors.border.neutralDefault,
+        iconSurface: colors.background.neutralsActive,
+        iconContent: colors.icons.neutralAlternative,
+        chevronContent: colors.icons.neutralAlternative,
       ),
+
       BebeAgendaEventCardVariant.brand => BebeAgendaEventCardPalette(
         surface: colors.background.neutralsSurface,
         border: colors.border.brandAlternative,
-        leadingIconVariant: BebeLeadingIconVariant.brand,
-        chevronVariant: BebeCardChevronVariant.brand,
+        iconSurface: colors.background.brandSurface,
+        iconContent: colors.text.brandDefault,
+        chevronContent: colors.text.brandDefault,
       ),
+
       BebeAgendaEventCardVariant.accent => BebeAgendaEventCardPalette(
         surface: colors.background.neutralsSurface,
         border: colors.border.accentAlternative,
-        leadingIconVariant: BebeLeadingIconVariant.accent,
-        chevronVariant: BebeCardChevronVariant.accent,
+        iconSurface: colors.background.accentSurface,
+        iconContent: colors.icons.accentDefault,
+        chevronContent: colors.icons.accentDefault,
       ),
+
       BebeAgendaEventCardVariant.information => BebeAgendaEventCardPalette(
         surface: colors.background.neutralsSurface,
         border: colors.border.infoDefault,
-        leadingIconVariant: BebeLeadingIconVariant.information,
-        chevronVariant: BebeCardChevronVariant.information,
+        iconSurface: colors.background.infoSurface,
+        iconContent: colors.text.infoDefault,
+        chevronContent: colors.text.infoDefault,
       ),
+
       BebeAgendaEventCardVariant.warning => BebeAgendaEventCardPalette(
         surface: colors.background.neutralsSurface,
         border: colors.border.warningDefault,
-        leadingIconVariant: BebeLeadingIconVariant.warning,
-        chevronVariant: BebeCardChevronVariant.neutral,
+        iconSurface: colors.background.warningSurface,
+        iconContent: colors.text.warningDefault,
+        chevronContent: colors.icons.neutralAlternative,
       ),
+
       BebeAgendaEventCardVariant.success => BebeAgendaEventCardPalette(
         surface: colors.background.neutralsSurface,
         border: colors.border.successDefault,
-        leadingIconVariant: BebeLeadingIconVariant.success,
-        chevronVariant: BebeCardChevronVariant.neutral,
+        iconSurface: colors.background.successSurface,
+        iconContent: colors.text.successDefault,
+        chevronContent: colors.icons.neutralAlternative,
       ),
     };
   }

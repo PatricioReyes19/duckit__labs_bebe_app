@@ -1,4 +1,4 @@
 export 'atoms/atoms.dart';
 export 'molecules/molecules.dart';
-export 'Organisms/Organisms.dart';
+export 'organisms/organisms.dart';
 export 'templates/templates.dart';

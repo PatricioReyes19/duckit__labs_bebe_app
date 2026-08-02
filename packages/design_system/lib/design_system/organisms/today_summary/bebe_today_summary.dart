@@ -1,51 +1,44 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-class BebeTodayMetricData {
-  const BebeTodayMetricData({
-    required this.type,
-    required this.label,
-    required this.value,
-    required this.unit,
-    required this.lastLabel,
-    required this.lastValue,
-    required this.icon,
-    this.semanticLabel,
-  });
-
-  final BebeTodayMetricType type;
-  final String label;
-  final String value;
-  final String unit;
-  final String lastLabel;
-  final String lastValue;
-  final Widget icon;
-  final String? semanticLabel;
-}
-
 class BebeTodaySummary extends StatelessWidget {
   const BebeTodaySummary({
     required this.items,
-    this.title = 'Resumen de hoy',
-    this.actionLabel = 'Ver más',
-    this.onViewMorePressed,
+    required this.title,
+    this.actionLabel,
+    this.onActionPressed,
     super.key,
   });
 
   final List<BebeTodayMetricData> items;
   final String title;
-  final String actionLabel;
-  final VoidCallback? onViewMorePressed;
+
+  /// Texto de la acción opcional del encabezado.
+  ///
+  /// Debe proporcionarse junto con [onActionPressed].
+  final String? actionLabel;
+
+  /// Acción opcional del encabezado.
+  ///
+  /// Debe proporcionarse junto con [actionLabel].
+  final VoidCallback? onActionPressed;
 
   static const int _maximumInlineItems = 3;
-  static const double _minimumInlineCardWidth = 96;
-  static const double _carouselCardWidth = 116;
-  static const double _carouselHeight = 168;
+
+  /// Ancho mínimo que necesita una métrica para conservar el layout inline.
+  static const double _minimumInlineCardWidth = 120;
+
+  /// Ancho estructural utilizado por las cards de la lista horizontal.
+  static const double _horizontalCardWidth = 132;
+
+  /// Altura reservada para el patrón compacto de Today Summary.
+  static const double _horizontalListHeight = 200;
+
+  static const double _accessibleHorizontalListHeight = 232;
+  static const double _maximumInlineTextScale = 1.3;
 
   @override
   Widget build(BuildContext context) {
-    assert(items.isNotEmpty, 'BebeTodaySummary requires at least one item.');
-
     final spacing = context.theme.spacing;
 
     return SizedBox(
@@ -56,68 +49,45 @@ class BebeTodaySummary extends StatelessWidget {
           BebeTitleSection(
             title: title,
             actionLabel: actionLabel,
-            onActionPressed: onViewMorePressed,
+            onActionPressed: onActionPressed,
           ),
-          SizedBox(height: spacing.spacingXl),
+          SizedBox(height: spacing.spacingL),
           LayoutBuilder(
             builder: (context, constraints) {
-              final inlineCount = items.length.clamp(1, _maximumInlineItems);
+              final textScale = MediaQuery.textScalerOf(context).scale(1);
 
-              final totalGap = spacing.spacingL * (inlineCount - 1);
+              final inlineCount = items.length
+                  .clamp(1, _maximumInlineItems)
+                  .toInt();
 
-              final availableWidth = constraints.maxWidth - totalGap;
+              final totalSpacing = spacing.spacingL * (inlineCount - 1);
 
+              final availableWidth = constraints.maxWidth - totalSpacing;
               final inlineCardWidth = availableWidth / inlineCount;
 
-              final shouldUseCarousel =
+              final shouldUseHorizontalList =
                   items.length > _maximumInlineItems ||
-                  inlineCardWidth < _minimumInlineCardWidth;
+                  inlineCardWidth < _minimumInlineCardWidth ||
+                  textScale > _maximumInlineTextScale;
 
-              if (shouldUseCarousel) {
-                return _TodayMetricsCarousel(items: items);
+              if (shouldUseHorizontalList) {
+                return _TodayMetricsHorizontalList(
+                  items: items,
+                  textScale: textScale,
+                );
               }
 
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  for (var index = 0; index < items.length; index++) ...[
-                    Expanded(child: _buildMetricCard(items[index])),
-                    if (index < items.length - 1)
-                      SizedBox(width: spacing.spacingL),
-                  ],
-                ],
-              );
+              return _TodayMetricsInlineRow(items: items);
             },
           ),
         ],
       ),
     );
   }
-
-  Widget _buildMetricCard(BebeTodayMetricData item) {
-    return BebeMetricCard(
-      variant: _mapVariant(item.type),
-      label: item.label,
-      value: item.value,
-      unit: item.unit,
-      supportingLabel: item.lastLabel,
-      supportingValue: item.lastValue,
-      icon: item.icon,
-      semanticLabel: item.semanticLabel,
-    );
-  }
-
-  BebeMetricCardVariant _mapVariant(BebeTodayMetricType type) {
-    return switch (type) {
-      BebeTodayMetricType.feeding => BebeMetricCardVariant.feeding,
-      BebeTodayMetricType.sleep => BebeMetricCardVariant.sleep,
-      BebeTodayMetricType.diaper => BebeMetricCardVariant.diaper,
-    };
-  }
 }
 
-class _TodayMetricsCarousel extends StatelessWidget {
-  const _TodayMetricsCarousel({required this.items});
+class _TodayMetricsInlineRow extends StatelessWidget {
+  const _TodayMetricsInlineRow({required this.items});
 
   final List<BebeTodayMetricData> items;
 
@@ -125,41 +95,175 @@ class _TodayMetricsCarousel extends StatelessWidget {
   Widget build(BuildContext context) {
     final spacing = context.theme.spacing;
 
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var index = 0; index < items.length; index++) ...[
+          Expanded(child: _TodayMetricItem(data: items[index])),
+          if (index < items.length - 1) SizedBox(width: spacing.spacingL),
+        ],
+      ],
+    );
+  }
+}
+
+class _TodayMetricsHorizontalList extends StatelessWidget {
+  const _TodayMetricsHorizontalList({
+    required this.items,
+    required this.textScale,
+  });
+
+  final List<BebeTodayMetricData> items;
+  final double textScale;
+
+  @override
+  Widget build(BuildContext context) {
+    final spacing = context.theme.spacing;
+
+    final listHeight = textScale > BebeTodaySummary._maximumInlineTextScale
+        ? BebeTodaySummary._accessibleHorizontalListHeight
+        : BebeTodaySummary._horizontalListHeight;
+
     return SizedBox(
-      height: BebeTodaySummary._carouselHeight,
+      height: listHeight,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
+        padding: EdgeInsets.zero,
         itemCount: items.length,
-        separatorBuilder: (_, __) {
+        separatorBuilder: (_, _) {
           return SizedBox(width: spacing.spacingL);
         },
         itemBuilder: (context, index) {
-          final item = items[index];
-
           return SizedBox(
-            width: BebeTodaySummary._carouselCardWidth,
-            child: BebeMetricCard(
-              variant: _mapVariant(item.type),
-              label: item.label,
-              value: item.value,
-              unit: item.unit,
-              supportingLabel: item.lastLabel,
-              supportingValue: item.lastValue,
-              icon: item.icon,
-              semanticLabel: item.semanticLabel,
-            ),
+            width: BebeTodaySummary._horizontalCardWidth,
+            child: _TodayMetricItem(data: items[index]),
           );
         },
       ),
     );
   }
+}
 
-  BebeMetricCardVariant _mapVariant(BebeTodayMetricType type) {
-    return switch (type) {
-      BebeTodayMetricType.feeding => BebeMetricCardVariant.feeding,
-      BebeTodayMetricType.sleep => BebeMetricCardVariant.sleep,
-      BebeTodayMetricType.diaper => BebeMetricCardVariant.diaper,
+class _TodayMetricItem extends StatelessWidget {
+  const _TodayMetricItem({required this.data});
+
+  final BebeTodayMetricData data;
+
+  @override
+  Widget build(BuildContext context) {
+    return BebeMetricCard(
+      variant: data.variant,
+      label: data.label,
+      icon: data.icon,
+      value: data.value,
+      unit: data.unit,
+      supporting: _TodayMetricSupporting(
+        variant: data.variant,
+        label: data.lastLabel,
+        value: data.lastValue,
+      ),
+      onPressed: data.onPressed,
+      semanticLabel:
+          data.semanticLabel ??
+          '${data.label}. '
+              '${data.value}'
+              '${data.unit == null ? '' : ' ${data.unit}'}. '
+              '${data.lastLabel}. '
+              '${data.lastValue}.',
+    );
+  }
+}
+
+class _TodayMetricSupporting extends StatelessWidget {
+  const _TodayMetricSupporting({
+    required this.variant,
+    required this.label,
+    required this.value,
+  });
+
+  final BebeMetricCardVariant variant;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    final spacing = theme.spacing;
+    final typography = theme.typography;
+    final colors = theme.colors;
+
+    final contentColor = _resolveContentColor(colors);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: typography.styles.body.sm.regular.copyWith(
+            color: colors.text.neutralBody,
+          ),
+        ),
+        SizedBox(height: spacing.spacingXs),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: typography.styles.label.lg.semibold.copyWith(
+            color: contentColor,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Color _resolveContentColor(BebeColor colors) {
+    return switch (variant) {
+      BebeMetricCardVariant.feeding ||
+      BebeMetricCardVariant.brand => colors.text.brandDefault,
+
+      BebeMetricCardVariant.sleep ||
+      BebeMetricCardVariant.accent => colors.text.accentDefault,
+
+      BebeMetricCardVariant.diaper ||
+      BebeMetricCardVariant.warning => colors.text.warningDefault,
+
+      BebeMetricCardVariant.neutral => colors.text.neutralTitle,
+
+      BebeMetricCardVariant.information => colors.text.infoDefault,
+
+      BebeMetricCardVariant.success => colors.text.successDefault,
     };
   }
+}
+
+/// Modelo visual utilizado por [BebeTodaySummary].
+///
+/// Representa una métrica breve del día actual. No contiene entidades,
+/// reglas de negocio, navegación ni estado de la feature.
+class BebeTodayMetricData {
+  const BebeTodayMetricData({
+    required this.variant,
+    required this.label,
+    required this.value,
+    required this.lastLabel,
+    required this.lastValue,
+    required this.icon,
+    this.unit,
+    this.onPressed,
+    this.semanticLabel,
+  });
+
+  final BebeMetricCardVariant variant;
+  final String label;
+  final String value;
+  final String? unit;
+  final String lastLabel;
+  final String lastValue;
+  final Widget icon;
+  final VoidCallback? onPressed;
+  final String? semanticLabel;
 }

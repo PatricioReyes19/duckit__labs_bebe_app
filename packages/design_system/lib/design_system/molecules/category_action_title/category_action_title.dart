@@ -59,7 +59,7 @@ class CategoryActionTile extends StatelessWidget {
       child: Material(
         color: surface,
         shape: RoundedRectangleBorder(
-          borderRadius: radius.xl,
+          borderRadius: radius.x3l,
           side: BorderSide(color: border, width: isSelected ? 2 : 1),
         ),
         clipBehavior: Clip.antiAlias,
@@ -98,7 +98,7 @@ class CategoryActionTile extends StatelessWidget {
                     ),
                     child: Center(
                       child: IconTheme(
-                        data: IconThemeData(color: content, size: 14),
+                        data: IconThemeData(color: content, size: 18),
                         child: icon,
                       ),
                     ),

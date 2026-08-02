@@ -1,0 +1,60 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "BebéApp - Debug",
+            "request": "launch",
+            "type": "dart",
+            "program": "${workspaceFolder}/apps/bebe_app/lib/main.dart",
+            "cwd": "${workspaceFolder}/apps/bebe_app",
+            "flutterMode": "debug"
+        },
+        {
+            "name": "Widgetbook - Debug",
+            "request": "launch",
+            "type": "dart",
+            "program": "${workspaceFolder}/apps/widgetbook/lib/main.dart",
+            "cwd": "${workspaceFolder}/apps/widgetbook",
+            "flutterMode": "debug"
+        },
+        {
+            "name": "Widgetbook - Chrome",
+            "request": "launch",
+            "type": "dart",
+            "program": "${workspaceFolder}/apps/widgetbook/lib/main.dart",
+            "cwd": "${workspaceFolder}/apps/widgetbook",
+            "deviceId": "chrome",
+            "flutterMode": "debug",
+            "args": [
+                "--web-port=8080"
+            ]
+        },
+        {
+            "name": "Widgetbook - Windows",
+            "request": "launch",
+            "type": "dart",
+            "program": "${workspaceFolder}/apps/widgetbook/lib/main.dart",
+            "cwd": "${workspaceFolder}/apps/widgetbook",
+            "deviceId": "windows",
+            "flutterMode": "debug"
+        },
+        {
+            "name": "Widgetbook - Profile",
+            "request": "launch",
+            "type": "dart",
+            "program": "${workspaceFolder}/apps/widgetbook/lib/main.dart",
+            "cwd": "${workspaceFolder}/apps/widgetbook",
+            "flutterMode": "profile"
+        }
+    ],
+    "compounds": [
+        {
+            "name": "BebéApp + Widgetbook",
+            "configurations": [
+                "BebéApp - Debug",
+                "Widgetbook - Chrome"
+            ],
+            "stopAll": true
+        }
+    ]
+}

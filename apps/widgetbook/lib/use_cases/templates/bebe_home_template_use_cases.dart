@@ -30,7 +30,7 @@ Widget homeTemplateDefault(BuildContext context) {
     todaySummary: const BebeTodaySummary(
       items: [
         BebeTodayMetricData(
-          type: BebeTodayMetricType.feeding,
+          variant: BebeMetricCardVariant.feeding,
           label: 'Alimentación',
           value: '5',
           unit: 'tomas',
@@ -39,7 +39,7 @@ Widget homeTemplateDefault(BuildContext context) {
           icon: Icon(LucideIcons.milk),
         ),
         BebeTodayMetricData(
-          type: BebeTodayMetricType.sleep,
+          variant: BebeMetricCardVariant.sleep,
           label: 'Sueño',
           value: '3',
           unit: 'h 45 min',
@@ -48,7 +48,7 @@ Widget homeTemplateDefault(BuildContext context) {
           icon: Icon(LucideIcons.moon),
         ),
         BebeTodayMetricData(
-          type: BebeTodayMetricType.diaper,
+          variant: BebeMetricCardVariant.diaper,
           label: 'Pañales',
           value: '6',
           unit: 'cambios',
@@ -57,6 +57,7 @@ Widget homeTemplateDefault(BuildContext context) {
           icon: Icon(LucideIcons.baby),
         ),
       ],
+      title: 'Actividad del día',
     ),
     quickActions: BebeQuickRegistrationActions(
       items: const [

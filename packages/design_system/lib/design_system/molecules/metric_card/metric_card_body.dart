@@ -2,10 +2,10 @@ import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
 class MetricCardValue extends StatelessWidget {
-  const MetricCardValue({super.key, required this.value, required this.unit});
+  const MetricCardValue({required this.value, this.unit, super.key});
 
   final String value;
-  final String unit;
+  final String? unit;
 
   @override
   Widget build(BuildContext context) {
@@ -14,30 +14,33 @@ class MetricCardValue extends StatelessWidget {
     final colors = theme.colors;
     final typography = theme.typography;
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
+    final effectiveUnit = unit?.trim();
+
+    return Wrap(
+      spacing: spacing.spacingS,
+      runSpacing: spacing.spacingXs,
+      crossAxisAlignment: WrapCrossAlignment.end,
       children: [
         Text(
           value,
           maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: typography.styles.headline.md.bold.copyWith(
             color: colors.text.neutralHeadline,
           ),
         ),
-        SizedBox(width: spacing.spacingS),
-        Expanded(
-          child: Padding(
+        if (effectiveUnit != null && effectiveUnit.isNotEmpty)
+          Padding(
             padding: EdgeInsets.only(bottom: spacing.spacingXs),
             child: Text(
-              unit,
+              effectiveUnit,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: typography.styles.body.sm.regular.copyWith(
-                color: colors.text.neutralTitle,
+                color: colors.text.neutralBody,
               ),
             ),
           ),
-        ),
       ],
     );
   }

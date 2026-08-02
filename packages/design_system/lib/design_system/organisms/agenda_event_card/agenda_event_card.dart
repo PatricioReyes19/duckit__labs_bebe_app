@@ -1,6 +1,8 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
+import 'event_card_palette.dart';
+
 class BebeAgendaEventCard extends StatelessWidget {
   const BebeAgendaEventCard({
     required this.time,
@@ -8,6 +10,7 @@ class BebeAgendaEventCard extends StatelessWidget {
     required this.title,
     this.description,
     this.variant = BebeAgendaEventCardVariant.neutral,
+    this.layout = BebeAgendaEventCardLayout.responsive,
     this.caregiver,
     this.status,
     this.syncIndicator,
@@ -21,6 +24,7 @@ class BebeAgendaEventCard extends StatelessWidget {
   final String title;
   final String? description;
   final BebeAgendaEventCardVariant variant;
+  final BebeAgendaEventCardLayout layout;
   final Widget? caregiver;
   final Widget? status;
   final Widget? syncIndicator;
@@ -30,101 +34,148 @@ class BebeAgendaEventCard extends StatelessWidget {
   static const double _compactBreakpoint = 360;
   static const double _leadingContainerSize = 44;
   static const double _leadingIconSize = 20;
+  static const double _chevronSlotWidth = 24;
   static const double _chevronIconSize = 20;
+
+  bool get _isInteractive => onPressed != null;
 
   @override
   Widget build(BuildContext context) {
     final theme = context.theme;
     final radius = theme.borderRadius;
     final elevation = theme.elevation;
-    final colors = theme.colors;
     final overlays = theme.overlays;
+    final colors = theme.colors;
 
-    final palette = _AgendaEventCardPalette.resolve(
+    final effectiveTitle = title.trim();
+    final effectiveDescription = _normalizeText(description);
+    final effectiveSemanticLabel = _normalizeText(semanticLabel);
+
+    final palette = BebeAgendaEventCardPalette.resolve(
       colors: colors,
       variant: variant,
     );
 
-    final material = Material(
-      color: colors.background.neutralsSurface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(radius.radius3xl),
-        side: BorderSide(color: colors.border.accentAlternative),
+    final borderRadius = BorderRadius.circular(radius.radius3xl);
+
+    final content = switch (layout) {
+      BebeAgendaEventCardLayout.carousel => _CarouselAgendaEventLayout(
+        time: time,
+        icon: icon,
+        title: effectiveTitle,
+        description: effectiveDescription,
+        caregiver: caregiver,
+        status: status,
+        syncIndicator: syncIndicator,
+        palette: palette,
+        showChevron: _isInteractive,
       ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onPressed,
-        overlayColor: WidgetStateProperty.resolveWith<Color?>((states) {
-          if (states.contains(WidgetState.pressed)) {
-            return overlays.interactionPressed;
-          }
 
-          if (states.contains(WidgetState.hovered)) {
-            return overlays.interactionHover;
-          }
-
-          if (states.contains(WidgetState.focused)) {
-            return overlays.interactionFocus;
-          }
-
-          return null;
-        }),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            if (constraints.maxWidth < _compactBreakpoint) {
-              return _CompactAgendaEventLayout(
-                time: time,
-                icon: icon,
-                title: title,
-                description: description,
-                caregiver: caregiver,
-                status: status,
-                syncIndicator: syncIndicator,
-                palette: palette,
-                showChevron: onPressed != null,
-              );
-            }
-
-            return _HorizontalAgendaEventLayout(
+      BebeAgendaEventCardLayout.responsive => LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth < _compactBreakpoint) {
+            return _CompactAgendaEventLayout(
               time: time,
               icon: icon,
-              title: title,
-              description: description,
+              title: effectiveTitle,
+              description: effectiveDescription,
               caregiver: caregiver,
               status: status,
               syncIndicator: syncIndicator,
               palette: palette,
-              showChevron: onPressed != null,
+              showChevron: _isInteractive,
             );
-          },
+          }
+
+          return _HorizontalAgendaEventLayout(
+            time: time,
+            icon: icon,
+            title: effectiveTitle,
+            description: effectiveDescription,
+            caregiver: caregiver,
+            status: status,
+            syncIndicator: syncIndicator,
+            palette: palette,
+            showChevron: _isInteractive,
+          );
+        },
+      ),
+    };
+
+    final materialContent = _isInteractive
+        ? InkWell(
+            onTap: onPressed,
+            overlayColor: WidgetStateProperty.resolveWith<Color?>((states) {
+              if (states.contains(WidgetState.pressed)) {
+                return overlays.interactionPressed;
+              }
+
+              if (states.contains(WidgetState.hovered)) {
+                return overlays.interactionHover;
+              }
+
+              if (states.contains(WidgetState.focused)) {
+                return overlays.interactionFocus;
+              }
+
+              return null;
+            }),
+            child: content,
+          )
+        : content;
+
+    final visualCard = SizedBox(
+      width: double.infinity,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: borderRadius,
+          boxShadow: elevation.low,
+        ),
+        child: Material(
+          color: palette.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: borderRadius,
+            side: BorderSide(color: palette.border),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: materialContent,
         ),
       ),
     );
 
+    final generatedSemanticLabel = [
+      effectiveTitle,
+      if (effectiveDescription != null) effectiveDescription,
+    ].join('. ');
+
+    final resolvedSemanticLabel =
+        effectiveSemanticLabel ?? generatedSemanticLabel;
+
+    if (_isInteractive) {
+      return Semantics(
+        container: true,
+        button: true,
+        enabled: true,
+        label: resolvedSemanticLabel,
+        child: ExcludeSemantics(child: visualCard),
+      );
+    }
+
     return Semantics(
       container: true,
-      button: onPressed != null,
-      enabled: onPressed != null,
-      label:
-          semanticLabel ??
-          [
-            title,
-            if (description != null && description!.trim().isNotEmpty)
-              description!.trim(),
-          ].join('. '),
-      child: ExcludeSemantics(
-        child: SizedBox(
-          width: double.infinity,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(radius.radius3xl),
-              boxShadow: elevation.low,
-            ),
-            child: material,
-          ),
-        ),
-      ),
+      label: resolvedSemanticLabel,
+      child: ExcludeSemantics(child: visualCard),
     );
+  }
+
+  static String? _normalizeText(String? value) {
+    final normalizedValue = value?.trim();
+
+    if (normalizedValue == null || normalizedValue.isEmpty) {
+      return null;
+    }
+
+    return normalizedValue;
   }
 }
 
@@ -148,7 +199,7 @@ class _HorizontalAgendaEventLayout extends StatelessWidget {
   final Widget? caregiver;
   final Widget? status;
   final Widget? syncIndicator;
-  final _AgendaEventCardPalette palette;
+  final BebeAgendaEventCardPalette palette;
   final bool showChevron;
 
   @override
@@ -188,7 +239,7 @@ class _HorizontalAgendaEventLayout extends StatelessWidget {
           ],
           if (showChevron) ...[
             SizedBox(width: spacing.spacingS),
-            _AgendaEventChevron(color: palette.chevronColor),
+            _AgendaEventChevron(color: palette.chevronContent),
           ],
         ],
       ),
@@ -216,7 +267,7 @@ class _CompactAgendaEventLayout extends StatelessWidget {
   final Widget? caregiver;
   final Widget? status;
   final Widget? syncIndicator;
-  final _AgendaEventCardPalette palette;
+  final BebeAgendaEventCardPalette palette;
   final bool showChevron;
 
   @override
@@ -232,8 +283,10 @@ class _CompactAgendaEventLayout extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Flexible(child: time),
-              const Spacer(),
-              if (showChevron) _AgendaEventChevron(color: palette.chevronColor),
+              if (showChevron) ...[
+                const Spacer(),
+                _AgendaEventChevron(color: palette.chevronContent),
+              ],
             ],
           ),
           SizedBox(height: spacing.spacingM),
@@ -269,11 +322,79 @@ class _CompactAgendaEventLayout extends StatelessWidget {
   }
 }
 
+class _CarouselAgendaEventLayout extends StatelessWidget {
+  const _CarouselAgendaEventLayout({
+    required this.time,
+    required this.icon,
+    required this.title,
+    required this.description,
+    required this.caregiver,
+    required this.status,
+    required this.syncIndicator,
+    required this.palette,
+    required this.showChevron,
+  });
+
+  final Widget time;
+  final Widget icon;
+  final String title;
+  final String? description;
+  final Widget? caregiver;
+  final Widget? status;
+  final Widget? syncIndicator;
+  final BebeAgendaEventCardPalette palette;
+  final bool showChevron;
+
+  @override
+  Widget build(BuildContext context) {
+    final spacing = context.theme.spacing;
+
+    return Padding(
+      padding: EdgeInsets.all(spacing.spacingL),
+      child: Column(
+        mainAxisSize: MainAxisSize.max,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              _AgendaEventLeading(icon: icon, palette: palette),
+              SizedBox(width: spacing.spacingM),
+              Expanded(
+                child: BebeInformationContent(
+                  title: title,
+                  description: description,
+                ),
+              ),
+              if (showChevron) ...[
+                SizedBox(width: spacing.spacingS),
+                _AgendaEventChevron(color: palette.chevronContent),
+              ],
+            ],
+          ),
+          SizedBox(height: spacing.spacingM),
+          Wrap(
+            spacing: spacing.spacingM,
+            runSpacing: spacing.spacingS,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              time,
+              if (status != null) status!,
+              if (syncIndicator != null) syncIndicator!,
+              if (caregiver != null) caregiver!,
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _AgendaEventLeading extends StatelessWidget {
   const _AgendaEventLeading({required this.icon, required this.palette});
 
   final Widget icon;
-  final _AgendaEventCardPalette palette;
+  final BebeAgendaEventCardPalette palette;
 
   @override
   Widget build(BuildContext context) {
@@ -288,7 +409,7 @@ class _AgendaEventLeading extends StatelessWidget {
           child: IconTheme(
             data: IconThemeData(
               size: BebeAgendaEventCard._leadingIconSize,
-              color: palette.iconColor,
+              color: palette.iconContent,
             ),
             child: icon,
           ),
@@ -305,60 +426,16 @@ class _AgendaEventChevron extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Icon(
-      Icons.chevron_right_rounded,
-      size: BebeAgendaEventCard._chevronIconSize,
-      color: color,
+    return SizedBox(
+      width: BebeAgendaEventCard._chevronSlotWidth,
+      child: Align(
+        alignment: Alignment.centerRight,
+        child: Icon(
+          Icons.chevron_right_rounded,
+          size: BebeAgendaEventCard._chevronIconSize,
+          color: color,
+        ),
+      ),
     );
-  }
-}
-
-class _AgendaEventCardPalette {
-  const _AgendaEventCardPalette({
-    required this.iconSurface,
-    required this.iconColor,
-    required this.chevronColor,
-  });
-
-  final Color iconSurface;
-  final Color iconColor;
-  final Color chevronColor;
-
-  static _AgendaEventCardPalette resolve({
-    required BebeColor colors,
-    required BebeAgendaEventCardVariant variant,
-  }) {
-    return switch (variant) {
-      BebeAgendaEventCardVariant.neutral => _AgendaEventCardPalette(
-        iconSurface: colors.background.neutralsActive,
-        iconColor: colors.icons.neutralAlternative,
-        chevronColor: colors.icons.neutralAlternative,
-      ),
-      BebeAgendaEventCardVariant.brand => _AgendaEventCardPalette(
-        iconSurface: colors.background.brandSurface,
-        iconColor: colors.text.brandDefault,
-        chevronColor: colors.text.brandDefault,
-      ),
-      BebeAgendaEventCardVariant.accent => _AgendaEventCardPalette(
-        iconSurface: colors.background.accentSurface,
-        iconColor: colors.icons.accentDefault,
-        chevronColor: colors.icons.accentDefault,
-      ),
-      BebeAgendaEventCardVariant.information => _AgendaEventCardPalette(
-        iconSurface: colors.background.infoSurface,
-        iconColor: colors.text.infoDefault,
-        chevronColor: colors.text.brandDefault,
-      ),
-      BebeAgendaEventCardVariant.warning => _AgendaEventCardPalette(
-        iconSurface: colors.background.warningSurface,
-        iconColor: colors.text.warningDefault,
-        chevronColor: colors.text.brandDefault,
-      ),
-      BebeAgendaEventCardVariant.success => _AgendaEventCardPalette(
-        iconSurface: colors.background.successSurface,
-        iconColor: colors.text.successDefault,
-        chevronColor: colors.text.brandDefault,
-      ),
-    };
   }
 }
