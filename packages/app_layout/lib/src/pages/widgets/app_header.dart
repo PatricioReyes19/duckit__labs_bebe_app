@@ -23,7 +23,8 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    final resolvedLeading = leading ??
+    final resolvedLeading =
+        leading ??
         (showBackButton
             ? IconButton(
                 onPressed: () {
@@ -43,11 +44,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
       scrolledUnderElevation: 0,
       centerTitle: centerTitle,
       leading: resolvedLeading,
-      title: Text(
-        title,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
+      title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
       actions: actions,
       shape: showDivider
           ? Border(

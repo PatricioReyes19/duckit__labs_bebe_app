@@ -24,6 +24,7 @@ dependencies:
   health:
   home:
   injectable: ^2.7.1+4
+  shared_preferences: ^2.5.5
 
 
 

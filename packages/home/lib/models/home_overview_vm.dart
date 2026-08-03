@@ -66,8 +66,11 @@ class HomeSiblingVm extends Equatable {
 }
 
 enum HomeMetricType { feeding, sleep, diaper }
+
 enum HomeQuickActionKind { feeding, sleep, diaper, observation, medicine }
+
 enum HomeUpcomingHealthKind { control, vaccine, medicine }
+
 enum HomeRecentStatus { success, warning, information }
 
 class HomeTodayMetricVm extends Equatable {

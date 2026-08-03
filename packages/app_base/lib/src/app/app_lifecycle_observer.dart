@@ -9,8 +9,7 @@ class AppLifecycleObserver extends StatefulWidget {
   final Widget child;
 
   @override
-  State<AppLifecycleObserver> createState() =>
-      _AppLifecycleObserverState();
+  State<AppLifecycleObserver> createState() => _AppLifecycleObserverState();
 }
 
 class _AppLifecycleObserverState extends State<AppLifecycleObserver>

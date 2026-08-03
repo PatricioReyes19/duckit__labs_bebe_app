@@ -24,7 +24,7 @@ class AppBottomBar extends StatelessWidget {
       builder: (context, state) {
         final enabledTabs = state.tabs.isEmpty
             ? (tabs.where((tab) => tab.enabled).toList()
-              ..sort((a, b) => a.order.compareTo(b.order)))
+                ..sort((a, b) => a.order.compareTo(b.order)))
             : state.tabs;
 
         if (enabledTabs.length != 4) {
@@ -48,13 +48,11 @@ class AppBottomBar extends StatelessWidget {
                     Expanded(
                       child: _Item(
                         tab: tab,
-                        active: enabledTabs.indexOf(tab) ==
+                        active:
+                            enabledTabs.indexOf(tab) ==
                             state.activeDisplayIndex,
-                        onTap: () => _onTabTap(
-                          context,
-                          tab,
-                          enabledTabs.indexOf(tab),
-                        ),
+                        onTap: () =>
+                            _onTabTap(context, tab, enabledTabs.indexOf(tab)),
                       ),
                     ),
                   SizedBox(
@@ -71,13 +69,11 @@ class AppBottomBar extends StatelessWidget {
                     Expanded(
                       child: _Item(
                         tab: tab,
-                        active: enabledTabs.indexOf(tab) ==
+                        active:
+                            enabledTabs.indexOf(tab) ==
                             state.activeDisplayIndex,
-                        onTap: () => _onTabTap(
-                          context,
-                          tab,
-                          enabledTabs.indexOf(tab),
-                        ),
+                        onTap: () =>
+                            _onTabTap(context, tab, enabledTabs.indexOf(tab)),
                       ),
                     ),
                 ],
@@ -134,11 +130,7 @@ class AppBottomBar extends StatelessWidget {
 }
 
 class _Item extends StatelessWidget {
-  const _Item({
-    required this.tab,
-    required this.active,
-    required this.onTap,
-  });
+  const _Item({required this.tab, required this.active, required this.onTap});
 
   final AppLayoutTabConfig tab;
   final bool active;
@@ -174,8 +166,7 @@ class _Item extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: color,
-                    fontWeight:
-                        active ? FontWeight.w600 : FontWeight.w400,
+                    fontWeight: active ? FontWeight.w600 : FontWeight.w400,
                   ),
                 ),
               ],
@@ -232,9 +223,9 @@ class _PrimaryAction extends StatelessWidget {
                 child: Text(
                   label,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: colors.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    color: colors.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],

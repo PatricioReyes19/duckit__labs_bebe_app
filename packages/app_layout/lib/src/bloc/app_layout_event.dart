@@ -17,23 +17,19 @@ sealed class AppLayoutEvent with _$AppLayoutEvent {
     required String tabId,
   }) = _TabChanged;
 
-  const factory AppLayoutEvent.toggleBottomBar({
-    required bool show,
-  }) = _ToggleBottomBar;
+  const factory AppLayoutEvent.toggleBottomBar({required bool show}) =
+      _ToggleBottomBar;
 
-  const factory AppLayoutEvent.toggleHeader({
-    required bool show,
-  }) = _ToggleHeader;
+  const factory AppLayoutEvent.toggleHeader({required bool show}) =
+      _ToggleHeader;
 
-  const factory AppLayoutEvent.togglePrimaryAction({
-    required bool show,
-  }) = _TogglePrimaryAction;
+  const factory AppLayoutEvent.togglePrimaryAction({required bool show}) =
+      _TogglePrimaryAction;
 
   const factory AppLayoutEvent.togglePrimaryActionExpanded({
     required bool expanded,
   }) = _TogglePrimaryActionExpanded;
 
-  const factory AppLayoutEvent.scrollToTop({
-    required String tabId,
-  }) = _ScrollToTop;
+  const factory AppLayoutEvent.scrollToTop({required String tabId}) =
+      _ScrollToTop;
 }

@@ -20,10 +20,10 @@ class AppLayoutVisibilityRule {
     required String path,
     required AppLayoutChromeConfig chrome,
   }) : this(
-          path: path,
-          chrome: chrome,
-          matchType: AppLayoutRouteMatchType.prefix,
-        );
+         path: path,
+         chrome: chrome,
+         matchType: AppLayoutRouteMatchType.prefix,
+       );
 
   final String path;
   final AppLayoutChromeConfig chrome;
