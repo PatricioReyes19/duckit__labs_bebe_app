@@ -23,6 +23,7 @@ dependencies:
   go_router: ^16.3.0
   health:
   home:
+  injectable: ^2.7.1+4
 
 
 

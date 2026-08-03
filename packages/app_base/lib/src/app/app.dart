@@ -30,7 +30,6 @@ class App extends StatelessWidget {
           child: Builder(
             builder: (context) {
               final router = _resolveRouter();
-
               return AppLifecycleObserver(
                 child: MaterialApp.router(
                   title: 'DuckIT BebéApp',
@@ -50,8 +49,7 @@ class App extends StatelessWidget {
                   themeMode: ThemeMode.system,
                   locale: const Locale('es', 'CL'),
                   supportedLocales: const [Locale('es', 'CL')],
-                  localizationsDelegates:
-                      GlobalMaterialLocalizations.delegates,
+                  localizationsDelegates: GlobalMaterialLocalizations.delegates,
                   builder: (context, child) => AppWrappers(
                     child: child ?? const SizedBox.shrink(),
                   ),

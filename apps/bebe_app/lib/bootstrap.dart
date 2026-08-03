@@ -25,10 +25,10 @@ Future<void> bootstrap() async {
       };
 
       try {
+        await setupAppBaseDependencies();
         await setupDependencies();
 
-        PaintingBinding.instance.imageCache.maximumSizeBytes =
-            300 << 20;
+        PaintingBinding.instance.imageCache.maximumSizeBytes = 300 << 20;
 
         runApp(
           const AppBuilder(
