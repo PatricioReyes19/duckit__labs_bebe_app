@@ -72,7 +72,7 @@ class BebeAvatar extends StatelessWidget {
         fit: BoxFit.cover,
         width: size.value,
         height: size.value,
-        errorBuilder: (_, __, ___) =>
+        errorBuilder: (_, _, _) =>
             _FallbackIcon(icon: fallbackIcon, color: colors.primary),
       );
     } else if (initials != null) {

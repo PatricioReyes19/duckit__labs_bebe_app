@@ -2,11 +2,12 @@ name: duckit_labs_bebe_app_workspace
 publish_to: none
 
 environment:
-  sdk: ">=3.11.0 <4.0.0"
+  sdk: ">=3.6.0 <4.0.0"
 
 workspace:
   - apps/bebe_app
   - apps/widgetbook
+  - packages/app_base
   - packages/app_layout
   - packages/core
   - packages/design_system

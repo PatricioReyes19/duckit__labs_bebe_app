@@ -1,8 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-import 'indicator_dot_variant.dart';
-
 class IndicatorDotPalette {
   const IndicatorDotPalette({required this.color});
 

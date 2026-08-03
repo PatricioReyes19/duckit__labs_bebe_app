@@ -1,5 +1,4 @@
 import 'package:design_system/design_system.dart';
-import 'package:design_system/themes/theme_data.dart';
 import 'package:flutter/material.dart';
 
 extension BebeThemeContext on BuildContext {

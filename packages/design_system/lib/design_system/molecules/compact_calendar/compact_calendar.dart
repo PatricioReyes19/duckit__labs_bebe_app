@@ -1,8 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-import 'compact_calendar_day_data.dart';
-
 class BebeCompactCalendar extends StatelessWidget {
   const BebeCompactCalendar({
     required this.monthLabel,

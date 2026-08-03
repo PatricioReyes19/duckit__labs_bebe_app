@@ -1,4 +1,5 @@
 library;
 
-export 'src/app/bebe_app.dart';
+export 'src/app/app.dart';
+export 'src/app/app_builder.dart';
 export 'src/dependencies/dependencies.dart';

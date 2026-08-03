@@ -16,9 +16,9 @@ platforms:
 dependencies:
   flutter:
     sdk: flutter
-
   app_base:
-    path: ../../packages/app_base
+  core:
+  design_system:
 
   cupertino_icons: ^1.0.8
 

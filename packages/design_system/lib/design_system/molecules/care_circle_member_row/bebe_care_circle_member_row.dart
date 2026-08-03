@@ -127,12 +127,15 @@ class BebeCareCircleMemberRow extends StatelessWidget {
             child: InkWell(
               onTap: onPressed,
               overlayColor: WidgetStateProperty.resolveWith<Color?>((states) {
-                if (states.contains(WidgetState.pressed))
+                if (states.contains(WidgetState.pressed)) {
                   return overlays.interactionPressed;
-                if (states.contains(WidgetState.hovered))
+                }
+                if (states.contains(WidgetState.hovered)) {
                   return overlays.interactionHover;
-                if (states.contains(WidgetState.focused))
+                }
+                if (states.contains(WidgetState.focused)) {
                   return overlays.interactionFocus;
+                }
                 return null;
               }),
               child: content,
@@ -145,7 +148,7 @@ class BebeCareCircleMemberRow extends StatelessWidget {
         [
           effectiveName,
           effectiveRole,
-          if (effectiveAccessDescription != null) effectiveAccessDescription,
+          ?effectiveAccessDescription,
           _statusSemanticText,
         ].join('. ');
     return Semantics(

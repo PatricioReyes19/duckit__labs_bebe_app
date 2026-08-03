@@ -1,148 +1,123 @@
-import 'package:app_base/src/router/routes.dart';
+import 'package:agenda/agenda.dart';
+import 'package:app_layout/app_layout.dart';
+import 'package:family/family.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:health/health.dart';
+import 'package:home/home.dart';
 
-final appRouter = GoRouter(
-  initialLocation: AppRoutes.splash,
-  routes: [
-    GoRoute(
-      path: AppRoutes.splash,
-      name: 'splash',
-      builder: (context, state) {
-        return const _SplashPage();
-      },
-    ),
-    GoRoute(
-      path: AppRoutes.home,
-      name: 'home',
-      builder: (context, state) {
-        return const _HomePage();
-      },
-    ),
-  ],
-);
+import '../dependencies/dependencies.dart';
+import 'app_layout_configuration.dart';
 
-class _SplashPage extends StatefulWidget {
-  const _SplashPage();
+final rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
+final homeNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'home');
+final agendaNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'agenda');
+final healthNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'health');
+final familyNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'family');
 
-  @override
-  State<_SplashPage> createState() => _SplashPageState();
-}
-
-class _SplashPageState extends State<_SplashPage> {
-  @override
-  void initState() {
-    super.initState();
-
-    Future<void>.delayed(const Duration(milliseconds: 600), () {
-      if (!mounted) return;
-      context.go(AppRoutes.home);
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: Color(0xFF2F7194),
-      body: Center(
-        child: Text(
-          'DuckIT BebéApp',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 28,
-            fontWeight: FontWeight.w700,
+GoRouter createAppRouter() {
+  return GoRouter(
+    navigatorKey: rootNavigatorKey,
+    initialLocation: HomePage.fullPath,
+    routes: [
+      AppLayoutPage(
+        appLayoutBloc: (_) => getIt<AppLayoutBloc>(),
+        routes: [
+          StatefulShellRoute.indexedStack(
+            builder: (context, state, navigationShell) {
+              return AppLayoutView(
+                state: state,
+                navigationShell: navigationShell,
+                tabs: appLayoutTabs,
+                visibilityPolicy: appLayoutVisibilityPolicy,
+                defaultTitle: 'BebéApp',
+                defaultHeaderActions: [
+                  IconButton(
+                    onPressed: () => context.push('/notifications'),
+                    icon: const Icon(Icons.notifications_none_rounded),
+                  ),
+                ],
+                onPrimaryActionPressed: () => context.push('/register'),
+                child: navigationShell,
+              );
+            },
+            branches: [
+              StatefulShellBranch(
+                navigatorKey: homeNavigatorKey,
+                routes: [
+                  HomePage(
+                    homeBloc: (_) => getIt<HomeBloc>(),
+                    openNotifications: (context) =>
+                        context.push('/notifications'),
+                    openRegister: (context, actionId) =>
+                        context.push('/register?type=$actionId'),
+                    openAgenda: (context) => context.go(AgendaPage.fullPath),
+                    openHealth: (context) => context.go(HealthPage.fullPath),
+                  ),
+                ],
+              ),
+              StatefulShellBranch(
+                navigatorKey: agendaNavigatorKey,
+                routes: [
+                  AgendaPage(
+                    agendaBloc: (_) => getIt<AgendaBloc>(),
+                  ),
+                ],
+              ),
+              StatefulShellBranch(
+                navigatorKey: healthNavigatorKey,
+                routes: [
+                  HealthPage(
+                    healthBloc: (_) => getIt<HealthBloc>(),
+                  ),
+                ],
+              ),
+              StatefulShellBranch(
+                navigatorKey: familyNavigatorKey,
+                routes: [
+                  FamilyPage(
+                    familyBloc: (_) => getIt<FamilyBloc>(),
+                    routes: [
+                      SettingsPage(
+                        settingsBloc: (_) => getIt<SettingsBloc>(),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
           ),
-        ),
+        ],
       ),
-    );
-  }
+      GoRoute(
+        path: '/register',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, __) => const _PendingPage(title: 'Registrar'),
+      ),
+      GoRoute(
+        path: '/notifications',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, __) => const _PendingPage(title: 'Notificaciones'),
+      ),
+    ],
+  );
 }
 
-class _HomePage extends StatelessWidget {
-  const _HomePage();
+class _PendingPage extends StatelessWidget {
+  const _PendingPage({required this.title});
+
+  final String title;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F7F8),
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Franco Reyes González'),
-        backgroundColor: const Color(0xFF2F7194),
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        title: Text(title),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: const [
-          Text(
-            '1 mes · 2 días',
-            style: TextStyle(color: Color(0xFF6B7280), fontSize: 14),
-          ),
-          SizedBox(height: 16),
-          _MetricCard(title: 'Última toma', value: 'Hace 1h 20m'),
-          SizedBox(height: 12),
-          _MetricCard(title: 'Próxima toma', value: 'En 40m'),
-          SizedBox(height: 12),
-          _AlertCard(),
-        ],
-      ),
-    );
-  }
-}
-
-class _MetricCard extends StatelessWidget {
-  const _MetricCard({required this.title, required this.value});
-
-  final String title;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Icon(Icons.child_care, color: Color(0xFF2F7194)),
-            SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title),
-                Text(
-                  value,
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _AlertCard extends StatelessWidget {
-  const _AlertCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      color: Color(0xFFFFEEE8),
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.deepOrange),
-            SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'Vacuna pendiente: Hexavalente 2.a dosis',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ),
-          ],
-        ),
-      ),
+      body: Center(child: Text('$title: package pendiente')),
     );
   }
 }

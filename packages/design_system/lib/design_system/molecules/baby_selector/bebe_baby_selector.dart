@@ -1,8 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-import '../../atoms/avatar/bebe_avatar.dart';
-
 class BebeBabySelector extends StatelessWidget {
   const BebeBabySelector({
     required this.name,

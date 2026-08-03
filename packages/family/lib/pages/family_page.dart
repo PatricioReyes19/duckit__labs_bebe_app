@@ -1,12 +1,29 @@
 import 'package:family/family.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
-class FamilyPage extends StatelessWidget {
-  const FamilyPage({super.key});
-  @override
-  Widget build(BuildContext context) => BlocProvider(
-    create: (_) => FamilyBloc()..add(const FamilyStarted()),
-    child: const FamilyView(),
-  );
+typedef FamilyBlocFactory = FamilyBloc Function(BuildContext context);
+
+class FamilyPage extends GoRoute {
+  FamilyPage({required FamilyBlocFactory familyBloc, super.name, super.routes})
+    : super(
+        path: fullPath,
+        pageBuilder: (context, state) {
+          return CupertinoPage<void>(
+            key: const ValueKey('family'),
+            name: name ?? nameRoute,
+            child: BlocProvider(
+              create: (context) =>
+                  familyBloc(context)..add(const FamilyEvent.started()),
+              child: const FamilyView(),
+            ),
+          );
+        },
+      );
+
+  static const nameRoute = 'Family';
+  static const fullPath = '/family';
+
+  static void open(BuildContext context) => context.go(fullPath);
 }

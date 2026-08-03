@@ -221,8 +221,8 @@ class BebeFamilyContextHeader extends StatelessWidget {
     final generatedSemanticLabel = [
       effectiveFamilyName,
       effectiveBabyName,
-      if (effectiveBabyAge != null) effectiveBabyAge,
-      if (effectiveSupportingText != null) effectiveSupportingText,
+      ?effectiveBabyAge,
+      ?effectiveSupportingText,
     ].join('. ');
 
     final resolvedSemanticLabel =

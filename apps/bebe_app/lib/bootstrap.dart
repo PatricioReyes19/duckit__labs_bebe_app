@@ -5,45 +5,45 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'dependencies/dependencies.dart';
+
 Future<void> bootstrap() async {
   await runZonedGuarded(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
-      await configureDependencies();
 
       await SystemChrome.setPreferredOrientations([
         DeviceOrientation.portraitUp,
       ]);
 
-      FlutterError.onError = (details) {
-        FlutterError.presentError(details);
-
-        if (kDebugMode) {
-          debugPrint(
-            '[BebéApp][Flutter] ${details.exceptionAsString()}',
-          );
-          debugPrintStack(stackTrace: details.stack);
-        }
-      };
+      FlutterError.onError = FlutterError.presentError;
 
       PlatformDispatcher.instance.onError = (error, stack) {
-        if (kDebugMode) {
-          debugPrint(
-            '[BebéApp][Platform] $error',
-          );
-          debugPrintStack(stackTrace: stack);
-        }
-
+        debugPrint('Platform error: $error');
+        debugPrintStack(stackTrace: stack);
         return true;
       };
 
-      runApp(const BebeApp());
+      try {
+        await setupDependencies();
+
+        PaintingBinding.instance.imageCache.maximumSizeBytes =
+            300 << 20;
+
+        runApp(
+          const AppBuilder(
+            app: App(),
+          ),
+        );
+      } on Object catch (error, stack) {
+        debugPrint('Bootstrap error: $error');
+        debugPrintStack(stackTrace: stack);
+        runApp(const AppError());
+      }
     },
     (error, stackTrace) {
-      if (kDebugMode) {
-        debugPrint('Zoned error: $error');
-        debugPrintStack(stackTrace: stackTrace);
-      }
+      debugPrint('Zoned error: $error');
+      debugPrintStack(stackTrace: stackTrace);
     },
   );
 }

@@ -1,9 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-import 'status_badge_palette.dart';
-import 'status_badge_variant.dart';
-
 class BebeStatusBadge extends StatelessWidget {
   const BebeStatusBadge({
     required this.label,

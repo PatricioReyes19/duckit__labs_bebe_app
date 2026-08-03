@@ -106,7 +106,7 @@ class _BebeAgendaCategoryFiltersState extends State<BebeAgendaCategoryFilters> {
       physics: const BouncingScrollPhysics(),
       padding: EdgeInsets.symmetric(horizontal: spacing.spacingXs),
       itemCount: widget.items.length,
-      separatorBuilder: (_, __) {
+      separatorBuilder: (_, _) {
         return SizedBox(width: spacing.spacingS);
       },
       itemBuilder: (context, index) {

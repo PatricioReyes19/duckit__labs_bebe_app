@@ -2,7 +2,6 @@ import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
 import 'indicator_dot_palette.dart';
-import 'indicator_dot_variant.dart';
 
 class BebeIndicatorDot extends StatelessWidget {
   const BebeIndicatorDot({

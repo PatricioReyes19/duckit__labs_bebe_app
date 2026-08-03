@@ -1,17 +1,195 @@
+import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:home/home.dart';
+import 'package:home/models/home_overview_vm.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class HomeView extends StatelessWidget {
-  const HomeView({super.key});
+  const HomeView({
+    required this.openNotifications,
+    required this.openRegister,
+    required this.openAgenda,
+    required this.openHealth,
+    super.key,
+  });
+
+  final void Function(BuildContext context) openNotifications;
+  final void Function(BuildContext context, String actionId) openRegister;
+  final void Function(BuildContext context) openAgenda;
+  final void Function(BuildContext context) openHealth;
+
   @override
-  Widget build(BuildContext context) => BlocBuilder<HomeBloc, HomeState>(
-      builder: (context, state) => switch (state) {
-            HomeInitial() ||
-            HomeLoading() =>
-              const Center(child: CircularProgressIndicator()),
-            HomeFailure(:final message) => Center(child: Text(message)),
-            HomeLoaded() =>
-              const SizedBox.expand(child: Center(child: Text('Home'))),
-          });
+  Widget build(BuildContext context) {
+    return BlocBuilder<HomeBloc, HomeState>(
+      builder: (context, state) {
+        return switch (state) {
+          HomeInitial() || HomeLoading() => const BebeHomeTemplate(
+              title: 'BebéApp',
+              isLoading: true,
+              activeBabyHeader: SizedBox.shrink(),
+              todaySummary: SizedBox.shrink(),
+              quickActions: SizedBox.shrink(),
+              upcomingHealth: SizedBox.shrink(),
+              recentInformation: SizedBox.shrink(),
+            ),
+          HomeFailure(:final message) => BebeHomeTemplate(
+              title: 'BebéApp',
+              errorMessage: message,
+              onRetry: () {
+                context.read<HomeBloc>().add(const HomeEvent.retried());
+              },
+              activeBabyHeader: const SizedBox.shrink(),
+              todaySummary: const SizedBox.shrink(),
+              quickActions: const SizedBox.shrink(),
+              upcomingHealth: const SizedBox.shrink(),
+              recentInformation: const SizedBox.shrink(),
+            ),
+          HomeLoaded(:final overview) => _LoadedHome(
+              overview: overview,
+              openNotifications: openNotifications,
+              openRegister: openRegister,
+              openAgenda: openAgenda,
+              openHealth: openHealth,
+            ),
+        };
+      },
+    );
+  }
+}
+
+class _LoadedHome extends StatelessWidget {
+  const _LoadedHome({
+    required this.overview,
+    required this.openNotifications,
+    required this.openRegister,
+    required this.openAgenda,
+    required this.openHealth,
+  });
+
+  final HomeOverviewVm overview;
+  final void Function(BuildContext context) openNotifications;
+  final void Function(BuildContext context, String actionId) openRegister;
+  final void Function(BuildContext context) openAgenda;
+  final void Function(BuildContext context) openHealth;
+
+  @override
+  Widget build(BuildContext context) {
+    final baby = overview.activeBaby;
+    final health = overview.upcomingHealth;
+    final recent = overview.recentInformation;
+
+    return BebeHomeTemplate(
+      title: 'BebéApp',
+      onNotificationPressed: () => openNotifications(context),
+      activeBabyHeader: BebeActiveBabyHeader(
+        name: baby.name,
+        ageLabel: baby.ageLabel,
+        avatar: AssetImage(baby.avatarAssetPath),
+        familyContextLabel: baby.familyContextLabel,
+        sibling: baby.sibling == null
+            ? null
+            : BebeSiblingSummaryData(
+                name: baby.sibling!.name,
+                ageLabel: baby.sibling!.ageLabel,
+                avatar: AssetImage(baby.sibling!.avatarAssetPath),
+              ),
+      ),
+      todaySummary: BebeTodaySummary(
+        title: 'Actividad del día',
+        items: overview.todayMetrics.map(_metric).toList(growable: false),
+      ),
+      quickActions: BebeQuickRegistrationActions(
+        items: overview.quickActions.map(_action).toList(growable: false),
+        onItemPressed: (item) => openRegister(context, "1"),
+      ),
+      upcomingHealth: BebeUpcomingHealthSection(
+        data: BebeUpcomingHealthData(
+          title: health.title,
+          dateLabel: health.dateLabel,
+          timeLabel: health.timeLabel,
+          caregiverLabel: health.caregiverLabel,
+          type: switch (health.type) {
+            HomeUpcomingHealthKind.control => BebeUpcomingHealthType.control,
+            HomeUpcomingHealthKind.vaccine => BebeUpcomingHealthType.vaccine,
+            HomeUpcomingHealthKind.medicine => BebeUpcomingHealthType.vaccine,
+          },
+          icon: switch (health.type) {
+            HomeUpcomingHealthKind.control =>
+              const Icon(Icons.medical_services_outlined),
+            HomeUpcomingHealthKind.vaccine =>
+              const Icon(Icons.vaccines_outlined),
+            HomeUpcomingHealthKind.medicine =>
+              const Icon(Icons.medication_outlined),
+          },
+        ),
+        onCardPressed: () => openHealth(context),
+        onViewAgendaPressed: () => openAgenda(context),
+        onOpenHealthPressed: () => openHealth(context),
+      ),
+      recentInformation: BebeRecentInformationSection(
+        data: BebeRecentInformationData(
+          title: recent.title,
+          dateLabel: recent.dateLabel,
+          description: recent.description,
+          status: switch (recent.status) {
+            HomeRecentStatus.success => BebeRecentInformationStatus.success,
+            HomeRecentStatus.warning => BebeRecentInformationStatus.warning,
+            HomeRecentStatus.information =>
+              BebeRecentInformationStatus.information,
+          },
+          statusLabel: recent.statusLabel,
+          icon: switch (recent.status) {
+            HomeRecentStatus.success =>
+              const Icon(Icons.assignment_turned_in_outlined),
+            HomeRecentStatus.warning => const Icon(Icons.warning_amber_rounded),
+            HomeRecentStatus.information =>
+              const Icon(Icons.info_outline_rounded),
+          },
+        ),
+        onPressed: () => openHealth(context),
+      ),
+    );
+  }
+
+  BebeTodayMetricData _metric(HomeTodayMetricVm metric) {
+    return BebeTodayMetricData(
+      variant: switch (metric.type) {
+        HomeMetricType.feeding => BebeMetricCardVariant.feeding,
+        HomeMetricType.sleep => BebeMetricCardVariant.sleep,
+        HomeMetricType.diaper => BebeMetricCardVariant.diaper,
+      },
+      label: metric.label,
+      value: metric.value,
+      unit: metric.unit,
+      lastLabel: metric.lastLabel,
+      lastValue: metric.lastValue,
+      icon: switch (metric.type) {
+        HomeMetricType.feeding => const Icon(LucideIcons.milk),
+        HomeMetricType.sleep => const Icon(LucideIcons.moon),
+        HomeMetricType.diaper => const Icon(LucideIcons.baby),
+      },
+    );
+  }
+
+  BebeQuickActionData _action(HomeQuickActionVm action) {
+    return BebeQuickActionData(
+      id: action.id,
+      type: switch (action.type) {
+        HomeQuickActionKind.feeding => BebeQuickActionType.feeding,
+        HomeQuickActionKind.sleep => BebeQuickActionType.sleep,
+        HomeQuickActionKind.diaper => BebeQuickActionType.diaper,
+        HomeQuickActionKind.observation => BebeQuickActionType.observation,
+        HomeQuickActionKind.medicine => BebeQuickActionType.medicine,
+      },
+      label: action.label,
+      icon: switch (action.type) {
+        HomeQuickActionKind.feeding => const Icon(LucideIcons.milk),
+        HomeQuickActionKind.sleep => const Icon(LucideIcons.moon),
+        HomeQuickActionKind.diaper => const Icon(LucideIcons.baby),
+        HomeQuickActionKind.observation => const Icon(Icons.edit_outlined),
+        HomeQuickActionKind.medicine => const Icon(Icons.medication_outlined),
+      },
+    );
+  }
 }

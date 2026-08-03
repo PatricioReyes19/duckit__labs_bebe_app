@@ -1,12 +1,29 @@
 import 'package:agenda/agenda.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
-class AgendaPage extends StatelessWidget {
-  const AgendaPage({super.key});
-  @override
-  Widget build(BuildContext context) => BlocProvider(
-    create: (_) => AgendaBloc()..add(const AgendaStarted()),
-    child: const AgendaView(),
-  );
+typedef AgendaBlocFactory = AgendaBloc Function(BuildContext context);
+
+class AgendaPage extends GoRoute {
+  AgendaPage({required AgendaBlocFactory agendaBloc, super.name, super.routes})
+    : super(
+        path: fullPath,
+        pageBuilder: (context, state) {
+          return CupertinoPage<void>(
+            key: const ValueKey('agenda'),
+            name: name ?? nameRoute,
+            child: BlocProvider(
+              create: (context) =>
+                  agendaBloc(context)..add(const AgendaEvent.started()),
+              child: const AgendaView(),
+            ),
+          );
+        },
+      );
+
+  static const nameRoute = 'Agenda';
+  static const fullPath = '/agenda';
+
+  static void open(BuildContext context) => context.go(fullPath);
 }

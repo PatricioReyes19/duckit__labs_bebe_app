@@ -1,12 +1,29 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:health/health.dart';
 
-class HealthPage extends StatelessWidget {
-  const HealthPage({super.key});
-  @override
-  Widget build(BuildContext context) => BlocProvider(
-    create: (_) => HealthBloc()..add(const HealthStarted()),
-    child: const HealthView(),
-  );
+typedef HealthBlocFactory = HealthBloc Function(BuildContext context);
+
+class HealthPage extends GoRoute {
+  HealthPage({required HealthBlocFactory healthBloc, super.name, super.routes})
+    : super(
+        path: fullPath,
+        pageBuilder: (context, state) {
+          return CupertinoPage<void>(
+            key: const ValueKey('health'),
+            name: name ?? nameRoute,
+            child: BlocProvider(
+              create: (context) =>
+                  healthBloc(context)..add(const HealthEvent.started()),
+              child: const HealthView(),
+            ),
+          );
+        },
+      );
+
+  static const nameRoute = 'Health';
+  static const fullPath = '/health';
+
+  static void open(BuildContext context) => context.go(fullPath);
 }

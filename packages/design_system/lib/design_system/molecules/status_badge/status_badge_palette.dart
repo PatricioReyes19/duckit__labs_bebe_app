@@ -1,8 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-import 'status_badge_variant.dart';
-
 @immutable
 class BebeStatusBadgePalette {
   const BebeStatusBadgePalette({

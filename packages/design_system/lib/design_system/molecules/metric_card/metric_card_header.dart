@@ -1,8 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-import 'metric_palette.dart';
-
 class MetricCardHeader extends StatelessWidget {
   const MetricCardHeader({
     required this.label,

@@ -1,53 +1,62 @@
-import 'package:family/bloc/bloc.dart';
+import 'package:design_system/design_system.dart';
+import 'package:family/family.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class SettingsView extends StatelessWidget {
   const SettingsView({super.key});
+
   @override
-  Widget build(BuildContext context) =>
-      BlocBuilder<SettingsBloc, SettingsState>(
-        builder: (context, state) {
-          if (state.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          return ListView(
-            padding: const EdgeInsets.all(16),
+  Widget build(BuildContext context) {
+    return BlocBuilder<SettingsBloc, SettingsState>(
+      builder: (context, state) {
+        if (state.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        return BebeSettingsOverviewTemplate(
+          accountSection: BebeAccountSummary(
+            name: 'Usuario',
+            avatar: const CircleAvatar(child: Icon(Icons.person_outline)),
+            onPressed: () {},
+          ),
+          preferencesSection: BebeSettingsSection(
+            title: 'Preferencias',
             children: [
-              const Text('Cuenta y configuración'),
-              DropdownButtonFormField<SettingsThemeMode>(
-                initialValue: state.themeMode,
-                items: const [
-                  DropdownMenuItem(
-                    value: SettingsThemeMode.system,
-                    child: Text('Sistema'),
-                  ),
-                  DropdownMenuItem(
-                    value: SettingsThemeMode.light,
-                    child: Text('Claro'),
-                  ),
-                  DropdownMenuItem(
-                    value: SettingsThemeMode.dark,
-                    child: Text('Oscuro'),
-                  ),
-                ],
-                onChanged: (v) {
-                  if (v != null)
-                    context.read<SettingsBloc>().add(
-                      SettingsThemeModeChanged(v),
-                    );
+              BebeThemeModeSelector(
+                value: state.themeMode,
+                onChanged: (value) {
+                  context.read<SettingsBloc>().add(
+                    SettingsEvent.themeChanged(value),
+                  );
+                },
+                systemLabel: 'Usar configuración del sistema',
+                lightLabel: 'Claro',
+                darkLabel: 'Oscuro',
+              ),
+              BebeSettingsSwitchTile(
+                title: 'Reducir animaciones',
+                value: state.reduceMotion,
+                onChanged: (value) {
+                  context.read<SettingsBloc>().add(
+                    SettingsEvent.reduceMotionChanged(value),
+                  );
                 },
               ),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Reducir animaciones'),
-                value: state.reduceMotion,
-                onChanged: (v) => context.read<SettingsBloc>().add(
-                  SettingsReduceMotionChanged(v),
-                ),
+            ],
+          ),
+          privacySection: BebeSettingsSection(
+            title: 'Privacidad y seguridad',
+            children: [
+              BebeSettingsActionTile(
+                title: 'Privacidad',
+                icon: const Icon(Icons.privacy_tip_outlined),
+                onPressed: () {},
               ),
             ],
-          );
-        },
-      );
+          ),
+        );
+      },
+    );
+  }
 }

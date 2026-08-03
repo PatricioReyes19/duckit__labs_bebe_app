@@ -115,11 +115,7 @@ class BebeSettingsValueTile extends StatelessWidget {
 
     final resolvedSemanticLabel =
         effectiveSemanticLabel ??
-        [
-          effectiveTitle,
-          effectiveValue,
-          if (effectiveDescription != null) effectiveDescription,
-        ].join('. ');
+        [effectiveTitle, effectiveValue, ?effectiveDescription].join('. ');
 
     if (_isInteractive) {
       return Semantics(

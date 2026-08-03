@@ -33,12 +33,12 @@ class BebeSettingsOverviewTemplate extends StatelessWidget {
     final sections = <Widget>[
       accountSection,
       preferencesSection,
-      if (notificationsSection != null) notificationsSection!,
-      if (accessibilitySection != null) accessibilitySection!,
+      ?notificationsSection,
+      ?accessibilitySection,
       privacySection,
-      if (storageSection != null) storageSection!,
-      if (supportSection != null) supportSection!,
-      if (sessionActions != null) sessionActions!,
+      ?storageSection,
+      ?supportSection,
+      ?sessionActions,
     ];
 
     return SizedBox(

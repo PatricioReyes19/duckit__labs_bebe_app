@@ -1,6 +1,5 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
-import 'inline_action_variant.dart';
 
 class BebeInlineAction extends StatelessWidget {
   const BebeInlineAction({

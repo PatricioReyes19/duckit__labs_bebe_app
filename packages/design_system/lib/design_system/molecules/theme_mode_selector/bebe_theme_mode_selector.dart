@@ -1,8 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-import 'bebe_theme_mode_option.dart';
-
 class BebeThemeModeSelector extends StatelessWidget {
   const BebeThemeModeSelector({
     required this.value,

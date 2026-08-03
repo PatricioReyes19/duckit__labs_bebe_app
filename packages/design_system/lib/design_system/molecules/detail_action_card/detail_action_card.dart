@@ -174,8 +174,8 @@ class BebeDetailActionCard extends StatelessWidget {
 
     final generatedSemanticLabel = [
       effectiveTitle,
-      if (effectiveDescription != null) effectiveDescription,
-      if (effectiveMetadata != null) effectiveMetadata,
+      ?effectiveDescription,
+      ?effectiveMetadata,
     ].join('. ');
 
     final resolvedSemanticLabel =

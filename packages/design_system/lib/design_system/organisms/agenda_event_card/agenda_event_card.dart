@@ -145,7 +145,7 @@ class BebeAgendaEventCard extends StatelessWidget {
 
     final generatedSemanticLabel = [
       effectiveTitle,
-      if (effectiveDescription != null) effectiveDescription,
+      ?effectiveDescription,
     ].join('. ');
 
     final resolvedSemanticLabel =
@@ -309,11 +309,7 @@ class _CompactAgendaEventLayout extends StatelessWidget {
               spacing: spacing.spacingS,
               runSpacing: spacing.spacingS,
               crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                if (status != null) status!,
-                if (syncIndicator != null) syncIndicator!,
-                if (caregiver != null) caregiver!,
-              ],
+              children: [?status, ?syncIndicator, ?caregiver],
             ),
           ],
         ],
@@ -377,12 +373,7 @@ class _CarouselAgendaEventLayout extends StatelessWidget {
             spacing: spacing.spacingM,
             runSpacing: spacing.spacingS,
             crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              time,
-              if (status != null) status!,
-              if (syncIndicator != null) syncIndicator!,
-              if (caregiver != null) caregiver!,
-            ],
+            children: [time, ?status, ?syncIndicator, ?caregiver],
           ),
         ],
       ),

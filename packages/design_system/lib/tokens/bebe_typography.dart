@@ -4,10 +4,7 @@ import 'package:flutter/material.dart';
 import 'typography_styles.dart';
 
 class BebeTypography extends ThemeExtension<BebeTypography> {
-  const BebeTypography._({
-    required this.fontFamily,
-    required Map<String, TextStyle> styles,
-  }) : _styles = styles;
+  const BebeTypography._({required this.fontFamily, required this._styles});
 
   factory BebeTypography.fromJson(Map<String, dynamic> json) {
     final fontFamily = json['fontFamily'] as String? ?? 'PlusJakartaSans';

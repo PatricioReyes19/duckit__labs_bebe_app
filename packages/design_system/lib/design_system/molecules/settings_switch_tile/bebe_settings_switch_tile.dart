@@ -79,10 +79,7 @@ class BebeSettingsSwitchTile extends StatelessWidget {
       enabled: _isEnabled,
       label:
           effectiveSemanticLabel ??
-          [
-            effectiveTitle,
-            if (effectiveDescription != null) effectiveDescription,
-          ].join('. '),
+          [effectiveTitle, ?effectiveDescription].join('. '),
       child: ExcludeSemantics(child: visual),
     );
   }

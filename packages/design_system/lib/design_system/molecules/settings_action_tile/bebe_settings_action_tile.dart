@@ -129,10 +129,7 @@ class BebeSettingsActionTile extends StatelessWidget {
 
     final resolvedSemanticLabel =
         effectiveSemanticLabel ??
-        [
-          effectiveTitle,
-          if (effectiveDescription != null) effectiveDescription,
-        ].join('. ');
+        [effectiveTitle, ?effectiveDescription].join('. ');
 
     if (_isInteractive) {
       return Semantics(

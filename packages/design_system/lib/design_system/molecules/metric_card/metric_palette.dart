@@ -2,8 +2,6 @@ import 'dart:ui';
 
 import 'package:design_system/design_system.dart';
 
-import 'metric_variant.dart';
-
 class BebeMetricCardPalette {
   const BebeMetricCardPalette({
     required this.surface,

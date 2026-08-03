@@ -1,9 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-import '../../atoms/avatar/bebe_avatar.dart';
-import '../../molecules/baby_selector/bebe_baby_selector.dart';
-
 class BebeSiblingSummaryData {
   const BebeSiblingSummaryData({
     required this.name,
