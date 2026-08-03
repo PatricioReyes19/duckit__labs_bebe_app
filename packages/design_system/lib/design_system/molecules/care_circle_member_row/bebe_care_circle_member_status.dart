@@ -1,5 +1,1 @@
-enum BebeCareCircleMemberStatus {
-  active,
-  pending,
-  suspended,
-}
+enum BebeCareCircleMemberStatus { active, pending, suspended }

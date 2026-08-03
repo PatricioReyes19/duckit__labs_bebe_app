@@ -11,6 +11,9 @@ workspace:
   - packages/core
   - packages/design_system
   - packages/home
+  - packages/agenda
+  - packages/health
+  - packages/family
 
 dev_dependencies:
   melos: ^8.2.0

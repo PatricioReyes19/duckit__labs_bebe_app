@@ -63,6 +63,8 @@ import 'package:widgetbook_app/use_cases/templates/bebe_family_overview_template
     as _widgetbook_app_use_cases_templates_bebe_family_overview_template_use_cases;
 import 'package:widgetbook_app/use_cases/templates/bebe_home_template_use_cases.dart'
     as _widgetbook_app_use_cases_templates_bebe_home_template_use_cases;
+import 'package:widgetbook_app/use_cases/templates/bebe_settings_overview_template_use_cases.dart'
+    as _widgetbook_app_use_cases_templates_bebe_settings_overview_template_use_cases;
 import 'package:widgetbook_app/use_cases/templates/salud_template.dart'
     as _widgetbook_app_use_cases_templates_salud_template;
 
@@ -777,6 +779,40 @@ final directories = <_widgetbook.WidgetbookNode>[
                     name: 'Solo contenido principal',
                     builder: _widgetbook_app_use_cases_templates_salud_template
                         .bebeHealthOverviewTemplatePrimaryContentUseCase,
+                  ),
+                ],
+              )
+            ],
+          ),
+          _widgetbook.WidgetbookFolder(
+            name: 'settings',
+            children: [
+              _widgetbook.WidgetbookComponent(
+                name: 'BebeSettingsOverviewTemplate',
+                useCases: [
+                  _widgetbook.WidgetbookUseCase(
+                    name: 'Ancho reducido',
+                    builder:
+                        _widgetbook_app_use_cases_templates_bebe_settings_overview_template_use_cases
+                            .bebeSettingsOverviewTemplateCompactUseCase,
+                  ),
+                  _widgetbook.WidgetbookUseCase(
+                    name: 'Completo',
+                    builder:
+                        _widgetbook_app_use_cases_templates_bebe_settings_overview_template_use_cases
+                            .bebeSettingsOverviewTemplateCompleteUseCase,
+                  ),
+                  _widgetbook.WidgetbookUseCase(
+                    name: 'Contenido mínimo',
+                    builder:
+                        _widgetbook_app_use_cases_templates_bebe_settings_overview_template_use_cases
+                            .bebeSettingsOverviewTemplateMinimumUseCase,
+                  ),
+                  _widgetbook.WidgetbookUseCase(
+                    name: 'Modo oscuro seleccionado',
+                    builder:
+                        _widgetbook_app_use_cases_templates_bebe_settings_overview_template_use_cases
+                            .bebeSettingsOverviewTemplateDarkModeUseCase,
                   ),
                 ],
               )
