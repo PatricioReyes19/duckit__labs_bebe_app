@@ -2,10 +2,13 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+<module fileurl="file://$PROJECT_DIR$/packages/agenda/melos_agenda.iml" filepath="$PROJECT_DIR$/packages/agenda/melos_agenda.iml"/>
 <module fileurl="file://$PROJECT_DIR$/packages/app_layout/melos_app_layout.iml" filepath="$PROJECT_DIR$/packages/app_layout/melos_app_layout.iml"/>
 <module fileurl="file://$PROJECT_DIR$/apps/bebe_app/melos_bebe_app.iml" filepath="$PROJECT_DIR$/apps/bebe_app/melos_bebe_app.iml"/>
 <module fileurl="file://$PROJECT_DIR$/packages/core/melos_core.iml" filepath="$PROJECT_DIR$/packages/core/melos_core.iml"/>
 <module fileurl="file://$PROJECT_DIR$/packages/design_system/melos_design_system.iml" filepath="$PROJECT_DIR$/packages/design_system/melos_design_system.iml"/>
+<module fileurl="file://$PROJECT_DIR$/packages/family/melos_family.iml" filepath="$PROJECT_DIR$/packages/family/melos_family.iml"/>
+<module fileurl="file://$PROJECT_DIR$/packages/health/melos_health.iml" filepath="$PROJECT_DIR$/packages/health/melos_health.iml"/>
 <module fileurl="file://$PROJECT_DIR$/packages/home/melos_home.iml" filepath="$PROJECT_DIR$/packages/home/melos_home.iml"/>
 <module fileurl="file://$PROJECT_DIR$/apps/widgetbook/melos_widgetbook_app.iml" filepath="$PROJECT_DIR$/apps/widgetbook/melos_widgetbook_app.iml"/>
 <module fileurl="file://$PROJECT_DIR$/melos_duckit_labs_bebe_app_workspace.iml" filepath="$PROJECT_DIR$/melos_duckit_labs_bebe_app_workspace.iml"/>
