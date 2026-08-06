@@ -105,12 +105,18 @@ class BebeTitleSection extends StatelessWidget {
 
             if (stackContent) {
               return Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  copy,
-                  SizedBox(height: spacing.spacingS),
-                  Align(alignment: Alignment.centerRight, child: accessory),
+                  Expanded(child: copy),
+                  SizedBox(width: spacing.spacingM),
+                  Flexible(
+                    fit: FlexFit.loose,
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: accessory,
+                    ),
+                  ),
                 ],
               );
             }

@@ -171,7 +171,10 @@ class BebeMetricCard extends StatelessWidget {
     final visualCard = SizedBox(
       width: double.infinity,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: _minimumHeight),
+        constraints: const BoxConstraints(
+          minHeight: _minimumHeight,
+          minWidth: 60,
+        ),
         child: DecoratedBox(
           decoration: BoxDecoration(
             borderRadius: cardBorderRadius,

@@ -159,7 +159,7 @@ class WidgetbookApp extends StatelessWidget {
             final theme = context.theme;
 
             return ColoredBox(
-              color: theme.colors.background.neutralsSurface,
+              color: theme.colors.background.basicsWhite,
               child: child,
             );
           },

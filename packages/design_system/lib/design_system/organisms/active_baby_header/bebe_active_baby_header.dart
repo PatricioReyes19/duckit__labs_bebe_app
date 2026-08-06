@@ -53,7 +53,7 @@ class BebeActiveBabyHeader extends StatelessWidget {
   static const double _minimumInlineWidth = 312;
   static const double _minimumActiveWidth = 196;
   static const double _compactCardWidth = 112;
-  static const double _compactCardBaseHeight = 80;
+  static const double _compactCardBaseHeight = 105;
   static const double _maximumInlineTextScale = 1.3;
   static const double _maximumRailWidthFactor = 0.40;
 

@@ -46,7 +46,7 @@ const appLayoutVisibilityPolicy = AppLayoutVisibilityPolicy(
       path: '/home',
       chrome: AppLayoutChromeConfig(
         title: 'BebéApp',
-        showBrandMark: false,
+        showBrandMark: true,
       ),
     ),
     AppLayoutVisibilityRule.exact(

@@ -21,10 +21,10 @@ class BebeFeatureActionCard extends StatelessWidget {
   final bool enabled;
   final String? semanticLabel;
 
-  static const double _minimumHeight = 104;
-  static const double _iconContainerSize = 48;
-  static const double _iconSize = 24;
-  static const double _chevronSlotWidth = 20;
+  static const double _minimumHeight = 108;
+  static const double _iconContainerSize = 25;
+  static const double _iconSize = 18;
+  static const double _chevronSlotWidth = 15;
   static const double _chevronIconSize = 20;
 
   bool get _isInteractive => enabled && onPressed != null;
@@ -74,7 +74,7 @@ class BebeFeatureActionCard extends StatelessWidget {
             ),
           ),
           SizedBox(width: spacing.spacingM),
-          Expanded(
+          Flexible(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -140,7 +140,10 @@ class BebeFeatureActionCard extends StatelessWidget {
     final visualCard = SizedBox(
       width: double.infinity,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: _minimumHeight),
+        constraints: const BoxConstraints(
+          minHeight: _minimumHeight,
+          maxHeight: 120,
+        ),
         child: DecoratedBox(
           decoration: BoxDecoration(
             borderRadius: cardBorderRadius,

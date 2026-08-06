@@ -34,7 +34,7 @@ class BebeQuickRegistrationActions extends StatelessWidget {
   final String helperLabel;
 
   static const int _maximumVisibleItems = 5;
-  static const double _minimumTileWidth = 72;
+  static const double _minimumTileWidth = 80;
   static const double _accessibleTileWidth = 112;
   static const double _maximumCompactTextScale = 1.3;
 

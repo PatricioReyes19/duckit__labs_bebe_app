@@ -68,7 +68,7 @@ class BebeFamilyContextHeader extends StatelessWidget {
   /// Cuando no se proporciona, se genera a partir de los textos visibles.
   final String? semanticLabel;
 
-  static const double _avatarSize = 56;
+  static const double _avatarSize = 46;
   static const double _contextChevronSize = 24;
 
   bool get _isInteractive => onContextPressed != null;
@@ -193,19 +193,22 @@ class BebeFamilyContextHeader extends StatelessWidget {
           )
         : content;
 
-    final card = DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: cardRadius,
-        boxShadow: elevation.low,
-      ),
-      child: Material(
-        color: colors.background.neutralsSurface,
-        shape: RoundedRectangleBorder(
+    final card = ConstrainedBox(
+      constraints: const BoxConstraints(maxHeight: 120, minHeight: 100),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
           borderRadius: cardRadius,
-          side: BorderSide(color: colors.border.neutralDefault),
+          boxShadow: elevation.low,
         ),
-        clipBehavior: Clip.antiAlias,
-        child: interactiveContent,
+        child: Material(
+          color: colors.background.neutralsSurface,
+          shape: RoundedRectangleBorder(
+            borderRadius: cardRadius,
+            side: BorderSide(color: colors.border.neutralDefault),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: interactiveContent,
+        ),
       ),
     );
 

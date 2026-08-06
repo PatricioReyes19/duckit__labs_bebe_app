@@ -199,18 +199,6 @@ class _BabySelectorContent extends StatelessWidget {
               ],
             ),
           ),
-          if (showTrailing) ...[
-            SizedBox(width: spacing.spacingM),
-            Icon(
-              isSelected
-                  ? Icons.keyboard_arrow_down_rounded
-                  : Icons.chevron_right_rounded,
-              size: 20,
-              color: isSelected
-                  ? colors.icons.accentDefault
-                  : colors.icons.neutralAlternative,
-            ),
-          ],
         ],
       ),
     );

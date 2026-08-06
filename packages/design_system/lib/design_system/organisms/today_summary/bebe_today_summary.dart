@@ -44,7 +44,7 @@ class BebeTodaySummary extends StatelessWidget {
   static const double _minimumInlineCardWidth = 96;
 
   /// Ancho estructural utilizado por las cards de la lista horizontal.
-  static const double _horizontalCardWidth = 145;
+  static const double _horizontalCardWidth = 120;
 
   /// Altura reservada para el patrón compacto de Today Summary.
   static const double _maximumInlineTextScale = 1.3;
@@ -108,15 +108,23 @@ class _TodayMetricsInlineRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final spacing = context.theme.spacing;
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        for (var index = 0; index < items.length; index++) ...[
-          Flexible(child: _TodayMetricItem(data: items[index])),
-          if (index < items.length - 1) SizedBox(width: spacing.spacingL),
-        ],
-      ],
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (var index = 0; index < items.length; index++) ...[
+              SizedBox(
+                width: BebeTodaySummary._horizontalCardWidth,
+                child: _TodayMetricItem(data: items[index]),
+              ),
+              if (index < items.length - 1) SizedBox(width: spacing.spacingL),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }

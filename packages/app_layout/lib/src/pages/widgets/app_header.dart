@@ -56,7 +56,13 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                 },
                 icon: const Icon(Icons.arrow_back_ios_new_rounded),
               )
-            : null);
+            : BebeBrandMark(
+                variant: theme.brightness == Brightness.dark
+                    ? BebeBrandMarkVariant.darkColor
+                    : BebeBrandMarkVariant.master,
+                size: brandMarkSize,
+                excludeFromSemantics: true,
+              ));
 
     return AppBar(
       automaticallyImplyLeading: false,
@@ -71,17 +77,8 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
       actionsIconTheme: IconThemeData(color: effectiveForeground),
       title: Row(
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          if (showBrandMark) ...[
-            BebeBrandMark(
-              variant: theme.brightness == Brightness.dark
-                  ? BebeBrandMarkVariant.darkColor
-                  : BebeBrandMarkVariant.master,
-              size: brandMarkSize,
-              excludeFromSemantics: true,
-            ),
-            const SizedBox(width: 10),
-          ],
           Flexible(
             child: Text(
               title,

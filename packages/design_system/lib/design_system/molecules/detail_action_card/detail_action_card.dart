@@ -23,9 +23,9 @@ class BebeDetailActionCard extends StatelessWidget {
   final VoidCallback? onPressed;
   final String? semanticLabel;
 
-  static const double _iconContainerSize = 48;
-  static const double _iconSize = 24;
-  static const double _chevronSlotWidth = 20;
+  static const double _iconContainerSize = 25;
+  static const double _iconSize = 18;
+  static const double _chevronSlotWidth = 10;
   static const double _chevronSize = 20;
 
   bool get _isInteractive => onPressed != null;

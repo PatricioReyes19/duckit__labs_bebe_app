@@ -79,7 +79,6 @@ class _AppLayoutViewState extends State<AppLayoutView> {
             routeChrome.showBottomBar && layoutState.showBottomBar;
 
         return Scaffold(
-          backgroundColor: layoutTheme.backgroundColor,
           appBar: showHeader
               ? AppHeader(
                   title: routeChrome.title ?? widget.defaultTitle,

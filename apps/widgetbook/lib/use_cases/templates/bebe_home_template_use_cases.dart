@@ -17,13 +17,15 @@ Widget homeTemplateDefault(BuildContext context) {
         'assets/images/babies/mateo.png',
       ),
       familyContextLabel: '2 bebés en la familia',
-      sibling: BebeSiblingSummaryData(
-        name: 'Sofía',
-        ageLabel: '8 meses',
-        avatar: AssetImage(
-          'assets/images/babies/sofia.png',
-        ),
-      ),
+      siblings: [
+        BebeSiblingSummaryData(
+          name: 'Sofía',
+          ageLabel: '8 meses',
+          avatar: AssetImage(
+            'assets/images/babies/sofia.png',
+          ),
+        )
+      ],
     ),
     todaySummary: const BebeTodaySummary(
       items: [
