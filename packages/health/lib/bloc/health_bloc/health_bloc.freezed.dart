@@ -349,12 +349,12 @@ return failure(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  initial,TResult Function()?  loading,TResult Function()?  loaded,TResult Function( String message)?  failure,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  initial,TResult Function()?  loading,TResult Function( HealthOverviewVm overview)?  loaded,TResult Function( String message)?  failure,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case HealthInitial() when initial != null:
 return initial();case HealthLoading() when loading != null:
 return loading();case HealthLoaded() when loaded != null:
-return loaded();case HealthFailure() when failure != null:
+return loaded(_that.overview);case HealthFailure() when failure != null:
 return failure(_that.message);case _:
   return orElse();
 
@@ -373,12 +373,12 @@ return failure(_that.message);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  initial,required TResult Function()  loading,required TResult Function()  loaded,required TResult Function( String message)  failure,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  initial,required TResult Function()  loading,required TResult Function( HealthOverviewVm overview)  loaded,required TResult Function( String message)  failure,}) {final _that = this;
 switch (_that) {
 case HealthInitial():
 return initial();case HealthLoading():
 return loading();case HealthLoaded():
-return loaded();case HealthFailure():
+return loaded(_that.overview);case HealthFailure():
 return failure(_that.message);}
 }
 /// A variant of `when` that fallback to returning `null`
@@ -393,12 +393,12 @@ return failure(_that.message);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  initial,TResult? Function()?  loading,TResult? Function()?  loaded,TResult? Function( String message)?  failure,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  initial,TResult? Function()?  loading,TResult? Function( HealthOverviewVm overview)?  loaded,TResult? Function( String message)?  failure,}) {final _that = this;
 switch (_that) {
 case HealthInitial() when initial != null:
 return initial();case HealthLoading() when loading != null:
 return loading();case HealthLoaded() when loaded != null:
-return loaded();case HealthFailure() when failure != null:
+return loaded(_that.overview);case HealthFailure() when failure != null:
 return failure(_that.message);case _:
   return null;
 
@@ -475,33 +475,67 @@ String toString() {
 
 
 class HealthLoaded implements HealthState {
-  const HealthLoaded();
+  const HealthLoaded({required this.overview});
   
 
+ final  HealthOverviewVm overview;
 
-
+/// Create a copy of HealthState
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$HealthLoadedCopyWith<HealthLoaded> get copyWith => _$HealthLoadedCopyWithImpl<HealthLoaded>(this, _$identity);
 
 
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is HealthLoaded);
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is HealthLoaded&&(identical(other.overview, overview) || other.overview == overview));
 }
 
 
 @override
-int get hashCode => runtimeType.hashCode;
+int get hashCode => Object.hash(runtimeType,overview);
 
 @override
 String toString() {
-  return 'HealthState.loaded()';
+  return 'HealthState.loaded(overview: $overview)';
 }
 
 
 }
 
+/// @nodoc
+abstract mixin class $HealthLoadedCopyWith<$Res> implements $HealthStateCopyWith<$Res> {
+  factory $HealthLoadedCopyWith(HealthLoaded value, $Res Function(HealthLoaded) _then) = _$HealthLoadedCopyWithImpl;
+@useResult
+$Res call({
+ HealthOverviewVm overview
+});
 
 
+
+
+}
+/// @nodoc
+class _$HealthLoadedCopyWithImpl<$Res>
+    implements $HealthLoadedCopyWith<$Res> {
+  _$HealthLoadedCopyWithImpl(this._self, this._then);
+
+  final HealthLoaded _self;
+  final $Res Function(HealthLoaded) _then;
+
+/// Create a copy of HealthState
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? overview = null,}) {
+  return _then(HealthLoaded(
+overview: null == overview ? _self.overview : overview // ignore: cast_nullable_to_non_nullable
+as HealthOverviewVm,
+  ));
+}
+
+
+}
 
 /// @nodoc
 

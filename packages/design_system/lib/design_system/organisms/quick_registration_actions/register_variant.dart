@@ -18,7 +18,8 @@ extension BebeQuickActionTypeMapper on BebeQuickActionType {
       BebeQuickActionType.observation =>
         BebeCategoryActionTileVariant.observation,
       BebeQuickActionType.medicine => BebeCategoryActionTileVariant.medication,
-      BebeQuickActionType.measurement => BebeCategoryActionTileVariant.neutral,
+      BebeQuickActionType.measurement =>
+        BebeCategoryActionTileVariant.measurement,
     };
   }
 }

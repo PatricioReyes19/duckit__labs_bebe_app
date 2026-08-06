@@ -1,3 +1,3 @@
-## 0.0.1
+## 0.1.0
 
-* TODO: Describe initial release.
+- Agrega el flujo completo de elección, invitaciones y creación del perfil.

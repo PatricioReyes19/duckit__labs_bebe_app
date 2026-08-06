@@ -182,7 +182,7 @@ class BebeWeekCalendarDay extends StatelessWidget {
   final bool isOutside;
 
   static const double _selectedRadius = 20;
-  static const double _horizontalPadding = 2;
+  static const double _horizontalPadding = 5;
   static const double _verticalPadding = 8;
 
   @override
@@ -257,9 +257,14 @@ class BebeWeekCalendarDay extends StatelessWidget {
         isSelected: isSelected,
       ),
       child: ExcludeSemantics(
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: spacing.spacingXs),
-          child: content,
+        child: Flexible(
+          child: SizedBox(
+            width: 80,
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: spacing.spacingXs),
+              child: content,
+            ),
+          ),
         ),
       ),
     );
@@ -298,7 +303,7 @@ class BebeWeekCalendarMarkers extends StatelessWidget {
   final List<BebeCalendarMarkerData> markers;
 
   static const int _maximumVisibleMarkers = 3;
-  static const double _markerSize = 23;
+  static const double _markerSize = 15;
   static const double _markerSpacing = 3;
   static const double _reservedHeight = 6;
 
@@ -316,6 +321,7 @@ class BebeWeekCalendarMarkers extends StatelessWidget {
       height: _reservedHeight,
       child: Row(
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           for (var index = 0; index < visibleMarkers.length; index++) ...[
             ExcludeSemantics(

@@ -9,12 +9,18 @@ workspace:
   - apps/widgetbook
   - packages/app_base
   - packages/app_layout
+  - packages/auth
   - packages/core
   - packages/design_system
   - packages/home
   - packages/agenda
   - packages/health
+  - packages/register
   - packages/family
+  - packages/login
+  - packages/onboarding
+  - packages/splash
+  - packages/signup
 
 dev_dependencies:
   melos: ^8.2.0

@@ -14,6 +14,7 @@ class BebeConsultationDetailTemplate extends StatelessWidget {
     this.additionalSections = const [],
     this.contentPadding,
     this.bottomSpacing,
+    this.maximumContentWidth = BebeLayout.formContentMaxWidth,
     this.useSafeArea = true,
     this.semanticLabel = 'Detalle de consulta pediátrica',
     super.key,
@@ -34,6 +35,7 @@ class BebeConsultationDetailTemplate extends StatelessWidget {
 
   final EdgeInsetsGeometry? contentPadding;
   final double? bottomSpacing;
+  final double maximumContentWidth;
 
   final bool useSafeArea;
   final String semanticLabel;
@@ -55,30 +57,33 @@ class BebeConsultationDetailTemplate extends StatelessWidget {
 
     final body = SingleChildScrollView(
       padding: effectivePadding,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          header,
-          SizedBox(height: spacing.spacing2xl),
-          summary,
-          SizedBox(height: spacing.spacing2xl),
-          BebeTitleSection(title: sectionTitle),
-          SizedBox(height: spacing.spacingL),
-          evaluation,
-          SizedBox(height: spacing.spacingM),
-          treatment,
-          SizedBox(height: spacing.spacingM),
-          followUp,
-          SizedBox(height: spacing.spacingM),
-          monitoring,
-          SizedBox(height: spacing.spacing2xl),
-          attachments,
-          for (final section in additionalSections) ...[
+      child: BebeResponsiveContent(
+        maxWidth: maximumContentWidth,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            header,
+            SizedBox(height: spacing.spacing2xl),
+            summary,
+            SizedBox(height: spacing.spacing2xl),
+            BebeTitleSection(title: sectionTitle),
+            SizedBox(height: spacing.spacingL),
+            evaluation,
             SizedBox(height: spacing.spacingM),
-            section,
+            treatment,
+            SizedBox(height: spacing.spacingM),
+            followUp,
+            SizedBox(height: spacing.spacingM),
+            monitoring,
+            SizedBox(height: spacing.spacing2xl),
+            attachments,
+            for (final section in additionalSections) ...[
+              SizedBox(height: spacing.spacingM),
+              section,
+            ],
+            SizedBox(height: effectiveBottomSpacing),
           ],
-          SizedBox(height: effectiveBottomSpacing),
-        ],
+        ),
       ),
     );
 

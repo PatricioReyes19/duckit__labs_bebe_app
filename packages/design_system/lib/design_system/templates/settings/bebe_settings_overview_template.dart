@@ -12,6 +12,7 @@ class BebeSettingsOverviewTemplate extends StatelessWidget {
     this.supportSection,
     this.sessionActions,
     this.horizontalPadding,
+    this.maximumContentWidth = BebeLayout.formContentMaxWidth,
     super.key,
   });
 
@@ -24,6 +25,7 @@ class BebeSettingsOverviewTemplate extends StatelessWidget {
   final Widget? supportSection;
   final Widget? sessionActions;
   final double? horizontalPadding;
+  final double maximumContentWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -41,8 +43,8 @@ class BebeSettingsOverviewTemplate extends StatelessWidget {
       ?sessionActions,
     ];
 
-    return SizedBox(
-      width: double.infinity,
+    return BebeResponsiveContent(
+      maxWidth: maximumContentWidth,
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: effectivePadding),
         child: Column(

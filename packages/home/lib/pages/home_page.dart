@@ -8,7 +8,6 @@ typedef HomeBlocFactory = HomeBloc Function(BuildContext context);
 class HomePage extends GoRoute {
   HomePage({
     required HomeBlocFactory homeBloc,
-    required void Function(BuildContext context) openNotifications,
     required void Function(BuildContext context, String actionId) openRegister,
     required void Function(BuildContext context) openAgenda,
     required void Function(BuildContext context) openHealth,
@@ -24,7 +23,6 @@ class HomePage extends GoRoute {
                 create: (context) =>
                     homeBloc(context)..add(const HomeEvent.started()),
                 child: HomeView(
-                  openNotifications: openNotifications,
                   openRegister: openRegister,
                   openAgenda: openAgenda,
                   openHealth: openHealth,

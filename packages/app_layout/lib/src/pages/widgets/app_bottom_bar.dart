@@ -1,3 +1,4 @@
+import 'package:app_layout/src/app_layout_theme.dart';
 import 'package:app_layout/src/bloc/app_layout_bloc.dart';
 import 'package:app_layout/src/config/app_layout_tab_config.dart';
 import 'package:flutter/material.dart';
@@ -18,6 +19,9 @@ class AppBottomBar extends StatelessWidget {
   final VoidCallback onPrimaryActionPressed;
   final String primaryActionLabel;
 
+  static const double _baseHeight = 80;
+  static const double _maximumAccessibleHeight = 96;
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<AppLayoutBloc, AppLayoutState>(
@@ -33,15 +37,30 @@ class AppBottomBar extends StatelessWidget {
 
         final left = enabledTabs.take(2).toList();
         final right = enabledTabs.skip(2).toList();
+        final layoutTheme = AppLayoutTheme.of(context);
+        final textScale = MediaQuery.textScalerOf(context).scale(1);
+        final barHeight = (_baseHeight + (textScale - 1) * 16).clamp(
+          _baseHeight,
+          _maximumAccessibleHeight,
+        );
 
-        return Material(
-          color: Colors.white,
-          elevation: 12,
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            color: layoutTheme.surfaceColor,
+            border: Border(top: BorderSide(color: layoutTheme.borderColor)),
+            boxShadow: [
+              BoxShadow(
+                color: layoutTheme.shadowColor,
+                blurRadius: 18,
+                offset: const Offset(0, -3),
+              ),
+            ],
+          ),
           child: SafeArea(
             top: false,
             minimum: const EdgeInsets.only(bottom: 2),
             child: SizedBox(
-              height: 76,
+              height: barHeight,
               child: Row(
                 children: [
                   for (final tab in left)
@@ -56,7 +75,7 @@ class AppBottomBar extends StatelessWidget {
                       ),
                     ),
                   SizedBox(
-                    width: 84,
+                    width: 80,
                     child: state.showPrimaryAction
                         ? _PrimaryAction(
                             label: primaryActionLabel,
@@ -91,9 +110,11 @@ class AppBottomBar extends StatelessWidget {
     int displayIndex,
   ) {
     final bloc = context.read<AppLayoutBloc>();
+
     final currentPath = _normalize(
       navigationShell.shellRouteContext.routerState.uri.toString(),
     );
+
     final rootPath = _normalize(tab.route);
     final isCurrent = bloc.state.activeDisplayIndex == displayIndex;
 
@@ -122,9 +143,11 @@ class AppBottomBar extends StatelessWidget {
 
   String _normalize(String value) {
     var path = Uri.tryParse(value)?.path ?? value;
+
     if (path.length > 1 && path.endsWith('/')) {
       path = path.substring(0, path.length - 1);
     }
+
     return path;
   }
 }
@@ -138,10 +161,12 @@ class _Item extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final color = active
-        ? theme.colorScheme.primary
-        : theme.colorScheme.onSurfaceVariant;
+    final layoutTheme = AppLayoutTheme.of(context);
+    final textTheme = Theme.of(context).textTheme;
+
+    final contentColor = active
+        ? layoutTheme.selectedColor
+        : layoutTheme.unselectedColor;
 
     return Semantics(
       button: true,
@@ -150,22 +175,38 @@ class _Item extends StatelessWidget {
       child: ExcludeSemantics(
         child: InkWell(
           onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 7),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                IconTheme(
-                  data: IconThemeData(size: 24, color: color),
-                  child: active ? tab.selectedIcon : tab.icon,
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOutCubic,
+                  width: 44,
+                  height: 38,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: active
+                        ? layoutTheme.selectedContainerColor
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: IconTheme(
+                    data: IconThemeData(size: 24, color: contentColor),
+                    child: active ? tab.selectedIcon : tab.icon,
+                  ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 3),
                 Text(
                   tab.label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: color,
+                  style: textTheme.labelSmall?.copyWith(
+                    color: active
+                        ? layoutTheme.selectedColor
+                        : layoutTheme.unselectedColor,
                     fontWeight: active ? FontWeight.w600 : FontWeight.w400,
                   ),
                 ),
@@ -191,7 +232,8 @@ class _PrimaryAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final layoutTheme = AppLayoutTheme.of(context);
+    final textTheme = Theme.of(context).textTheme;
 
     return Semantics(
       button: true,
@@ -199,21 +241,23 @@ class _PrimaryAction extends StatelessWidget {
       child: ExcludeSemantics(
         child: InkWell(
           onTap: onTap,
+          borderRadius: BorderRadius.circular(80),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Transform.translate(
-                offset: const Offset(0, -15),
+                offset: const Offset(0, -16),
                 child: Material(
-                  color: colors.primary,
-                  elevation: 8,
+                  color: layoutTheme.primaryActionColor,
+                  elevation: 7,
+                  shadowColor: layoutTheme.primaryActionShadowColor,
                   shape: const CircleBorder(),
                   child: SizedBox.square(
-                    dimension: 58,
+                    dimension: 60,
                     child: Icon(
                       expanded ? Icons.close_rounded : Icons.add_rounded,
-                      size: 30,
-                      color: colors.onPrimary,
+                      size: 31,
+                      color: layoutTheme.primaryActionForegroundColor,
                     ),
                   ),
                 ),
@@ -222,8 +266,9 @@ class _PrimaryAction extends StatelessWidget {
                 offset: const Offset(0, -10),
                 child: Text(
                   label,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: colors.primary,
+                  maxLines: 1,
+                  style: textTheme.labelSmall?.copyWith(
+                    color: layoutTheme.unselectedColor,
                     fontWeight: FontWeight.w600,
                   ),
                 ),

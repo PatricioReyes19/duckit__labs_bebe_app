@@ -55,11 +55,13 @@ extension FamilyEventPatterns on FamilyEvent {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( _Started value)?  started,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( _Started value)?  started,TResult Function( _Retried value)?  retried,TResult Function( _BabySelected value)?  babySelected,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case _Started() when started != null:
-return started(_that);case _:
+return started(_that);case _Retried() when retried != null:
+return retried(_that);case _BabySelected() when babySelected != null:
+return babySelected(_that);case _:
   return orElse();
 
 }
@@ -77,11 +79,13 @@ return started(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( _Started value)  started,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( _Started value)  started,required TResult Function( _Retried value)  retried,required TResult Function( _BabySelected value)  babySelected,}){
 final _that = this;
 switch (_that) {
 case _Started():
-return started(_that);}
+return started(_that);case _Retried():
+return retried(_that);case _BabySelected():
+return babySelected(_that);}
 }
 /// A variant of `map` that fallback to returning `null`.
 ///
@@ -95,11 +99,13 @@ return started(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( _Started value)?  started,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( _Started value)?  started,TResult? Function( _Retried value)?  retried,TResult? Function( _BabySelected value)?  babySelected,}){
 final _that = this;
 switch (_that) {
 case _Started() when started != null:
-return started(_that);case _:
+return started(_that);case _Retried() when retried != null:
+return retried(_that);case _BabySelected() when babySelected != null:
+return babySelected(_that);case _:
   return null;
 
 }
@@ -116,10 +122,12 @@ return started(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  started,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  started,TResult Function()?  retried,TResult Function( String babyId)?  babySelected,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Started() when started != null:
-return started();case _:
+return started();case _Retried() when retried != null:
+return retried();case _BabySelected() when babySelected != null:
+return babySelected(_that.babyId);case _:
   return orElse();
 
 }
@@ -137,10 +145,12 @@ return started();case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  started,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  started,required TResult Function()  retried,required TResult Function( String babyId)  babySelected,}) {final _that = this;
 switch (_that) {
 case _Started():
-return started();}
+return started();case _Retried():
+return retried();case _BabySelected():
+return babySelected(_that.babyId);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -154,10 +164,12 @@ return started();}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  started,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  started,TResult? Function()?  retried,TResult? Function( String babyId)?  babySelected,}) {final _that = this;
 switch (_that) {
 case _Started() when started != null:
-return started();case _:
+return started();case _Retried() when retried != null:
+return retried();case _BabySelected() when babySelected != null:
+return babySelected(_that.babyId);case _:
   return null;
 
 }
@@ -196,6 +208,104 @@ String toString() {
 
 
 
+
+/// @nodoc
+
+
+class _Retried implements FamilyEvent {
+  const _Retried();
+  
+
+
+
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Retried);
+}
+
+
+@override
+int get hashCode => runtimeType.hashCode;
+
+@override
+String toString() {
+  return 'FamilyEvent.retried()';
+}
+
+
+}
+
+
+
+
+/// @nodoc
+
+
+class _BabySelected implements FamilyEvent {
+  const _BabySelected(this.babyId);
+  
+
+ final  String babyId;
+
+/// Create a copy of FamilyEvent
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$BabySelectedCopyWith<_BabySelected> get copyWith => __$BabySelectedCopyWithImpl<_BabySelected>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _BabySelected&&(identical(other.babyId, babyId) || other.babyId == babyId));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,babyId);
+
+@override
+String toString() {
+  return 'FamilyEvent.babySelected(babyId: $babyId)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$BabySelectedCopyWith<$Res> implements $FamilyEventCopyWith<$Res> {
+  factory _$BabySelectedCopyWith(_BabySelected value, $Res Function(_BabySelected) _then) = __$BabySelectedCopyWithImpl;
+@useResult
+$Res call({
+ String babyId
+});
+
+
+
+
+}
+/// @nodoc
+class __$BabySelectedCopyWithImpl<$Res>
+    implements _$BabySelectedCopyWith<$Res> {
+  __$BabySelectedCopyWithImpl(this._self, this._then);
+
+  final _BabySelected _self;
+  final $Res Function(_BabySelected) _then;
+
+/// Create a copy of FamilyEvent
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? babyId = null,}) {
+  return _then(_BabySelected(
+null == babyId ? _self.babyId : babyId // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
 
 /// @nodoc
 mixin _$FamilyState {
@@ -311,12 +421,12 @@ return failure(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  initial,TResult Function()?  loading,TResult Function()?  loaded,TResult Function( String message)?  failure,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  initial,TResult Function()?  loading,TResult Function( FamilyOverviewVm overview)?  loaded,TResult Function( String message)?  failure,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case FamilyInitial() when initial != null:
 return initial();case FamilyLoading() when loading != null:
 return loading();case FamilyLoaded() when loaded != null:
-return loaded();case FamilyFailure() when failure != null:
+return loaded(_that.overview);case FamilyFailure() when failure != null:
 return failure(_that.message);case _:
   return orElse();
 
@@ -335,12 +445,12 @@ return failure(_that.message);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  initial,required TResult Function()  loading,required TResult Function()  loaded,required TResult Function( String message)  failure,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  initial,required TResult Function()  loading,required TResult Function( FamilyOverviewVm overview)  loaded,required TResult Function( String message)  failure,}) {final _that = this;
 switch (_that) {
 case FamilyInitial():
 return initial();case FamilyLoading():
 return loading();case FamilyLoaded():
-return loaded();case FamilyFailure():
+return loaded(_that.overview);case FamilyFailure():
 return failure(_that.message);}
 }
 /// A variant of `when` that fallback to returning `null`
@@ -355,12 +465,12 @@ return failure(_that.message);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  initial,TResult? Function()?  loading,TResult? Function()?  loaded,TResult? Function( String message)?  failure,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  initial,TResult? Function()?  loading,TResult? Function( FamilyOverviewVm overview)?  loaded,TResult? Function( String message)?  failure,}) {final _that = this;
 switch (_that) {
 case FamilyInitial() when initial != null:
 return initial();case FamilyLoading() when loading != null:
 return loading();case FamilyLoaded() when loaded != null:
-return loaded();case FamilyFailure() when failure != null:
+return loaded(_that.overview);case FamilyFailure() when failure != null:
 return failure(_that.message);case _:
   return null;
 
@@ -437,33 +547,67 @@ String toString() {
 
 
 class FamilyLoaded implements FamilyState {
-  const FamilyLoaded();
+  const FamilyLoaded({required this.overview});
   
 
+ final  FamilyOverviewVm overview;
 
-
+/// Create a copy of FamilyState
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$FamilyLoadedCopyWith<FamilyLoaded> get copyWith => _$FamilyLoadedCopyWithImpl<FamilyLoaded>(this, _$identity);
 
 
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is FamilyLoaded);
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is FamilyLoaded&&(identical(other.overview, overview) || other.overview == overview));
 }
 
 
 @override
-int get hashCode => runtimeType.hashCode;
+int get hashCode => Object.hash(runtimeType,overview);
 
 @override
 String toString() {
-  return 'FamilyState.loaded()';
+  return 'FamilyState.loaded(overview: $overview)';
 }
 
 
 }
 
+/// @nodoc
+abstract mixin class $FamilyLoadedCopyWith<$Res> implements $FamilyStateCopyWith<$Res> {
+  factory $FamilyLoadedCopyWith(FamilyLoaded value, $Res Function(FamilyLoaded) _then) = _$FamilyLoadedCopyWithImpl;
+@useResult
+$Res call({
+ FamilyOverviewVm overview
+});
 
 
+
+
+}
+/// @nodoc
+class _$FamilyLoadedCopyWithImpl<$Res>
+    implements $FamilyLoadedCopyWith<$Res> {
+  _$FamilyLoadedCopyWithImpl(this._self, this._then);
+
+  final FamilyLoaded _self;
+  final $Res Function(FamilyLoaded) _then;
+
+/// Create a copy of FamilyState
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? overview = null,}) {
+  return _then(FamilyLoaded(
+overview: null == overview ? _self.overview : overview // ignore: cast_nullable_to_non_nullable
+as FamilyOverviewVm,
+  ));
+}
+
+
+}
 
 /// @nodoc
 

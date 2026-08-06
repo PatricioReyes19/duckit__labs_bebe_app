@@ -106,7 +106,6 @@ class _AgendaTemplateExampleState extends State<_AgendaTemplateExample> {
       child: BebeAgendaTemplate(
         state: widget.state,
         semanticLabel: 'Agenda de salud',
-        header: _buildHeader(),
         weekPicker: _buildWeekPicker(),
         filters: _buildFilters(),
         todaySection: _buildTodaySection(),
@@ -135,22 +134,6 @@ class _AgendaTemplateExampleState extends State<_AgendaTemplateExample> {
         ),
         onRefresh: _refresh,
         useSafeArea: true,
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return BebePageHeader(
-      title: 'Agenda de salud',
-      alignment: BebePageHeaderAlignment.center,
-      trailing: BebeNavigationIconButton(
-        icon: const Icon(
-          Icons.notifications_none_rounded,
-        ),
-        semanticLabel: 'Notificaciones',
-        variant: BebeNavigationIconButtonVariant.brand,
-        size: BebeNavigationIconButtonSize.large,
-        onPressed: _showInteraction,
       ),
     );
   }

@@ -10,11 +10,15 @@ class BebeHealthOverviewTemplate extends StatelessWidget {
     this.quickSummary,
     this.historyAction,
     this.horizontalPadding,
+    this.maximumContentWidth = BebeLayout.pageContentMaxWidth,
+    this.onRefresh,
     super.key,
   });
 
   /// Grilla de accesos principales.
   final Widget primaryActions;
+
+  final Future<void> Function()? onRefresh;
 
   /// Encabezado de la sección de eventos próximos.
   ///
@@ -35,6 +39,7 @@ class BebeHealthOverviewTemplate extends StatelessWidget {
   ///
   /// Si es nulo, utiliza el token `spacingL`.
   final double? horizontalPadding;
+  final double maximumContentWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -48,33 +53,39 @@ class BebeHealthOverviewTemplate extends StatelessWidget {
       );
     }
 
-    return SizedBox(
-      width: double.infinity,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          padded(primaryActions),
-          if (supportAction != null) ...[
+    return SingleChildScrollView(
+      physics: onRefresh != null
+          ? const AlwaysScrollableScrollPhysics()
+          : const ClampingScrollPhysics(),
+      padding: EdgeInsets.all(spacing.spacingXs),
+      child: BebeResponsiveContent(
+        maxWidth: maximumContentWidth,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            padded(primaryActions),
+            if (supportAction != null) ...[
+              SizedBox(height: spacing.spacingXl),
+              padded(supportAction!),
+            ],
             SizedBox(height: spacing.spacingXl),
-            padded(supportAction!),
-          ],
-          SizedBox(height: spacing.spacingXl),
-          padded(upcomingHeader),
-          SizedBox(height: spacing.spacingL),
+            padded(upcomingHeader),
+            SizedBox(height: spacing.spacingL),
 
-          // Intencionalmente sin padding horizontal.
-          upcomingCarousel,
+            // Intencionalmente sin padding horizontal.
+            upcomingCarousel,
 
-          if (quickSummary != null) ...[
-            SizedBox(height: spacing.spacingXl),
-            padded(quickSummary!),
+            if (quickSummary != null) ...[
+              SizedBox(height: spacing.spacingXl),
+              padded(quickSummary!),
+            ],
+            if (historyAction != null) ...[
+              SizedBox(height: spacing.spacingXl),
+              padded(historyAction!),
+            ],
           ],
-          if (historyAction != null) ...[
-            SizedBox(height: spacing.spacingXl),
-            padded(historyAction!),
-          ],
-        ],
+        ),
       ),
     );
   }

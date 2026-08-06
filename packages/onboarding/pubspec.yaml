@@ -1,29 +1,25 @@
 name: onboarding
-description: "A new Flutter package project."
-version: 0.0.1
-homepage:
+description: Flujo de activación inicial, invitaciones y perfil del bebé de BebéApp.
+version: 0.1.0
+publish_to: none
 
 resolution: workspace
 
 environment:
-  sdk: '^3.12.2'
+  sdk: ">=3.6.0 <4.0.0"
+  flutter: ">=3.22.0"
 
 dependencies:
   flutter:
     sdk: flutter
-  flutter_bloc:
-  freezed_annotation:
-  injectable:
-  go_router:
-  app_base:
-  core:
+  flutter_bloc: ^9.1.1
+  go_router: ^16.3.0
+  shared_preferences: ^2.5.5
   design_system:
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  bloc_test:
-  mocktail:
-  build_runner:
-  freezed:
-  injectable_generator:
+  bloc_test: ^10.0.0
+  mocktail: ^1.0.4
+  flutter_lints: ^6.0.0

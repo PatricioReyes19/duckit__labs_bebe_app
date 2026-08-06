@@ -73,12 +73,13 @@ class _AppLayoutViewState extends State<AppLayoutView> {
 
     return BlocBuilder<AppLayoutBloc, AppLayoutState>(
       builder: (context, layoutState) {
+        final layoutTheme = AppLayoutTheme.of(context);
         final showHeader = routeChrome.showHeader && layoutState.showHeader;
         final showBottomBar =
             routeChrome.showBottomBar && layoutState.showBottomBar;
 
         return Scaffold(
-          backgroundColor: Colors.white,
+          backgroundColor: layoutTheme.backgroundColor,
           appBar: showHeader
               ? AppHeader(
                   title: routeChrome.title ?? widget.defaultTitle,
@@ -87,6 +88,7 @@ class _AppLayoutViewState extends State<AppLayoutView> {
                       ? widget.defaultHeaderActions
                       : routeChrome.actions,
                   showBackButton: routeChrome.showBackButton,
+                  showBrandMark: routeChrome.showBrandMark,
                 )
               : null,
           body: widget.child,

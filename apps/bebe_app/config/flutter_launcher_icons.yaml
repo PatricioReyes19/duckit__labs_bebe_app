@@ -1,0 +1,14 @@
+flutter_launcher_icons:
+  android: true
+  ios: true
+
+  image_path: assets/branding/launcher/bebeapp_launcher_light_1024.png
+  remove_alpha_ios: true
+
+  adaptive_icon_background: "#FAFAFC"
+  adaptive_icon_foreground: assets/branding/launcher/ic_launcher_foreground.png
+  adaptive_icon_monochrome: assets/branding/launcher/ic_launcher_monochrome.png
+  adaptive_icon_foreground_inset: 20
+
+  web:
+    generate: false

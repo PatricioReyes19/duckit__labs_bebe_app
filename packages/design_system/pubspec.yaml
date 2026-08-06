@@ -10,7 +10,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_bloc: ^9.1.1
   flutter_svg: ^2.3.0
+  json_annotation: ^4.9.0
   lucide_icons_flutter: ^3.1.15
   table_calendar: ^3.2.0
   intl: any
@@ -32,6 +34,7 @@ resolution: workspace
 flutter:
   assets:
     - assets/json/bebe_theme.json
+    - assets/branding/brand/
 
   fonts:
     - family: PlusJakartaSans

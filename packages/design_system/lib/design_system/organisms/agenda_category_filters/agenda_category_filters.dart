@@ -43,22 +43,17 @@ class _BebeAgendaCategoryFiltersState extends State<BebeAgendaCategoryFilters> {
   late final ScrollController _scrollController;
   late Map<String, GlobalKey> _itemKeys;
 
-  bool _canScrollLeft = false;
-  bool _canScrollRight = false;
-
   static const double _containerHeight = 52;
 
   @override
   void initState() {
     super.initState();
 
-    _scrollController = ScrollController()
-      ..addListener(_updateScrollIndicators);
+    _scrollController = ScrollController();
 
     _itemKeys = {for (final item in widget.items) item.id: GlobalKey()};
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _updateScrollIndicators();
       _ensureSelectedFilterVisible();
     });
   }
@@ -77,7 +72,6 @@ class _BebeAgendaCategoryFiltersState extends State<BebeAgendaCategoryFilters> {
     if (oldWidget.selectedId != widget.selectedId ||
         oldWidget.items != widget.items) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _updateScrollIndicators();
         _ensureSelectedFilterVisible();
       });
     }
@@ -85,9 +79,7 @@ class _BebeAgendaCategoryFiltersState extends State<BebeAgendaCategoryFilters> {
 
   @override
   void dispose() {
-    _scrollController
-      ..removeListener(_updateScrollIndicators)
-      ..dispose();
+    _scrollController.dispose();
 
     super.dispose();
   }
@@ -139,31 +131,6 @@ class _BebeAgendaCategoryFiltersState extends State<BebeAgendaCategoryFilters> {
         child: filters,
       ),
     );
-  }
-
-  void _updateScrollIndicators() {
-    if (!_scrollController.hasClients) {
-      return;
-    }
-
-    final position = _scrollController.position;
-
-    final canScrollLeft = position.pixels > position.minScrollExtent;
-
-    final canScrollRight = position.pixels < position.maxScrollExtent;
-
-    if (canScrollLeft == _canScrollLeft && canScrollRight == _canScrollRight) {
-      return;
-    }
-
-    if (!mounted) {
-      return;
-    }
-
-    setState(() {
-      _canScrollLeft = canScrollLeft;
-      _canScrollRight = canScrollRight;
-    });
   }
 
   void _ensureSelectedFilterVisible() {

@@ -2,8 +2,7 @@ import 'package:core/core.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SharedPreferencesThemeStorage implements ThemeStorage {
-  SharedPreferencesThemeStorage({required SharedPreferences preferences})
-    : _preferences = preferences;
+  SharedPreferencesThemeStorage(this._preferences);
 
   static const _themeModeKey = 'theme_mode';
 

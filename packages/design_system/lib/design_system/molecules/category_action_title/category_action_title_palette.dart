@@ -23,40 +23,52 @@ BebeCategoryPalette resolveCategoryPalette(
 
   return switch (type) {
     BebeCategoryActionTileVariant.feeding => BebeCategoryPalette(
-      surface: colors.background.brandSurface,
-      iconSurface: colors.background.brandDefault.withAlpha(50),
-      content: colors.text.brandDefault,
-      border: colors.border.brandDefault,
+      surface: colors.clinical.feedingSurface,
+      iconSurface: colors.clinical.feedingAccent.withValues(
+        alpha: context.theme.overlays.interactionSelected.a,
+      ),
+      content: colors.clinical.feedingContent,
+      border: colors.clinical.feedingAccent,
     ),
     BebeCategoryActionTileVariant.sleep => BebeCategoryPalette(
-      surface: colors.background.accentSurface,
-      iconSurface: colors.background.accentDefault.withAlpha(50),
-      content: colors.text.accentDefault,
-      border: colors.border.accentAlternative,
+      surface: colors.clinical.sleepSurface,
+      iconSurface: colors.clinical.sleepAccent.withValues(
+        alpha: context.theme.overlays.interactionSelected.a,
+      ),
+      content: colors.clinical.sleepContent,
+      border: colors.clinical.sleepAccent,
     ),
     BebeCategoryActionTileVariant.diaper => BebeCategoryPalette(
-      surface: colors.background.warningSurface,
-      iconSurface: colors.background.warningDefault.withAlpha(50),
-      content: colors.text.warningDefault,
-      border: colors.border.warningDefault,
+      surface: colors.clinical.diaperSurface,
+      iconSurface: colors.clinical.diaperAccent.withValues(
+        alpha: context.theme.overlays.interactionSelected.a,
+      ),
+      content: colors.clinical.diaperContent,
+      border: colors.clinical.diaperAccent,
     ),
     BebeCategoryActionTileVariant.observation => BebeCategoryPalette(
-      surface: colors.background.infoSurface,
-      iconSurface: colors.background.infoDefault.withAlpha(50),
-      content: colors.text.infoDefault,
-      border: colors.border.infoDefault,
+      surface: colors.clinical.observationSurface,
+      iconSurface: colors.clinical.observationAccent.withValues(
+        alpha: context.theme.overlays.interactionSelected.a,
+      ),
+      content: colors.clinical.observationContent,
+      border: colors.clinical.observationAccent,
     ),
     BebeCategoryActionTileVariant.medication => BebeCategoryPalette(
-      surface: colors.background.infoSurface,
-      iconSurface: colors.background.infoDefault.withAlpha(50),
-      content: colors.text.infoDefault,
-      border: colors.border.infoDefault,
+      surface: colors.clinical.medicationSurface,
+      iconSurface: colors.clinical.medicationAccent.withValues(
+        alpha: context.theme.overlays.interactionSelected.a,
+      ),
+      content: colors.clinical.medicationContent,
+      border: colors.clinical.medicationAccent,
     ),
-    BebeCategoryActionTileVariant.neutral => BebeCategoryPalette(
-      surface: colors.background.successSurface,
-      iconSurface: colors.background.successDefault.withAlpha(50),
-      content: colors.text.successDefault,
-      border: colors.border.successDefault,
+    BebeCategoryActionTileVariant.measurement => BebeCategoryPalette(
+      surface: colors.clinical.measurementSurface,
+      iconSurface: colors.clinical.measurementAccent.withValues(
+        alpha: context.theme.overlays.interactionSelected.a,
+      ),
+      content: colors.clinical.measurementContent,
+      border: colors.clinical.measurementAccent,
     ),
   };
 }

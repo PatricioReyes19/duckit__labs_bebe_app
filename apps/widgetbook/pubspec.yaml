@@ -22,6 +22,7 @@ dependencies:
   core:
   design_system:
   app_layout:
+  register:
   widgetbook: ^3.25.0
   widgetbook_annotation: ^3.11.0
   intl: any

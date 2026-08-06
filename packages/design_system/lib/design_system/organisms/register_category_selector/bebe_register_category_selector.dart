@@ -1,0 +1,84 @@
+import 'package:design_system/design_system.dart';
+import 'package:flutter/material.dart';
+
+/// Visual data for one item in [BebeRegisterCategorySelector].
+class BebeRegisterCategoryItem<T> {
+  const BebeRegisterCategoryItem({
+    required this.value,
+    required this.label,
+    required this.icon,
+    required this.variant,
+    this.semanticLabel,
+    this.enabled = true,
+  });
+
+  final T value;
+  final String label;
+  final Widget icon;
+  final BebeCategoryActionTileVariant variant;
+  final String? semanticLabel;
+  final bool enabled;
+}
+
+/// Horizontal, controlled selector for register event categories.
+class BebeRegisterCategorySelector<T> extends StatelessWidget {
+  const BebeRegisterCategorySelector({
+    required this.items,
+    required this.selectedValue,
+    required this.onChanged,
+    this.semanticLabel = 'Categoría del registro',
+    super.key,
+  });
+
+  final List<BebeRegisterCategoryItem<T>> items;
+  final T selectedValue;
+  final ValueChanged<T>? onChanged;
+  final String semanticLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    assert(
+      items.isNotEmpty,
+      'BebeRegisterCategorySelector requires at least one item.',
+    );
+    assert(
+      items.any((item) => item.value == selectedValue),
+      'selectedValue must match one of the provided items.',
+    );
+
+    final spacing = context.theme.spacing;
+    final tileWidth = spacing.spacing8xl + spacing.spacing5xl;
+
+    return Semantics(
+      container: true,
+      label: semanticLabel,
+      explicitChildNodes: true,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (var index = 0; index < items.length; index++) ...[
+              SizedBox(
+                width: tileWidth,
+                child: BebeCategoryActionTile(
+                  variant: items[index].variant,
+                  label: items[index].label,
+                  icon: items[index].icon,
+                  isSelected: items[index].value == selectedValue,
+                  enabled: items[index].enabled,
+                  semanticLabel: items[index].semanticLabel,
+                  onPressed: onChanged == null || !items[index].enabled
+                      ? null
+                      : () => onChanged!(items[index].value),
+                ),
+              ),
+              if (index < items.length - 1) SizedBox(width: spacing.spacingM),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}

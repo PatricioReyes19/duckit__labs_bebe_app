@@ -8,6 +8,7 @@ class BebeColor extends ThemeExtension<BebeColor> {
     required this._iconColors,
     required this._borderColors,
     required this._onPrimaryColors,
+    required this._clinicalColors,
   });
 
   factory BebeColor.fromJson(Map<String, dynamic> json) {
@@ -27,6 +28,9 @@ class BebeColor extends ThemeExtension<BebeColor> {
       onPrimaryColors: _parseColorGroup(
         json['OnPrimary'] as Map<String, dynamic>? ?? const {},
       ),
+      clinicalColors: _parseColorGroup(
+        json['Clinical'] as Map<String, dynamic>? ?? const {},
+      ),
     );
   }
 
@@ -37,6 +41,7 @@ class BebeColor extends ThemeExtension<BebeColor> {
       iconColors: {},
       borderColors: {},
       onPrimaryColors: {},
+      clinicalColors: {},
     );
   }
 
@@ -45,6 +50,7 @@ class BebeColor extends ThemeExtension<BebeColor> {
   final Map<String, Color> _iconColors;
   final Map<String, Color> _borderColors;
   final Map<String, Color> _onPrimaryColors;
+  final Map<String, Color> _clinicalColors;
 
   TextColors get text => TextColors(_textColors);
 
@@ -55,6 +61,8 @@ class BebeColor extends ThemeExtension<BebeColor> {
   BorderColors get border => BorderColors(_borderColors);
 
   OnPrimaryColors get onPrimary => OnPrimaryColors(_onPrimaryColors);
+
+  ClinicalColors get clinical => ClinicalColors(_clinicalColors);
 
   static Map<String, Color> _parseColorGroup(Map<String, dynamic> json) {
     final colors = <String, Color>{};
@@ -80,7 +88,8 @@ class BebeColor extends ThemeExtension<BebeColor> {
         _backgroundColors[key] ??
         _iconColors[key] ??
         _borderColors[key] ??
-        _onPrimaryColors[key];
+        _onPrimaryColors[key] ??
+        _clinicalColors[key];
   }
 
   @override
@@ -90,6 +99,7 @@ class BebeColor extends ThemeExtension<BebeColor> {
     Map<String, Color>? iconColors,
     Map<String, Color>? borderColors,
     Map<String, Color>? onPrimaryColors,
+    Map<String, Color>? clinicalColors,
   }) {
     return BebeColor._(
       textColors: textColors ?? _textColors,
@@ -97,6 +107,7 @@ class BebeColor extends ThemeExtension<BebeColor> {
       iconColors: iconColors ?? _iconColors,
       borderColors: borderColors ?? _borderColors,
       onPrimaryColors: onPrimaryColors ?? _onPrimaryColors,
+      clinicalColors: clinicalColors ?? _clinicalColors,
     );
   }
 
@@ -116,6 +127,7 @@ class BebeColor extends ThemeExtension<BebeColor> {
       iconColors: _lerpColors(_iconColors, other._iconColors, t),
       borderColors: _lerpColors(_borderColors, other._borderColors, t),
       onPrimaryColors: _lerpColors(_onPrimaryColors, other._onPrimaryColors, t),
+      clinicalColors: _lerpColors(_clinicalColors, other._clinicalColors, t),
     );
   }
 

@@ -1,37 +1,39 @@
 {
     "metadata": {
         "name": "BebeApp",
-        "version": "0.3.1",
+        "version": "0.4.0",
         "colorModel": "sRGB",
         "accessibilityTarget": "WCAG 2.2 AA",
         "font": "PlusJakartaSans",
         "visualSource": "Laboratorio visual BebéApp: onboarding, Inicio liviano, Salud, Agenda de salud, registros, autoría de cuidadores y estados offline-first",
         "source": "Auditoría visual de 20 renders BebéApp — Inicio, Agenda, Registro, Salud, Vacunas y Crecimiento",
-        "paletteDirection": "Teal clínico-amable + azul tinta + violeta + coral + ámbar",
-        "typographyContract": "Complete matrix: lg/md/sm × regular/medium/semibold/bold; includes Body-Strike and Body-Link."
+        "paletteDirection": "Teal núcleo de cuidado + azul tinta + lavanda + durazno + ámbar",
+        "typographyContract": "Complete matrix: lg/md/sm × regular/medium/semibold/bold; includes Body-Strike and Body-Link.",
+        "brandConcept": "Bebé al centro del círculo de cuidado",
+        "colorAudit": "Audited for semantic consistency and WCAG 2.2 AA contrast on primary usage pairs"
     },
     "Colors": {
         "Light": {
             "Text": {
                 "Brand": {
-                    "brand-default": "#087E86",
-                    "brand-alternative": "#07838C",
-                    "brand-subtle": "#EAF7F7"
+                    "brand-default": "#087772",
+                    "brand-alternative": "#15A79A",
+                    "brand-subtle": "#CFFEF9"
                 },
                 "Accent": {
-                    "accent-default": "#6750B8",
-                    "accent-alternative": "#7657C8",
-                    "accent-subtle": "#F5F1FC"
+                    "accent-default": "#5B43B8",
+                    "accent-alternative": "#BB7CF6",
+                    "accent-subtle": "#EEE9FF"
                 },
                 "Neutrals": {
-                    "neutral-display": "#102A43",
-                    "neutral-headline": "#102A43",
-                    "neutral-title": "#102A43",
+                    "neutral-display": "#14213D",
+                    "neutral-headline": "#14213D",
+                    "neutral-title": "#14213D",
                     "neutral-body": "#40566F",
-                    "neutral-link": "#087E86",
+                    "neutral-link": "#087772",
                     "neutral-label": "#596B80",
-                    "neutral-caption": "#6B7B8E",
-                    "neutral-disabled": "#96A0AD",
+                    "neutral-caption": "#5F6673",
+                    "neutral-disabled": "#7C8997",
                     "neutral-subtle": "#F7F9FA"
                 },
                 "Warning": {
@@ -53,17 +55,17 @@
             },
             "Background": {
                 "brand": {
-                    "bg-brand-surface": "#EAF7F7",
-                    "bg-brand-default": "#07838C",
-                    "bg-brand-pressed": "#006B73"
+                    "bg-brand-surface": "#EAFBF8",
+                    "bg-brand-default": "#087772",
+                    "bg-brand-pressed": "#065E59"
                 },
                 "accent": {
-                    "bg-accent-surface": "#F5F1FC",
-                    "bg-accent-default": "#7657C8",
-                    "bg-accent-pressed": "#6044B1"
+                    "bg-accent-surface": "#F5F1FF",
+                    "bg-accent-default": "#BB7CF6",
+                    "bg-accent-pressed": "#9B63D1"
                 },
                 "neutrals": {
-                    "bg-neutral-page": "#FBFCFD",
+                    "bg-neutral-page": "#FAFAFC",
                     "bg-neutral-surface": "#FFFFFF",
                     "bg-neutral-disabled": "#F1F3F5",
                     "bg-neutral-active": "#EAF1F3",
@@ -72,9 +74,9 @@
                     "bg-neutral-feedback": "#102A43"
                 },
                 "warning": {
-                    "bg-warning-surface": "#FFF4EE",
-                    "bg-warning-default": "#F15F43",
-                    "bg-warning-pressed": "#D64C34"
+                    "bg-warning-surface": "#FFF2ED",
+                    "bg-warning-default": "#FF9B8A",
+                    "bg-warning-pressed": "#E77F70"
                 },
                 "info": {
                     "bg-info-surface": "#EEF6FF",
@@ -93,16 +95,16 @@
                     "bg-basics-white": "#FFFFFF"
                 },
                 "splash": {
-                    "bg-splash": "#07838C"
+                    "bg-splash": "#FAFAFC"
                 }
             },
             "icons": {
-                "icon-brand-default": "#07838C",
-                "icon-brand-subtle": "#EAF7F7",
-                "icon-accent-default": "#7657C8",
-                "icon-accent-subtle": "#F5F1FC",
+                "icon-brand-default": "#087772",
+                "icon-brand-subtle": "#CFFEF9",
+                "icon-accent-default": "#5B43B8",
+                "icon-accent-subtle": "#EEE9FF",
                 "icon-neutral-default": "#596B80",
-                "icon-neutral-disabled": "#96A0AD",
+                "icon-neutral-disabled": "#7C8997",
                 "icon-neutral-alternative": "#6B7B8E",
                 "icon-neutral-subtle": "#F1F3F5",
                 "icon-error-default": "#C94A4A",
@@ -111,12 +113,12 @@
                 "icon-success-default": "#18875A"
             },
             "Border": {
-                "border-brand-default": "#07838C",
-                "border-brand-focus": "#20A4AA",
-                "border-brand-alternative": "#B9DFE1",
-                "border-accent-default": "#7657C8",
-                "border-accent-focus": "#9277D7",
-                "border-accent-alternative": "#DCD3F1",
+                "border-brand-default": "#087772",
+                "border-brand-focus": "#15A79A",
+                "border-brand-alternative": "#9EDFD8",
+                "border-accent-default": "#5B43B8",
+                "border-accent-focus": "#BB7CF6",
+                "border-accent-alternative": "#D8D0FF",
                 "border-neutral-disabled": "#E4E8EC",
                 "border-neutral-focus": "#596B80",
                 "border-neutral-default": "#D3DAE0",
@@ -131,16 +133,16 @@
                 "on-primary-neutral-default": "#FFFFFF"
             },
             "Interactive": {
-                "interactive-primary-default": "#2D6689",
-                "interactive-primary-hover": "#24536F",
-                "interactive-primary-pressed": "#1B4057",
-                "interactive-primary-focus": "#3D82A5",
-                "interactive-primary-disabled-bg": "#DCE8EE",
-                "interactive-primary-disabled-content": "#687780",
+                "interactive-primary-default": "#087772",
+                "interactive-primary-hover": "#096B66",
+                "interactive-primary-pressed": "#065E59",
+                "interactive-primary-focus": "#15A79A",
+                "interactive-primary-disabled-bg": "#D7E8E6",
+                "interactive-primary-disabled-content": "#647A78",
                 "interactive-secondary-default": "#FFFFFF",
-                "interactive-secondary-pressed": "#EFF7FB",
-                "interactive-secondary-border": "#2D6689",
-                "interactive-secondary-content": "#24536F"
+                "interactive-secondary-pressed": "#EEFBF9",
+                "interactive-secondary-border": "#087772",
+                "interactive-secondary-content": "#087772"
             },
             "Synchronization": {
                 "sync-local-surface": "#FFF8E8",
@@ -163,33 +165,33 @@
                 "sync-error-border": "#E78A8A"
             },
             "Clinical": {
-                "clinical-feeding-surface": "#ECF8F7",
-                "clinical-feeding-content": "#087E86",
-                "clinical-feeding-accent": "#13A0A6",
-                "clinical-sleep-surface": "#F5F1FC",
-                "clinical-sleep-content": "#6750B8",
-                "clinical-sleep-accent": "#8A70D0",
+                "clinical-feeding-surface": "#EAFBF8",
+                "clinical-feeding-content": "#087772",
+                "clinical-feeding-accent": "#15A79A",
+                "clinical-sleep-surface": "#F5F1FF",
+                "clinical-sleep-content": "#5B43B8",
+                "clinical-sleep-accent": "#BB7CF6",
                 "clinical-diaper-surface": "#FFF2ED",
-                "clinical-diaper-content": "#E95036",
-                "clinical-diaper-accent": "#FF654A",
+                "clinical-diaper-content": "#A84638",
+                "clinical-diaper-accent": "#FF9B8A",
                 "clinical-observation-surface": "#EEF5FF",
-                "clinical-observation-content": "#3478C7",
+                "clinical-observation-content": "#2A65AA",
                 "clinical-observation-accent": "#4C8FE0",
                 "clinical-medication-surface": "#FFF8E8",
-                "clinical-medication-content": "#C97800",
-                "clinical-medication-accent": "#F59E0B",
-                "clinical-measurement-surface": "#EDFAF8",
-                "clinical-measurement-content": "#118C83",
-                "clinical-measurement-accent": "#2CB7AB",
-                "clinical-health-surface": "#EAF7F7",
-                "clinical-health-content": "#087E86",
-                "clinical-health-accent": "#13A0A6",
-                "clinical-vaccine-surface": "#F5F1FC",
-                "clinical-vaccine-content": "#6750B8",
-                "clinical-vaccine-accent": "#8A70D0",
-                "clinical-growth-surface": "#ECF8F7",
-                "clinical-growth-content": "#087E86",
-                "clinical-growth-accent": "#13A0A6"
+                "clinical-medication-content": "#9A5900",
+                "clinical-medication-accent": "#F0A31A",
+                "clinical-measurement-surface": "#E6FAF7",
+                "clinical-measurement-content": "#087772",
+                "clinical-measurement-accent": "#15A79A",
+                "clinical-health-surface": "#EAFBF8",
+                "clinical-health-content": "#087772",
+                "clinical-health-accent": "#15A79A",
+                "clinical-vaccine-surface": "#F5F1FF",
+                "clinical-vaccine-content": "#5B43B8",
+                "clinical-vaccine-accent": "#BB7CF6",
+                "clinical-growth-surface": "#EAFBF8",
+                "clinical-growth-content": "#087772",
+                "clinical-growth-accent": "#15A79A"
             },
             "Caregiver": {
                 "caregiver-primary-surface": "#EFF7FB",
@@ -202,29 +204,29 @@
                 "caregiver-neutral-content": "#505D65"
             },
             "DataVisualization": {
-                "data-series-1": "#07838C",
-                "data-series-2": "#7657C8",
-                "data-series-3": "#FF654A",
+                "data-series-1": "#087772",
+                "data-series-2": "#5B43B8",
+                "data-series-3": "#FF9B8A",
                 "data-series-4": "#2F7FD3",
                 "data-series-5": "#18875A",
                 "data-series-6": "#C97800",
                 "data-grid": "#DDE5EA",
                 "data-axis": "#596B80",
-                "data-reference": "#7EC7CC",
-                "data-selection": "#006B73"
+                "data-reference": "#75D7CF",
+                "data-selection": "#065E59"
             }
         },
         "Dark": {
             "Text": {
                 "Brand": {
-                    "brand-default": "#7ED2D6",
-                    "brand-alternative": "#5EC2C7",
-                    "brand-subtle": "#123338"
+                    "brand-default": "#83E2D8",
+                    "brand-alternative": "#62D0C5",
+                    "brand-subtle": "#153D3A"
                 },
                 "Accent": {
-                    "accent-default": "#C1AFF0",
-                    "accent-alternative": "#A891E2",
-                    "accent-subtle": "#29223D"
+                    "accent-default": "#D1C0FF",
+                    "accent-alternative": "#C39AFF",
+                    "accent-subtle": "#302944"
                 },
                 "Neutrals": {
                     "neutral-display": "#F2F6F8",
@@ -233,7 +235,7 @@
                     "neutral-body": "#B7C3CC",
                     "neutral-link": "#7ED2D6",
                     "neutral-label": "#98A7B1",
-                    "neutral-caption": "#8B9AA5",
+                    "neutral-caption": "#98A7B1",
                     "neutral-disabled": "#667680",
                     "neutral-subtle": "#172126"
                 },
@@ -256,18 +258,18 @@
             },
             "Background": {
                 "brand": {
-                    "bg-brand-surface": "#123338",
-                    "bg-brand-default": "#5EC2C7",
-                    "bg-brand-pressed": "#7ED2D6"
+                    "bg-brand-surface": "#153D3A",
+                    "bg-brand-default": "#62D0C5",
+                    "bg-brand-pressed": "#83E2D8"
                 },
                 "accent": {
-                    "bg-accent-surface": "#29223D",
-                    "bg-accent-default": "#A891E2",
-                    "bg-accent-pressed": "#C1AFF0"
+                    "bg-accent-surface": "#302944",
+                    "bg-accent-default": "#C39AFF",
+                    "bg-accent-pressed": "#D1C0FF"
                 },
                 "neutrals": {
-                    "bg-neutral-page": "#0E171C",
-                    "bg-neutral-surface": "#172126",
+                    "bg-neutral-page": "#0F2A2D",
+                    "bg-neutral-surface": "#12383A",
                     "bg-neutral-disabled": "#202B31",
                     "bg-neutral-active": "#26343B",
                     "bg-neutral-default": "#667680",
@@ -296,14 +298,14 @@
                     "bg-basics-white": "#182126"
                 },
                 "splash": {
-                    "bg-splash": "#0E171C"
+                    "bg-splash": "#0F2A2D"
                 }
             },
             "icons": {
-                "icon-brand-default": "#8CC7E0",
-                "icon-brand-subtle": "#172A34",
-                "icon-accent-default": "#83D8DB",
-                "icon-accent-subtle": "#163033",
+                "icon-brand-default": "#83E2D8",
+                "icon-brand-subtle": "#153D3A",
+                "icon-accent-default": "#D1C0FF",
+                "icon-accent-subtle": "#302944",
                 "icon-neutral-default": "#B8C4CB",
                 "icon-neutral-disabled": "#687780",
                 "icon-neutral-alternative": "#94A3AC",
@@ -314,12 +316,12 @@
                 "icon-success-default": "#8BD8A4"
             },
             "Border": {
-                "border-brand-default": "#77B7D3",
-                "border-brand-focus": "#A8D8EA",
-                "border-brand-alternative": "#315161",
-                "border-accent-default": "#65C8CC",
-                "border-accent-focus": "#83D8DB",
-                "border-accent-alternative": "#285154",
+                "border-brand-default": "#62D0C5",
+                "border-brand-focus": "#9CEFE8",
+                "border-brand-alternative": "#2E5956",
+                "border-accent-default": "#C39AFF",
+                "border-accent-focus": "#D1C0FF",
+                "border-accent-alternative": "#554A70",
                 "border-neutral-disabled": "#29353C",
                 "border-neutral-focus": "#94A3AC",
                 "border-neutral-default": "#35434B",
@@ -334,16 +336,16 @@
                 "on-primary-neutral-default": "#10202A"
             },
             "Interactive": {
-                "interactive-primary-default": "#77B7D3",
-                "interactive-primary-hover": "#8CC7E0",
-                "interactive-primary-pressed": "#A8D8EA",
-                "interactive-primary-focus": "#A8D8EA",
-                "interactive-primary-disabled-bg": "#29353C",
-                "interactive-primary-disabled-content": "#7C8A93",
-                "interactive-secondary-default": "#182126",
-                "interactive-secondary-pressed": "#22313A",
-                "interactive-secondary-border": "#77B7D3",
-                "interactive-secondary-content": "#9CCFE6"
+                "interactive-primary-default": "#62D0C5",
+                "interactive-primary-hover": "#83E2D8",
+                "interactive-primary-pressed": "#9CEFE8",
+                "interactive-primary-focus": "#9CEFE8",
+                "interactive-primary-disabled-bg": "#293A39",
+                "interactive-primary-disabled-content": "#7D918F",
+                "interactive-secondary-default": "#12383A",
+                "interactive-secondary-pressed": "#1A4848",
+                "interactive-secondary-border": "#62D0C5",
+                "interactive-secondary-content": "#83E2D8"
             },
             "Synchronization": {
                 "sync-local-surface": "#332B16",
@@ -366,9 +368,9 @@
                 "sync-error-border": "#A75454"
             },
             "Clinical": {
-                "clinical-feeding-surface": "#123338",
-                "clinical-feeding-content": "#7ED2D6",
-                "clinical-feeding-accent": "#5EC2C7",
+                "clinical-feeding-surface": "#123532",
+                "clinical-feeding-content": "#82DDD5",
+                "clinical-feeding-accent": "#64CBC3",
                 "clinical-sleep-surface": "#29223D",
                 "clinical-sleep-content": "#C1AFF0",
                 "clinical-sleep-accent": "#A891E2",
@@ -381,18 +383,18 @@
                 "clinical-medication-surface": "#342C17",
                 "clinical-medication-content": "#F6D27B",
                 "clinical-medication-accent": "#E7B94D",
-                "clinical-measurement-surface": "#14342F",
-                "clinical-measurement-content": "#83D8CF",
-                "clinical-measurement-accent": "#65C8BD",
-                "clinical-health-surface": "#123338",
-                "clinical-health-content": "#7ED2D6",
-                "clinical-health-accent": "#5EC2C7",
+                "clinical-measurement-surface": "#143833",
+                "clinical-measurement-content": "#8BE1D8",
+                "clinical-measurement-accent": "#69CFC4",
+                "clinical-health-surface": "#123532",
+                "clinical-health-content": "#82DDD5",
+                "clinical-health-accent": "#64CBC3",
                 "clinical-vaccine-surface": "#29223D",
                 "clinical-vaccine-content": "#C1AFF0",
                 "clinical-vaccine-accent": "#A891E2",
-                "clinical-growth-surface": "#123338",
-                "clinical-growth-content": "#7ED2D6",
-                "clinical-growth-accent": "#5EC2C7"
+                "clinical-growth-surface": "#123532",
+                "clinical-growth-content": "#82DDD5",
+                "clinical-growth-accent": "#64CBC3"
             },
             "Caregiver": {
                 "caregiver-primary-surface": "#172A34",
@@ -405,7 +407,7 @@
                 "caregiver-neutral-content": "#B8C4CB"
             },
             "DataVisualization": {
-                "data-series-1": "#7ED2D6",
+                "data-series-1": "#82DDD5",
                 "data-series-2": "#C1AFF0",
                 "data-series-3": "#FFB29F",
                 "data-series-4": "#A9D3F7",
@@ -413,8 +415,8 @@
                 "data-series-6": "#F6D27B",
                 "data-grid": "#314049",
                 "data-axis": "#98A7B1",
-                "data-reference": "#4D8E94",
-                "data-selection": "#D1F2F3"
+                "data-reference": "#4F9690",
+                "data-selection": "#D8F7F4"
             }
         }
     },
@@ -1441,10 +1443,10 @@
     "overlays": {
         "Light": {
             "interaction": {
-                "overlay-hover": "#087F910A",
-                "overlay-pressed": "#087F911F",
-                "overlay-focus": "#087F9129",
-                "overlay-selected": "#087F9114"
+                "overlay-hover": "#15A79A0A",
+                "overlay-pressed": "#15A79A1F",
+                "overlay-focus": "#15A79A29",
+                "overlay-selected": "#15A79A14"
             },
             "scrim": {
                 "overlay-scrim-soft": "#102A4333",
@@ -1467,10 +1469,10 @@
         },
         "Dark": {
             "interaction": {
-                "overlay-hover": "#7ED2D614",
-                "overlay-pressed": "#7ED2D629",
-                "overlay-focus": "#7ED2D63D",
-                "overlay-selected": "#7ED2D61F"
+                "overlay-hover": "#83E2D814",
+                "overlay-pressed": "#83E2D829",
+                "overlay-focus": "#83E2D83D",
+                "overlay-selected": "#83E2D81F"
             },
             "scrim": {
                 "overlay-scrim-soft": "#00000052",

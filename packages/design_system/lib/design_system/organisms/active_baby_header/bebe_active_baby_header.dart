@@ -39,6 +39,8 @@ class BebeActiveBabyHeader extends StatelessWidget {
 
   static const int _activeFlex = 68;
   static const int _siblingFlex = 32;
+  static const double _minimumInlineWidth = 320;
+  static const double _maximumInlineTextScale = 1.3;
 
   @override
   Widget build(BuildContext context) {
@@ -81,16 +83,36 @@ class BebeActiveBabyHeader extends StatelessWidget {
       semanticLabel: siblingData.semanticLabel,
     );
 
-    return SizedBox(
-      width: double.infinity,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(flex: _activeFlex, child: activeSelector),
-          SizedBox(width: spacing.spacingM),
-          Expanded(flex: _siblingFlex, child: siblingSelector),
-        ],
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final textScale = MediaQuery.textScalerOf(context).scale(1);
+        final useStackedLayout =
+            constraints.maxWidth < _minimumInlineWidth ||
+            textScale > _maximumInlineTextScale;
+
+        if (useStackedLayout) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              activeSelector,
+              SizedBox(height: spacing.spacingM),
+              siblingSelector,
+            ],
+          );
+        }
+
+        return SizedBox(
+          width: double.infinity,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(flex: _activeFlex, child: activeSelector),
+              SizedBox(width: spacing.spacingM),
+              Expanded(flex: _siblingFlex, child: siblingSelector),
+            ],
+          ),
+        );
+      },
     );
   }
 }

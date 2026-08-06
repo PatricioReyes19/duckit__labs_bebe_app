@@ -1,4 +1,4 @@
-import 'package:flutter/src/painting/text_style.dart';
+import 'package:flutter/painting.dart';
 
 import 'bebe_typography.dart';
 

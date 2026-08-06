@@ -7,14 +7,12 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class HomeView extends StatelessWidget {
   const HomeView({
-    required this.openNotifications,
     required this.openRegister,
     required this.openAgenda,
     required this.openHealth,
     super.key,
   });
 
-  final void Function(BuildContext context) openNotifications;
   final void Function(BuildContext context, String actionId) openRegister;
   final void Function(BuildContext context) openAgenda;
   final void Function(BuildContext context) openHealth;
@@ -25,7 +23,6 @@ class HomeView extends StatelessWidget {
       builder: (context, state) {
         return switch (state) {
           HomeInitial() || HomeLoading() => const BebeHomeTemplate(
-              title: 'BebéApp',
               isLoading: true,
               activeBabyHeader: SizedBox.shrink(),
               todaySummary: SizedBox.shrink(),
@@ -34,7 +31,6 @@ class HomeView extends StatelessWidget {
               recentInformation: SizedBox.shrink(),
             ),
           HomeFailure(:final message) => BebeHomeTemplate(
-              title: 'BebéApp',
               errorMessage: message,
               onRetry: () {
                 context.read<HomeBloc>().add(const HomeEvent.retried());
@@ -47,7 +43,6 @@ class HomeView extends StatelessWidget {
             ),
           HomeLoaded(:final overview) => _LoadedHome(
               overview: overview,
-              openNotifications: openNotifications,
               openRegister: openRegister,
               openAgenda: openAgenda,
               openHealth: openHealth,
@@ -61,14 +56,12 @@ class HomeView extends StatelessWidget {
 class _LoadedHome extends StatelessWidget {
   const _LoadedHome({
     required this.overview,
-    required this.openNotifications,
     required this.openRegister,
     required this.openAgenda,
     required this.openHealth,
   });
 
   final HomeOverviewVm overview;
-  final void Function(BuildContext context) openNotifications;
   final void Function(BuildContext context, String actionId) openRegister;
   final void Function(BuildContext context) openAgenda;
   final void Function(BuildContext context) openHealth;
@@ -80,8 +73,6 @@ class _LoadedHome extends StatelessWidget {
     final recent = overview.recentInformation;
 
     return BebeHomeTemplate(
-      title: 'BebéApp',
-      onNotificationPressed: () => openNotifications(context),
       activeBabyHeader: BebeActiveBabyHeader(
         name: baby.name,
         ageLabel: baby.ageLabel,
@@ -101,7 +92,7 @@ class _LoadedHome extends StatelessWidget {
       ),
       quickActions: BebeQuickRegistrationActions(
         items: overview.quickActions.map(_action).toList(growable: false),
-        onItemPressed: (item) => openRegister(context, "1"),
+        onItemPressed: (itemId) => openRegister(context, itemId),
       ),
       upcomingHealth: BebeUpcomingHealthSection(
         data: BebeUpcomingHealthData(

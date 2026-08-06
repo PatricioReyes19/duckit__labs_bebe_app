@@ -18,9 +18,7 @@ abstract class BlocsModule {
   ThemeStorage themeStorage(
     SharedPreferences preferences,
   ) {
-    return SharedPreferencesThemeStorage(
-      preferences: preferences,
-    );
+    return SharedPreferencesThemeStorage(preferences);
   }
 
   @lazySingleton

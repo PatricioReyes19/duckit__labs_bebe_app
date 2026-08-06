@@ -1,4 +1,9 @@
 export 'segmented_selector/bebe_segmented_selector.dart';
+export 'segmented_form_field/segmented_form_field.dart';
+export 'form_field/form_field.dart';
+export 'picker_field/picker_field.dart';
+export 'notes_field/notes_field.dart';
+export 'photo_picker/photo_picker.dart';
 export 'status_banner/bebe_status_banner.dart';
 export 'baby_selector/bebe_baby_selector.dart';
 export 'title_section.dart';

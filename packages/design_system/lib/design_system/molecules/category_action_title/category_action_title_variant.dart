@@ -4,5 +4,5 @@ enum BebeCategoryActionTileVariant {
   diaper,
   observation,
   medication,
-  neutral,
+  measurement,
 }

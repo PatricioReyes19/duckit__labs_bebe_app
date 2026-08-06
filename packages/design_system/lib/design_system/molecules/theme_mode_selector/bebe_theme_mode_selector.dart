@@ -22,31 +22,29 @@ class BebeThemeModeSelector extends StatelessWidget {
   Widget build(BuildContext context) {
     final spacing = context.theme.spacing;
 
-    final content = Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        RadioListTile<BebeThemeModeOption>(
-          value: BebeThemeModeOption.system,
-          groupValue: value,
-          onChanged: _handleChanged,
-          title: Text(systemLabel.trim()),
-          contentPadding: EdgeInsets.symmetric(horizontal: spacing.spacingL),
-        ),
-        RadioListTile<BebeThemeModeOption>(
-          value: BebeThemeModeOption.light,
-          groupValue: value,
-          onChanged: _handleChanged,
-          title: Text(lightLabel.trim()),
-          contentPadding: EdgeInsets.symmetric(horizontal: spacing.spacingL),
-        ),
-        RadioListTile<BebeThemeModeOption>(
-          value: BebeThemeModeOption.dark,
-          groupValue: value,
-          onChanged: _handleChanged,
-          title: Text(darkLabel.trim()),
-          contentPadding: EdgeInsets.symmetric(horizontal: spacing.spacingL),
-        ),
-      ],
+    final content = RadioGroup<BebeThemeModeOption>(
+      groupValue: value,
+      onChanged: _handleChanged,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          RadioListTile<BebeThemeModeOption>(
+            value: BebeThemeModeOption.system,
+            title: Text(systemLabel.trim()),
+            contentPadding: EdgeInsets.symmetric(horizontal: spacing.spacingL),
+          ),
+          RadioListTile<BebeThemeModeOption>(
+            value: BebeThemeModeOption.light,
+            title: Text(lightLabel.trim()),
+            contentPadding: EdgeInsets.symmetric(horizontal: spacing.spacingL),
+          ),
+          RadioListTile<BebeThemeModeOption>(
+            value: BebeThemeModeOption.dark,
+            title: Text(darkLabel.trim()),
+            contentPadding: EdgeInsets.symmetric(horizontal: spacing.spacingL),
+          ),
+        ],
+      ),
     );
 
     final normalizedLabel = semanticLabel?.trim();

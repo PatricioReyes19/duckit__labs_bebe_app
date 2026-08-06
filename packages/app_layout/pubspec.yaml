@@ -1,5 +1,5 @@
 name: app_layout
-description: "A new Flutter package project."
+description: Shell, header y navegación principal de BebéApp.
 version: 0.0.1
 homepage:
 
@@ -15,6 +15,7 @@ dependencies:
   flutter_bloc: ^9.1.1
   freezed_annotation: ^3.1.0
   go_router: ^16.0.0
+  design_system:
 
 dev_dependencies:
   bloc_test: ^10.0.0

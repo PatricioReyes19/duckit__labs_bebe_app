@@ -12,11 +12,13 @@ resolution: workspace
 dependencies:
   agenda:
   app_layout:
+  auth:
   core:
   design_system:
   family:
-  flutter_localization: ^0.4.1
   flutter:
+    sdk: flutter
+  flutter_localizations:
     sdk: flutter
   flutter_bloc: ^9.1.1
   get_it: ^9.2.1
@@ -24,7 +26,12 @@ dependencies:
   health:
   home:
   injectable: ^2.7.1+4
+  login:
+  onboarding:
+  register:
   shared_preferences: ^2.5.5
+  splash:
+  signup:
 
 
 
@@ -37,3 +44,6 @@ dev_dependencies:
   build_runner: ^2.5.3
   very_good_analysis: ^9.0.0
   json_serializable: ^6.10.0
+
+flutter:
+  uses-material-design: true

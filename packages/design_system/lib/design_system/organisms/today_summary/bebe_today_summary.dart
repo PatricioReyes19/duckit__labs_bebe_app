@@ -26,15 +26,17 @@ class BebeTodaySummary extends StatelessWidget {
   static const int _maximumInlineItems = 3;
 
   /// Ancho mínimo que necesita una métrica para conservar el layout inline.
-  static const double _minimumInlineCardWidth = 120;
+  // Mantiene las tres métricas visibles en los anchos móviles de referencia
+  // (375–430 px) y cambia a carrusel en pantallas realmente estrechas.
+  static const double _minimumInlineCardWidth = 96;
 
   /// Ancho estructural utilizado por las cards de la lista horizontal.
-  static const double _horizontalCardWidth = 132;
+  static const double _horizontalCardWidth = 145;
 
   /// Altura reservada para el patrón compacto de Today Summary.
-  static const double _horizontalListHeight = 200;
+  static const double _horizontalListHeight = 170;
 
-  static const double _accessibleHorizontalListHeight = 232;
+  static const double _accessibleHorizontalListHeight = 256;
   static const double _maximumInlineTextScale = 1.3;
 
   @override
@@ -96,10 +98,11 @@ class _TodayMetricsInlineRow extends StatelessWidget {
     final spacing = context.theme.spacing;
 
     return Row(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         for (var index = 0; index < items.length; index++) ...[
-          Expanded(child: _TodayMetricItem(data: items[index])),
+          Flexible(child: _TodayMetricItem(data: items[index])),
           if (index < items.length - 1) SizedBox(width: spacing.spacingL),
         ],
       ],

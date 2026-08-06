@@ -5,7 +5,6 @@ enum BebeAgendaTemplateState { content, loading, empty, error, offline }
 
 class BebeAgendaTemplate extends StatelessWidget {
   const BebeAgendaTemplate({
-    required this.header,
     required this.weekPicker,
     required this.filters,
     required this.todaySection,
@@ -23,15 +22,10 @@ class BebeAgendaTemplate extends StatelessWidget {
     this.useSafeArea = true,
     this.contentPadding,
     this.bottomSpacing,
+    this.maximumContentWidth = BebeLayout.pageContentMaxWidth,
     this.semanticLabel = 'Agenda de salud',
     super.key,
   });
-
-  /// Encabezado completo de la pantalla.
-  ///
-  /// Normalmente recibe [BebePageHeader], pero el template no depende
-  /// directamente de ese componente.
-  final Widget header;
 
   /// Selector semanal.
   ///
@@ -94,6 +88,8 @@ class BebeAgendaTemplate extends StatelessWidget {
   /// navegación o FAB cubran la última sección.
   final double? bottomSpacing;
 
+  final double maximumContentWidth;
+
   final String semanticLabel;
 
   @override
@@ -113,7 +109,6 @@ class BebeAgendaTemplate extends StatelessWidget {
 
     final body = _AgendaTemplateBody(
       state: state,
-      header: header,
       weekPicker: weekPicker,
       filters: filters,
       todaySection: todaySection,
@@ -129,6 +124,7 @@ class BebeAgendaTemplate extends StatelessWidget {
       onRefresh: onRefresh,
       contentPadding: effectivePadding,
       bottomSpacing: effectiveBottomSpacing,
+      maximumContentWidth: maximumContentWidth,
     );
 
     return Semantics(
@@ -142,7 +138,6 @@ class BebeAgendaTemplate extends StatelessWidget {
 class _AgendaTemplateBody extends StatelessWidget {
   const _AgendaTemplateBody({
     required this.state,
-    required this.header,
     required this.weekPicker,
     required this.filters,
     required this.todaySection,
@@ -158,11 +153,11 @@ class _AgendaTemplateBody extends StatelessWidget {
     required this.onRefresh,
     required this.contentPadding,
     required this.bottomSpacing,
+    required this.maximumContentWidth,
   });
 
   final BebeAgendaTemplateState state;
 
-  final Widget header;
   final Widget weekPicker;
   final Widget filters;
   final Widget todaySection;
@@ -183,6 +178,7 @@ class _AgendaTemplateBody extends StatelessWidget {
 
   final EdgeInsetsGeometry contentPadding;
   final double bottomSpacing;
+  final double maximumContentWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -191,27 +187,29 @@ class _AgendaTemplateBody extends StatelessWidget {
           ? const AlwaysScrollableScrollPhysics()
           : const ClampingScrollPhysics(),
       padding: contentPadding,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          header,
-          _AgendaTemplateStateContent(
-            state: state,
-            weekPicker: weekPicker,
-            filters: filters,
-            todaySection: todaySection,
-            upcomingSection: upcomingSection,
-            loadingState: loadingState,
-            emptyState: emptyState,
-            errorState: errorState,
-            offlineBanner: offlineBanner,
-            reminderBanner: reminderBanner,
-            monthlyOverview: monthlyOverview,
-            healthNotice: healthNotice,
-            additionalSections: additionalSections,
-          ),
-          SizedBox(height: bottomSpacing),
-        ],
+      child: BebeResponsiveContent(
+        maxWidth: maximumContentWidth,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _AgendaTemplateStateContent(
+              state: state,
+              weekPicker: weekPicker,
+              filters: filters,
+              todaySection: todaySection,
+              upcomingSection: upcomingSection,
+              loadingState: loadingState,
+              emptyState: emptyState,
+              errorState: errorState,
+              offlineBanner: offlineBanner,
+              reminderBanner: reminderBanner,
+              monthlyOverview: monthlyOverview,
+              healthNotice: healthNotice,
+              additionalSections: additionalSections,
+            ),
+            SizedBox(height: bottomSpacing),
+          ],
+        ),
       ),
     );
 
@@ -220,27 +218,6 @@ class _AgendaTemplateBody extends StatelessWidget {
     }
 
     return RefreshIndicator(onRefresh: onRefresh!, child: scrollView);
-  }
-}
-
-enum _AgendaTemplateLayout {
-  compact,
-  medium,
-  expanded;
-
-  static const double _mediumBreakpoint = 600;
-  static const double _expandedBreakpoint = 960;
-
-  static _AgendaTemplateLayout resolve(double width) {
-    if (width >= _expandedBreakpoint) {
-      return _AgendaTemplateLayout.expanded;
-    }
-
-    if (width >= _mediumBreakpoint) {
-      return _AgendaTemplateLayout.medium;
-    }
-
-    return _AgendaTemplateLayout.compact;
   }
 }
 

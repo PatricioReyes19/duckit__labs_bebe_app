@@ -3,24 +3,19 @@ import 'package:flutter/material.dart';
 
 class BebeHomeTemplate extends StatelessWidget {
   const BebeHomeTemplate({
-    required this.title,
     required this.activeBabyHeader,
     required this.todaySummary,
     required this.quickActions,
     required this.upcomingHealth,
     required this.recentInformation,
-    this.notificationIcon,
-    this.onNotificationPressed,
-    this.hasUnreadNotifications = false,
     this.isLoading = false,
     this.loadingState,
     this.errorMessage,
     this.errorState,
     this.onRetry,
+    this.maximumContentWidth = BebeLayout.pageContentMaxWidth,
     super.key,
   });
-
-  final String title;
 
   /// El template recibe contenido visual, no Organisms concretos.
   final Widget activeBabyHeader;
@@ -29,16 +24,13 @@ class BebeHomeTemplate extends StatelessWidget {
   final Widget upcomingHealth;
   final Widget recentInformation;
 
-  final Widget? notificationIcon;
-  final VoidCallback? onNotificationPressed;
-  final bool hasUnreadNotifications;
-
   final bool isLoading;
   final Widget? loadingState;
 
   final String? errorMessage;
   final Widget? errorState;
   final VoidCallback? onRetry;
+  final double maximumContentWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -54,46 +46,10 @@ class BebeHomeTemplate extends StatelessWidget {
     final theme = context.theme;
     final spacing = theme.spacing;
     final colors = theme.colors;
-    final typography = theme.typography;
 
     return Scaffold(
       backgroundColor: colors.background.neutralsSurface,
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        backgroundColor: colors.background.neutralsSurface,
-        surfaceTintColor: Colors.transparent,
-        centerTitle: true,
-        title: Text(
-          title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: typography.styles.headline.md.bold.copyWith(
-            color: colors.text.brandDefault,
-          ),
-        ),
-        actions: [
-          Semantics(
-            button: true,
-            enabled: onNotificationPressed != null,
-            label: 'Notificaciones',
-            child: IconButton(
-              onPressed: onNotificationPressed,
-              tooltip: 'Notificaciones',
-              icon: Badge(
-                isLabelVisible: hasUnreadNotifications,
-                smallSize: 10,
-                child:
-                    notificationIcon ??
-                    Icon(
-                      Icons.notifications_none_rounded,
-                      color: colors.icons.neutralDefault,
-                    ),
-              ),
-            ),
-          ),
-          SizedBox(width: spacing.spacingM),
-        ],
-      ),
+
       body: SafeArea(
         top: false,
         child: CustomScrollView(
@@ -105,18 +61,24 @@ class BebeHomeTemplate extends StatelessWidget {
                 spacing.spacing3xl,
                 spacing.spacing5xl,
               ),
-              sliver: SliverList(
-                delegate: SliverChildListDelegate.fixed([
-                  SizedBox(width: double.infinity, child: activeBabyHeader),
-                  SizedBox(height: spacing.spacing4xl),
-                  SizedBox(width: double.infinity, child: todaySummary),
-                  SizedBox(height: spacing.spacing4xl),
-                  SizedBox(width: double.infinity, child: quickActions),
-                  SizedBox(height: spacing.spacing4xl),
-                  SizedBox(width: double.infinity, child: upcomingHealth),
-                  SizedBox(height: spacing.spacing4xl),
-                  SizedBox(width: double.infinity, child: recentInformation),
-                ]),
+              sliver: SliverToBoxAdapter(
+                child: BebeResponsiveContent(
+                  maxWidth: maximumContentWidth,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      activeBabyHeader,
+                      SizedBox(height: spacing.spacing4xl),
+                      todaySummary,
+                      SizedBox(height: spacing.spacing4xl),
+                      quickActions,
+                      SizedBox(height: spacing.spacing4xl),
+                      upcomingHealth,
+                      SizedBox(height: spacing.spacing4xl),
+                      recentInformation,
+                    ],
+                  ),
+                ),
               ),
             ),
           ],

@@ -2,7 +2,6 @@ import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
 import 'bebe_family_metric_card_palette.dart';
-import 'bebe_family_metric_card_variant.dart';
 
 class BebeFamilyMetricCard extends StatelessWidget {
   const BebeFamilyMetricCard({

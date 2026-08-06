@@ -7,7 +7,7 @@ import '../../support/use_case_frame.dart';
 
 @widgetbook.UseCase(
   name: 'Playground',
-  type: CategoryActionTile,
+  type: BebeCategoryActionTile,
   path: '[Moleculas]/Acciones rápidas',
 )
 Widget bebeCategoryTilePlayground(BuildContext context) {
@@ -29,7 +29,7 @@ Widget bebeCategoryTilePlayground(BuildContext context) {
   return UseCaseFrame(
     child: SizedBox(
       width: 116,
-      child: CategoryActionTile(
+      child: BebeCategoryActionTile(
         label: label,
         icon: const Icon(LucideIcons.milk),
         isSelected: selected,
@@ -43,7 +43,7 @@ Widget bebeCategoryTilePlayground(BuildContext context) {
 
 @widgetbook.UseCase(
   name: 'Categorías BebéApp',
-  type: CategoryActionTile,
+  type: BebeCategoryActionTile,
   path: '[Moleculas]/Acciones rápidas',
 )
 Widget bebeCategoryTiles(BuildContext context) {
@@ -54,7 +54,7 @@ Widget bebeCategoryTiles(BuildContext context) {
       children: const [
         SizedBox(
           width: 112,
-          child: CategoryActionTile(
+          child: BebeCategoryActionTile(
             label: 'Alimentación',
             icon: Icon(LucideIcons.milk),
             variant: BebeCategoryActionTileVariant.feeding,
@@ -63,7 +63,7 @@ Widget bebeCategoryTiles(BuildContext context) {
         ),
         SizedBox(
           width: 112,
-          child: CategoryActionTile(
+          child: BebeCategoryActionTile(
             label: 'Sueño',
             icon: Icon(LucideIcons.moon),
             variant: BebeCategoryActionTileVariant.sleep,
@@ -72,7 +72,7 @@ Widget bebeCategoryTiles(BuildContext context) {
         ),
         SizedBox(
           width: 112,
-          child: CategoryActionTile(
+          child: BebeCategoryActionTile(
             label: 'Pañal',
             icon: Icon(LucideIcons.baby),
             variant: BebeCategoryActionTileVariant.diaper,

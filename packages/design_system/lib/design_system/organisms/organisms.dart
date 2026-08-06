@@ -21,3 +21,7 @@ export 'care_circle_section/care_circle_section.dart';
 export 'family_summary/family_summary.dart';
 export 'account_summary/account_summary.dart';
 export 'settings_section/settings_section.dart';
+export 'register_category_selector/register_category_selector.dart';
+export 'register_form_section/register_form_section.dart';
+export 'register_action_bar/register_action_bar.dart';
+export 'responsive_form_grid/responsive_form_grid.dart';

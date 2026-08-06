@@ -64,15 +64,10 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   HomeOverviewVm _buildMockOverview() {
     return const HomeOverviewVm(
       activeBaby: HomeActiveBabyVm(
-        name: 'Emilia',
-        ageLabel: '2 meses y 8 días',
+        name: 'Franco Reyes',
+        ageLabel: '1 meses y 8 días',
         avatarAssetPath: 'assets/images/baby_avatar.png',
         familyContextLabel: 'Familia Reyes',
-        sibling: HomeSiblingVm(
-          name: 'Mateo',
-          ageLabel: '2 años',
-          avatarAssetPath: 'assets/images/baby_avatar_2.png',
-        ),
       ),
       todayMetrics: [
         HomeTodayMetricVm(

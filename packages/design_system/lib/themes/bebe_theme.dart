@@ -16,7 +16,6 @@ class BebeTheme {
 
   factory BebeTheme.fromJson(Map<String, dynamic> json) {
     final colorsJson = json['Colors'] as Map<String, dynamic>? ?? const {};
-
     final overlaysJson = json['overlays'] as Map<String, dynamic>? ?? const {};
 
     final lightOverlaysJson =
@@ -26,7 +25,6 @@ class BebeTheme {
         overlaysJson['Dark'] as Map<String, dynamic>? ?? const {};
 
     final lightOverlays = BebeOverlays.fromJson(lightOverlaysJson);
-
     final darkOverlays = BebeOverlays.fromJson(darkOverlaysJson);
 
     final elevationJson =
@@ -99,11 +97,8 @@ class BebeTheme {
     required BebeElevation? elevation,
   }) {
     final effectiveColors = colors ?? BebeColor.empty();
-
     final effectiveSpacing = spacing ?? BebeSpacing.fallback();
-
     final effectiveTypography = typography ?? BebeTypography.empty();
-
     final effectiveBorderRadius = borderRadius ?? BebeBorderRadius.fallback();
 
     final effectiveOverlays =
@@ -115,10 +110,35 @@ class BebeTheme {
     final effectiveElevation =
         elevation ?? BebeElevation.fallback(overlays: effectiveOverlays);
 
-    final theme = ThemeData(
+    final colorScheme = _buildColorScheme(
+      brightness: brightness,
+      colors: effectiveColors,
+      overlays: effectiveOverlays,
+    );
+
+    final textTheme = effectiveTypography.toTextTheme().apply(
+      bodyColor: effectiveColors.text.neutralBody,
+      displayColor: effectiveColors.text.neutralTitle,
+    );
+
+    return ThemeData(
       brightness: brightness,
       useMaterial3: true,
       fontFamily: effectiveTypography.fontFamily,
+      colorScheme: colorScheme,
+      textTheme: textTheme,
+      primaryTextTheme: textTheme,
+
+      scaffoldBackgroundColor: effectiveColors.background.neutralsPage,
+      canvasColor: effectiveColors.background.neutralsPage,
+      cardColor: effectiveColors.background.neutralsSurface,
+      dividerColor: effectiveColors.border.neutralDefault,
+      disabledColor: effectiveColors.text.neutralDisabled,
+      shadowColor: effectiveOverlays.shadowDefault,
+      splashColor: effectiveOverlays.interactionPressed,
+      highlightColor: effectiveOverlays.interactionHover,
+      hoverColor: effectiveOverlays.interactionHover,
+      focusColor: effectiveOverlays.interactionFocus,
 
       extensions: <ThemeExtension<dynamic>>[
         effectiveColors,
@@ -129,18 +149,122 @@ class BebeTheme {
         effectiveOverlays,
       ],
 
-      scaffoldBackgroundColor: effectiveColors.background.neutralsSurface,
+      iconTheme: IconThemeData(color: effectiveColors.icons.neutralDefault),
 
-      colorScheme: brightness == Brightness.light
-          ? const ColorScheme.light()
-          : const ColorScheme.dark(),
+      appBarTheme: AppBarTheme(
+        backgroundColor: effectiveColors.background.neutralsSurface,
+        foregroundColor: effectiveColors.text.neutralTitle,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        iconTheme: IconThemeData(color: effectiveColors.icons.neutralDefault),
+        actionsIconTheme: IconThemeData(
+          color: effectiveColors.icons.neutralDefault,
+        ),
+        titleTextStyle: textTheme.titleLarge?.copyWith(
+          color: effectiveColors.text.neutralTitle,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: effectiveColors.background.brandDefault,
+        foregroundColor: effectiveColors.onPrimary.neutralDefault,
+        focusColor: effectiveOverlays.interactionFocus,
+        hoverColor: effectiveOverlays.interactionHover,
+        splashColor: effectiveOverlays.interactionPressed,
+        elevation: 6,
+        focusElevation: 8,
+        hoverElevation: 8,
+        highlightElevation: 4,
+        shape: const CircleBorder(),
+      ),
+
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        backgroundColor: effectiveColors.background.neutralsSurface,
+        selectedItemColor: effectiveColors.text.brandDefault,
+        unselectedItemColor: effectiveColors.icons.neutralDefault,
+        selectedLabelStyle: textTheme.labelSmall?.copyWith(
+          fontWeight: FontWeight.w600,
+        ),
+        unselectedLabelStyle: textTheme.labelSmall?.copyWith(
+          fontWeight: FontWeight.w400,
+        ),
+        type: BottomNavigationBarType.fixed,
+        elevation: 0,
+      ),
+
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: effectiveColors.background.neutralsSurface,
+        indicatorColor: effectiveColors.background.brandSurface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        height: 72,
+      ),
+
+      dividerTheme: DividerThemeData(
+        color: effectiveColors.border.neutralDefault,
+        thickness: 1,
+        space: 1,
+      ),
 
       textSelectionTheme: TextSelectionThemeData(
-        selectionColor: effectiveColors.background.accentDefault,
-        selectionHandleColor: effectiveColors.text.accentDefault,
+        selectionColor: effectiveColors.background.brandSurface,
+        selectionHandleColor: effectiveColors.background.brandDefault,
+        cursorColor: effectiveColors.background.brandDefault,
       ),
     );
+  }
 
-    return theme.copyWith(textTheme: effectiveTypography.toTextTheme());
+  ColorScheme _buildColorScheme({
+    required Brightness brightness,
+    required BebeColor colors,
+    required BebeOverlays overlays,
+  }) {
+    final base = brightness == Brightness.light
+        ? const ColorScheme.light()
+        : const ColorScheme.dark();
+
+    return base.copyWith(
+      primary: colors.background.brandDefault,
+      onPrimary: colors.onPrimary.neutralDefault,
+      primaryContainer: colors.background.brandSurface,
+      onPrimaryContainer: colors.text.brandDefault,
+
+      secondary: colors.background.accentDefault,
+      // El lavanda claro requiere contenido oscuro para mantener contraste.
+      onSecondary: colors.text.neutralDisplay,
+      secondaryContainer: colors.background.accentSurface,
+      onSecondaryContainer: colors.text.accentDefault,
+
+      tertiary: colors.background.warningDefault,
+      onTertiary: colors.text.neutralDisplay,
+      tertiaryContainer: colors.background.warningSurface,
+      onTertiaryContainer: colors.text.warningDefault,
+
+      error: colors.background.errorDefault,
+      onError: colors.onPrimary.neutralDefault,
+      errorContainer: colors.background.errorSurface,
+      onErrorContainer: colors.text.errorDefault,
+
+      surface: colors.background.neutralsSurface,
+      onSurface: colors.text.neutralBody,
+      surfaceContainerLowest: colors.background.neutralsPage,
+      surfaceContainer: colors.background.neutralsSurface,
+      surfaceContainerHighest: colors.background.neutralsActive,
+      onSurfaceVariant: colors.text.neutralLabel,
+
+      outline: colors.border.neutralFocus,
+      outlineVariant: colors.border.neutralDefault,
+
+      shadow: overlays.shadowDefault,
+      scrim: overlays.scrimDefault,
+
+      inverseSurface: colors.background.neutralsFeedback,
+      onInverseSurface: colors.onPrimary.neutralDefault,
+      inversePrimary: colors.text.brandAlternative,
+
+      surfaceTint: Colors.transparent,
+    );
   }
 }

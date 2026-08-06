@@ -1,7 +1,10 @@
+import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
+/// Visual variants supported by [BebeButton].
 enum BebeButtonVariant { primary, secondary, text, destructive }
 
+/// Intrinsic button heights that preserve an accessible touch target.
 enum BebeButtonSize {
   medium(48),
   large(56);
@@ -11,6 +14,10 @@ enum BebeButtonSize {
   final double height;
 }
 
+/// BebéApp's base action button.
+///
+/// This widget only owns visual state. Saving, validation and navigation stay
+/// in the consuming feature through [onPressed].
 class BebeButton extends StatelessWidget {
   const BebeButton({
     required this.label,
@@ -39,61 +46,78 @@ class BebeButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final theme = context.theme;
+    final colors = theme.colors;
+    final spacing = theme.spacing;
+    final transparentSurface = colors.background.neutralsSurface.withValues(
+      alpha: 0,
+    );
 
     final background = switch (variant) {
-      BebeButtonVariant.primary => colors.primary,
-      BebeButtonVariant.secondary => colors.surface,
-      BebeButtonVariant.text => Colors.transparent,
-      BebeButtonVariant.destructive => colors.error,
+      BebeButtonVariant.primary => colors.background.brandDefault,
+      BebeButtonVariant.secondary => colors.background.neutralsSurface,
+      BebeButtonVariant.text => transparentSurface,
+      BebeButtonVariant.destructive => colors.background.errorDefault,
     };
 
     final foreground = switch (variant) {
-      BebeButtonVariant.primary => colors.onPrimary,
-      BebeButtonVariant.secondary => colors.primary,
-      BebeButtonVariant.text => colors.primary,
-      BebeButtonVariant.destructive => colors.onError,
+      BebeButtonVariant.primary => colors.onPrimary.neutralDefault,
+      BebeButtonVariant.secondary ||
+      BebeButtonVariant.text => colors.text.brandDefault,
+      BebeButtonVariant.destructive => colors.onPrimary.neutralDefault,
     };
 
     final border = switch (variant) {
-      BebeButtonVariant.secondary => BorderSide(color: colors.primary),
+      BebeButtonVariant.secondary => BorderSide(
+        color: colors.border.brandDefault,
+      ),
       _ => BorderSide.none,
     };
 
-    final content = AnimatedSwitcher(
-      duration: const Duration(milliseconds: 150),
-      child: isLoading
-          ? SizedBox.square(
-              key: const ValueKey('loading'),
-              dimension: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: foreground,
-              ),
-            )
-          : Row(
-              key: const ValueKey('content'),
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (leading != null) ...[leading!, const SizedBox(width: 8)],
-                Flexible(
-                  child: Text(
-                    label,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
+    final content = isLoading
+        ? SizedBox.square(
+            dimension: BebeIconSize.sm.value,
+            child: CircularProgressIndicator(
+              strokeWidth: theme.spacing.spacingXs,
+              color: foreground,
+            ),
+          )
+        : Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (leading != null) ...[
+                IconTheme(
+                  data: IconThemeData(color: foreground),
+                  child: leading!,
+                ),
+                SizedBox(width: spacing.spacingM),
+              ],
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 2,
+                  textAlign: TextAlign.center,
+                  style: theme.typography.styles.label.lg.semibold.copyWith(
+                    color: foreground,
                   ),
                 ),
-                if (trailing != null) ...[const SizedBox(width: 8), trailing!],
+              ),
+              if (trailing != null) ...[
+                SizedBox(width: spacing.spacingM),
+                IconTheme(
+                  data: IconThemeData(color: foreground),
+                  child: trailing!,
+                ),
               ],
-            ),
-    );
+            ],
+          );
 
     final button = Semantics(
       button: true,
       enabled: _isEnabled,
       label: semanticLabel ?? label,
+      value: isLoading ? 'Cargando' : null,
       child: SizedBox(
         height: size.height,
         child: FilledButton(
@@ -102,22 +126,42 @@ class BebeButton extends StatelessWidget {
             elevation: const WidgetStatePropertyAll(0),
             backgroundColor: WidgetStateProperty.resolveWith((states) {
               if (states.contains(WidgetState.disabled)) {
-                return colors.surfaceContainerHighest;
+                return colors.background.neutralsDisabled;
+              }
+              if (states.contains(WidgetState.pressed)) {
+                return switch (variant) {
+                  BebeButtonVariant.primary => colors.background.brandPressed,
+                  BebeButtonVariant.destructive =>
+                    colors.background.errorPressed,
+                  _ => background,
+                };
               }
               return background;
             }),
             foregroundColor: WidgetStateProperty.resolveWith((states) {
               if (states.contains(WidgetState.disabled)) {
-                return colors.onSurfaceVariant;
+                return colors.text.neutralDisabled;
               }
               return foreground;
             }),
+            overlayColor: WidgetStateProperty.resolveWith((states) {
+              if (states.contains(WidgetState.focused)) {
+                return theme.overlays.interactionFocus;
+              }
+              if (states.contains(WidgetState.hovered)) {
+                return theme.overlays.interactionHover;
+              }
+              if (states.contains(WidgetState.pressed)) {
+                return theme.overlays.interactionPressed;
+              }
+              return null;
+            }),
             side: WidgetStatePropertyAll(border),
             shape: WidgetStatePropertyAll(
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              RoundedRectangleBorder(borderRadius: theme.borderRadius.xl),
             ),
-            padding: const WidgetStatePropertyAll(
-              EdgeInsets.symmetric(horizontal: 20),
+            padding: WidgetStatePropertyAll(
+              EdgeInsets.symmetric(horizontal: spacing.spacing2xl),
             ),
           ),
           child: content,

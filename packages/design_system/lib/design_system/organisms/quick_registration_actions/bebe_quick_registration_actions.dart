@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
@@ -32,6 +34,9 @@ class BebeQuickRegistrationActions extends StatelessWidget {
   final String helperLabel;
 
   static const int _maximumVisibleItems = 5;
+  static const double _minimumTileWidth = 72;
+  static const double _accessibleTileWidth = 112;
+  static const double _maximumCompactTextScale = 1.3;
 
   @override
   Widget build(BuildContext context) {
@@ -70,8 +75,13 @@ class BebeQuickRegistrationActions extends StatelessWidget {
 
               final totalSpacing = gap * (visibleItems - 1);
 
-              final tileWidth =
+              final textScale = MediaQuery.textScalerOf(context).scale(1);
+              final minimumTileWidth = textScale > _maximumCompactTextScale
+                  ? _accessibleTileWidth
+                  : _minimumTileWidth;
+              final fluidTileWidth =
                   (constraints.maxWidth - totalSpacing) / visibleItems;
+              final tileWidth = math.max(minimumTileWidth, fluidTileWidth);
 
               return SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
@@ -97,7 +107,7 @@ class BebeQuickRegistrationActions extends StatelessWidget {
   }
 
   Widget _buildTile(BebeQuickActionData item) {
-    return CategoryActionTile(
+    return BebeCategoryActionTile(
       variant: item.type.toTitleVariant(),
       label: item.label,
       icon: item.icon,

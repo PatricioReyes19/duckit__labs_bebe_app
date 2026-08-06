@@ -1,0 +1,580 @@
+import 'dart:typed_data';
+
+import 'package:core/core.dart';
+import 'package:design_system/design_system.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:register/register.dart';
+
+/// Connects the six registration forms to their independent Cubits.
+class RegisterPageView extends StatefulWidget {
+  const RegisterPageView({
+    required this.initialKind,
+    required this.babyName,
+    required this.babyAge,
+    required this.familyContextLabel,
+    required this.onSaved,
+    required this.onCancel,
+    super.key,
+  });
+
+  final RegisterEventKind initialKind;
+  final String babyName;
+  final String babyAge;
+  final String familyContextLabel;
+  final ValueChanged<RegisteredEvent> onSaved;
+  final VoidCallback onCancel;
+
+  @override
+  State<RegisterPageView> createState() => _RegisterPageViewState();
+}
+
+class _RegisterPageViewState extends State<RegisterPageView> {
+  final _feedingNotes = TextEditingController();
+  final _feedingSymptoms = TextEditingController();
+  final _sleepNotes = TextEditingController();
+  final _sleepSymptoms = TextEditingController();
+  final _diaperNotes = TextEditingController();
+  final _diaperSymptoms = TextEditingController();
+  final _clinicalDescription = TextEditingController();
+  final _medicationName = TextEditingController();
+  final _medicationDose = TextEditingController();
+  final _medicationNotes = TextEditingController();
+  final _measurementValue = TextEditingController();
+  final _measurementNotes = TextEditingController();
+  final _imagePicker = ImagePicker();
+  final Map<String, Uint8List> _photoPreviews = {};
+
+  late RegisterEventKind _kind = widget.initialKind;
+
+  @override
+  void dispose() {
+    _feedingNotes.dispose();
+    _feedingSymptoms.dispose();
+    _sleepNotes.dispose();
+    _sleepSymptoms.dispose();
+    _diaperNotes.dispose();
+    _diaperSymptoms.dispose();
+    _clinicalDescription.dispose();
+    _medicationName.dispose();
+    _medicationDose.dispose();
+    _medicationNotes.dispose();
+    _measurementValue.dispose();
+    _measurementNotes.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<FeedingRegisterCubit, RegisterFormState>(
+          listener: _onSubmissionChanged,
+        ),
+        BlocListener<SleepRegisterCubit, RegisterFormState>(
+          listener: _onSubmissionChanged,
+        ),
+        BlocListener<DiaperRegisterCubit, RegisterFormState>(
+          listener: _onSubmissionChanged,
+        ),
+        BlocListener<ClinicalObservationRegisterCubit, RegisterFormState>(
+          listener: _onSubmissionChanged,
+        ),
+        BlocListener<MedicationRegisterCubit, RegisterFormState>(
+          listener: _onSubmissionChanged,
+        ),
+        BlocListener<MeasurementRegisterCubit, RegisterFormState>(
+          listener: _onSubmissionChanged,
+        ),
+      ],
+      child: switch (_kind) {
+        RegisterEventKind.feeding => _feeding(),
+        RegisterEventKind.sleep => _sleep(),
+        RegisterEventKind.diaper => _diaper(),
+        RegisterEventKind.observation => _clinicalObservation(),
+        RegisterEventKind.medication => _medication(),
+        RegisterEventKind.measurement => _measurement(),
+      },
+    );
+  }
+
+  void _onSubmissionChanged(BuildContext context, RegisterFormState state) {
+    if (state.status == RegisterSubmissionStatus.success &&
+        state.savedEvent != null) {
+      widget.onSaved(state.savedEvent!);
+    }
+  }
+
+  Widget _feeding() {
+    return BlocBuilder<FeedingRegisterCubit, RegisterFormState>(
+      builder: (context, state) {
+        final cubit = context.read<FeedingRegisterCubit>();
+        return _shell(
+          state: state,
+          kind: RegisterEventKind.feeding,
+          subcategories: _feedingTypes,
+          selectedSubcategory: cubit.subtype,
+          onSubcategoryChanged: cubit.subtypeChanged,
+          contextTitle: 'Registra la toma de ${widget.babyName}',
+          contextDescription: 'Guarda el tipo, horario y duración.',
+          onSave: cubit.submit,
+          form: FeedingRegisterForm(
+            side: cubit.side,
+            startTime: _time(context, cubit.startedAt),
+            duration: _duration(cubit.durationMinutes),
+            endTime:
+                cubit.endAt == null ? '--:--' : _time(context, cubit.endAt!),
+            mood: cubit.mood,
+            notesController: _feedingNotes,
+            symptomsController: _feedingSymptoms,
+            onSideChanged: cubit.sideChanged,
+            onStartTimePressed: () => _pickTime(
+              cubit.startedAt,
+              cubit.timeChanged,
+            ),
+            onDurationPressed: () => _pickDuration(
+              cubit.durationMinutes,
+              cubit.durationChanged,
+            ),
+            onEndTimePressed: () => _pickTime(
+              cubit.endAt ??
+                  cubit.startedAt.add(
+                    Duration(minutes: cubit.durationMinutes),
+                  ),
+              cubit.endTimeChanged,
+            ),
+            onMoodChanged: cubit.moodChanged,
+            onNotesChanged: cubit.notesChanged,
+            onSymptomsChanged: cubit.symptomsChanged,
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _sleep() {
+    return BlocBuilder<SleepRegisterCubit, RegisterFormState>(
+      builder: (context, state) {
+        final cubit = context.read<SleepRegisterCubit>();
+        return _shell(
+          state: state,
+          kind: RegisterEventKind.sleep,
+          subcategories: _sleepTypes,
+          selectedSubcategory: cubit.subtype,
+          onSubcategoryChanged: cubit.subtypeChanged,
+          contextTitle: 'Registra el sueño de ${widget.babyName}',
+          contextDescription: 'Guarda duración, lugar y estado al despertar.',
+          onSave: cubit.submit,
+          form: SleepRegisterForm(
+            startTime: _time(context, cubit.startedAt),
+            duration: _duration(cubit.durationMinutes),
+            endTime:
+                cubit.endAt == null ? '--:--' : _time(context, cubit.endAt!),
+            place: cubit.place,
+            mood: cubit.mood,
+            notesController: _sleepNotes,
+            symptomsController: _sleepSymptoms,
+            onStartTimePressed: () => _pickTime(
+              cubit.startedAt,
+              cubit.timeChanged,
+            ),
+            onDurationPressed: () => _pickDuration(
+              cubit.durationMinutes,
+              cubit.durationChanged,
+            ),
+            onEndTimePressed: () => _pickTime(
+              cubit.endAt ??
+                  cubit.startedAt.add(
+                    Duration(minutes: cubit.durationMinutes),
+                  ),
+              cubit.endTimeChanged,
+            ),
+            onPlaceChanged: cubit.placeChanged,
+            onMoodChanged: cubit.moodChanged,
+            onNotesChanged: cubit.notesChanged,
+            onSymptomsChanged: cubit.symptomsChanged,
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _diaper() {
+    return BlocBuilder<DiaperRegisterCubit, RegisterFormState>(
+      builder: (context, state) {
+        final cubit = context.read<DiaperRegisterCubit>();
+        return _shell(
+          state: state,
+          kind: RegisterEventKind.diaper,
+          subcategories: _diaperTypes,
+          selectedSubcategory: cubit.subtype,
+          onSubcategoryChanged: cubit.subtypeChanged,
+          contextTitle: 'Registra el cambio de pañal',
+          contextDescription: 'Guarda sus características y el horario.',
+          onSave: cubit.submit,
+          form: DiaperRegisterForm(
+            date: _date(context, cubit.occurredAt),
+            time: _time(context, cubit.occurredAt),
+            appearance: cubit.appearance,
+            color: cubit.color,
+            amount: cubit.amount,
+            notesController: _diaperNotes,
+            symptomsController: _diaperSymptoms,
+            onDatePressed: () => _pickDate(
+              cubit.occurredAt,
+              cubit.dateChanged,
+            ),
+            onTimePressed: () => _pickTime(
+              cubit.occurredAt,
+              cubit.timeChanged,
+            ),
+            onAppearanceChanged: cubit.appearanceChanged,
+            onColorChanged: cubit.colorChanged,
+            onAmountChanged: cubit.amountChanged,
+            onNotesChanged: cubit.notesChanged,
+            onSymptomsChanged: cubit.symptomsChanged,
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _clinicalObservation() {
+    return BlocBuilder<ClinicalObservationRegisterCubit, RegisterFormState>(
+      builder: (context, state) {
+        final cubit = context.read<ClinicalObservationRegisterCubit>();
+        return _shell(
+          state: state,
+          kind: RegisterEventKind.observation,
+          title: 'Nueva observación clínica',
+          showEventContext: false,
+          onSave: cubit.submit,
+          form: ClinicalObservationRegisterForm(
+            observationType: cubit.observationType,
+            date: _date(context, cubit.occurredAt),
+            time: _time(context, cubit.occurredAt),
+            descriptionController: _clinicalDescription,
+            photos: [
+              for (final path in cubit.photoPaths)
+                BebePhotoItem(
+                  id: path,
+                  semanticLabel: 'Foto de la observación',
+                  preview: _photoPreviews[path] == null
+                      ? const Center(child: Icon(Icons.image_outlined))
+                      : Image.memory(
+                          _photoPreviews[path]!,
+                          fit: BoxFit.cover,
+                        ),
+                ),
+            ],
+            severity: cubit.severity,
+            shareWithPediatrician: cubit.shareWithPediatrician,
+            caregiver: cubit.caregiver,
+            onObservationTypeChanged: cubit.observationTypeChanged,
+            onDatePressed: () => _pickDate(
+              cubit.occurredAt,
+              cubit.dateChanged,
+            ),
+            onTimePressed: () => _pickTime(
+              cubit.occurredAt,
+              cubit.timeChanged,
+            ),
+            onDescriptionChanged: cubit.descriptionChanged,
+            onAddPhotoPressed: () => _addPhoto(cubit),
+            onRemovePhotoPressed: (path) => _removePhoto(cubit, path),
+            onSeverityChanged: cubit.severityChanged,
+            onShareChanged: cubit.shareChanged,
+            onCaregiverChanged: cubit.caregiverChanged,
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _medication() {
+    return BlocBuilder<MedicationRegisterCubit, RegisterFormState>(
+      builder: (context, state) {
+        final cubit = context.read<MedicationRegisterCubit>();
+        return _shell(
+          state: state,
+          kind: RegisterEventKind.medication,
+          subcategories: _medicationTypes,
+          selectedSubcategory: cubit.subtype,
+          onSubcategoryChanged: cubit.subtypeChanged,
+          contextTitle: 'Registra una administración',
+          contextDescription: 'La dosis quedará disponible sin conexión.',
+          onSave: cubit.submit,
+          form: MedicationRegisterForm(
+            nameController: _medicationName,
+            doseController: _medicationDose,
+            unit: cubit.unit,
+            time: _time(context, cubit.occurredAt),
+            frequency: cubit.frequency,
+            endDate: cubit.endDate == null
+                ? 'Selecciona una fecha'
+                : _date(context, cubit.endDate!),
+            scheduleNextDoses: cubit.scheduleNextDoses,
+            notesController: _medicationNotes,
+            caregiver: cubit.caregiver,
+            onNameChanged: cubit.nameChanged,
+            onDoseChanged: cubit.doseChanged,
+            onUnitPressed: () => _pickString(
+              title: 'Unidad',
+              current: cubit.unit,
+              options: _units,
+              onSelected: cubit.unitChanged,
+            ),
+            onTimePressed: () => _pickTime(
+              cubit.occurredAt,
+              cubit.timeChanged,
+            ),
+            onFrequencyPressed: () => _pickString(
+              title: 'Frecuencia',
+              current: cubit.frequency,
+              options: _frequencies,
+              onSelected: cubit.frequencyChanged,
+            ),
+            onEndDatePressed: () async {
+              final selected = await showDatePicker(
+                context: context,
+                initialDate: cubit.endDate ?? cubit.occurredAt,
+                firstDate: cubit.occurredAt,
+                lastDate: DateTime(cubit.occurredAt.year + 5),
+              );
+              if (selected != null) cubit.endDateChanged(selected);
+            },
+            onScheduleChanged: cubit.scheduleChanged,
+            onNotesChanged: cubit.notesChanged,
+            onCaregiverChanged: cubit.caregiverChanged,
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _measurement() {
+    return BlocBuilder<MeasurementRegisterCubit, RegisterFormState>(
+      builder: (context, state) {
+        final cubit = context.read<MeasurementRegisterCubit>();
+        return _shell(
+          state: state,
+          kind: RegisterEventKind.measurement,
+          subcategories: _measurementTypes,
+          selectedSubcategory: cubit.measurementType,
+          onSubcategoryChanged: cubit.measurementTypeChanged,
+          contextTitle: 'Registra una medición',
+          contextDescription: 'Se guardará en el historial de crecimiento.',
+          onSave: cubit.submit,
+          form: MeasurementRegisterForm(
+            valueController: _measurementValue,
+            unit: cubit.unit,
+            date: _date(context, cubit.occurredAt),
+            time: _time(context, cubit.occurredAt),
+            source: cubit.source,
+            notesController: _measurementNotes,
+            onValueChanged: cubit.valueChanged,
+            onDatePressed: () => _pickDate(
+              cubit.occurredAt,
+              cubit.dateChanged,
+            ),
+            onTimePressed: () => _pickTime(
+              cubit.occurredAt,
+              cubit.timeChanged,
+            ),
+            onSourceChanged: cubit.sourceChanged,
+            onNotesChanged: cubit.notesChanged,
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _shell({
+    required RegisterFormState state,
+    required RegisterEventKind kind,
+    required Widget form,
+    required VoidCallback onSave,
+    String title = 'Registrar evento',
+    bool showEventContext = true,
+    List<BebeSegmentedItem<String>> subcategories = const [],
+    String? selectedSubcategory,
+    ValueChanged<String>? onSubcategoryChanged,
+    String? contextTitle,
+    String? contextDescription,
+  }) {
+    return RegisterEventView(
+      title: title,
+      selectedKind: kind,
+      onKindChanged: (value) => setState(() => _kind = value),
+      babyName: widget.babyName,
+      babyAge: widget.babyAge,
+      familyContextLabel: widget.familyContextLabel,
+      showEventContext: showEventContext,
+      subcategories: subcategories,
+      selectedSubcategory: selectedSubcategory,
+      onSubcategoryChanged: onSubcategoryChanged,
+      contextTitle: contextTitle,
+      contextDescription: contextDescription,
+      contextTrailing:
+          contextTitle == null ? null : const Icon(Icons.info_outline_rounded),
+      form: form,
+      onBackPressed: widget.onCancel,
+      onSavePressed: state.isSaving ? null : onSave,
+      onCancelPressed: state.isSaving ? null : widget.onCancel,
+      isSaving: state.isSaving,
+      errorMessage: state.message,
+    );
+  }
+
+  Future<void> _pickDate(
+    DateTime current,
+    ValueChanged<DateTime> onSelected,
+  ) async {
+    final selected = await showDatePicker(
+      context: context,
+      initialDate: current,
+      firstDate: DateTime(current.year - 5),
+      lastDate: DateTime.now().add(const Duration(days: 1)),
+    );
+    if (selected != null) onSelected(selected);
+  }
+
+  Future<void> _pickTime(
+    DateTime current,
+    void Function(int hour, int minute) onSelected,
+  ) async {
+    final selected = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(current),
+    );
+    if (selected != null) onSelected(selected.hour, selected.minute);
+  }
+
+  Future<void> _pickDuration(
+    int current,
+    ValueChanged<int> onSelected,
+  ) async {
+    final selected = await showModalBottomSheet<int>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            for (final value in _durations)
+              ListTile(
+                title: Text(_duration(value)),
+                selected: value == current,
+                onTap: () => Navigator.of(context).pop(value),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (selected != null) onSelected(selected);
+  }
+
+  Future<void> _pickString({
+    required String title,
+    required String current,
+    required List<String> options,
+    required ValueChanged<String> onSelected,
+  }) async {
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            ListTile(
+              title: Text(
+                title,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+            for (final option in options)
+              ListTile(
+                title: Text(option),
+                selected: option == current,
+                onTap: () => Navigator.of(context).pop(option),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (selected != null) onSelected(selected);
+  }
+
+  Future<void> _addPhoto(ClinicalObservationRegisterCubit cubit) async {
+    final photo = await _imagePicker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+      requestFullMetadata: false,
+    );
+    if (photo == null) return;
+    final bytes = await photo.readAsBytes();
+    if (!mounted) return;
+    setState(() => _photoPreviews[photo.path] = bytes);
+    cubit.photoAdded(photo.path);
+  }
+
+  void _removePhoto(
+    ClinicalObservationRegisterCubit cubit,
+    String path,
+  ) {
+    setState(() => _photoPreviews.remove(path));
+    cubit.photoRemoved(path);
+  }
+
+  String _date(BuildContext context, DateTime value) =>
+      MaterialLocalizations.of(context).formatMediumDate(value);
+
+  String _time(BuildContext context, DateTime value) =>
+      MaterialLocalizations.of(context).formatTimeOfDay(
+        TimeOfDay.fromDateTime(value),
+      );
+
+  static String _duration(int minutes) {
+    if (minutes < 60) return '$minutes min';
+    final hours = minutes ~/ 60;
+    final remaining = minutes % 60;
+    return remaining == 0 ? '$hours h' : '$hours h $remaining min';
+  }
+
+  static const _durations = <int>[5, 10, 15, 20, 30, 45, 60, 90, 120];
+  static const _units = <String>['mL', 'mg', 'g', 'gotas'];
+  static const _frequencies = <String>[
+    'Una vez',
+    'Cada 4 horas',
+    'Cada 6 horas',
+    'Cada 8 horas',
+    'Cada 12 horas',
+    'Una vez al día',
+  ];
+  static const _feedingTypes = <BebeSegmentedItem<String>>[
+    BebeSegmentedItem(value: 'breast', label: 'Pecho'),
+    BebeSegmentedItem(value: 'bottle', label: 'Mamadera'),
+    BebeSegmentedItem(value: 'expressed', label: 'Leche extraída'),
+    BebeSegmentedItem(value: 'formula', label: 'Fórmula'),
+  ];
+  static const _sleepTypes = <BebeSegmentedItem<String>>[
+    BebeSegmentedItem(value: 'nap', label: 'Siesta'),
+    BebeSegmentedItem(value: 'night', label: 'Sueño nocturno'),
+    BebeSegmentedItem(value: 'timer', label: 'Temporizador'),
+  ];
+  static const _diaperTypes = <BebeSegmentedItem<String>>[
+    BebeSegmentedItem(value: 'wet', label: 'Mojado'),
+    BebeSegmentedItem(value: 'dirty', label: 'Sucio'),
+    BebeSegmentedItem(value: 'mixed', label: 'Mixto'),
+  ];
+  static const _medicationTypes = <BebeSegmentedItem<String>>[
+    BebeSegmentedItem(value: 'medication', label: 'Medicamento'),
+    BebeSegmentedItem(value: 'supplement', label: 'Suplemento'),
+    BebeSegmentedItem(value: 'vitamin', label: 'Vitamina'),
+  ];
+  static const _measurementTypes = <BebeSegmentedItem<String>>[
+    BebeSegmentedItem(value: 'weight', label: 'Peso'),
+    BebeSegmentedItem(value: 'height', label: 'Talla'),
+    BebeSegmentedItem(value: 'head', label: 'Perímetro cefálico'),
+  ];
+}

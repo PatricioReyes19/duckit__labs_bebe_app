@@ -3,3 +3,4 @@ export 'agenda/agenda.dart';
 export 'salud/salud.dart';
 export 'family/family.dart';
 export 'settings/settings.dart';
+export 'register/register.dart';

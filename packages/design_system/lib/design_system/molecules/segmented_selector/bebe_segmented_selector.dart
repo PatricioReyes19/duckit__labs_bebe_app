@@ -1,5 +1,7 @@
+import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
+/// A visual option displayed by [BebeSegmentedSelector].
 class BebeSegmentedItem<T> {
   const BebeSegmentedItem({
     required this.value,
@@ -16,6 +18,10 @@ class BebeSegmentedItem<T> {
   final bool enabled;
 }
 
+/// A controlled, single-selection segmented control.
+///
+/// The selected value is owned by the consuming feature. This component only
+/// renders selection and forwards changes.
 class BebeSegmentedSelector<T> extends StatelessWidget {
   const BebeSegmentedSelector({
     required this.items,
@@ -38,24 +44,38 @@ class BebeSegmentedSelector<T> extends StatelessWidget {
       items.isNotEmpty,
       'BebeSegmentedSelector requires at least one item.',
     );
+    assert(
+      items.any((item) => item.value == selectedValue),
+      'selectedValue must match one of the provided items.',
+    );
+
+    final theme = context.theme;
+    final colors = theme.colors;
+    final spacing = theme.spacing;
 
     final segments = items
         .map((item) {
+          final selected = item.value == selectedValue;
           return ButtonSegment<T>(
             value: item.value,
             enabled: item.enabled,
             icon: item.icon,
-            label: Text(
-              item.label,
-              maxLines: allowWrap ? 2 : 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
+            label: Semantics(
+              label: item.semanticLabel ?? item.label,
+              selected: selected,
+              child: Text(
+                item.label,
+                maxLines: allowWrap ? 2 : 1,
+                textAlign: TextAlign.center,
+                style: theme.typography.styles.label.md.regular,
+              ),
             ),
           );
         })
         .toList(growable: false);
 
     return Semantics(
+      container: true,
       label: semanticLabel,
       child: SegmentedButton<T>(
         segments: segments,
@@ -68,11 +88,56 @@ class BebeSegmentedSelector<T> extends StatelessWidget {
                 }
               },
         showSelectedIcon: false,
+        expandedInsets: EdgeInsets.zero,
         style: ButtonStyle(
-          minimumSize: const WidgetStatePropertyAll(Size(44, 48)),
-          shape: WidgetStatePropertyAll(
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          minimumSize: WidgetStatePropertyAll(
+            Size(48, BebeButtonSize.medium.height),
           ),
+          padding: WidgetStatePropertyAll(
+            EdgeInsets.symmetric(
+              horizontal: spacing.spacingM,
+              vertical: spacing.spacingM,
+            ),
+          ),
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return colors.background.brandSurface;
+            }
+            if (states.contains(WidgetState.disabled)) {
+              return colors.background.neutralsDisabled;
+            }
+            return colors.background.neutralsSurface;
+          }),
+          foregroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return colors.text.brandDefault;
+            }
+            if (states.contains(WidgetState.disabled)) {
+              return colors.text.neutralDisabled;
+            }
+            return colors.text.neutralBody;
+          }),
+          side: WidgetStateProperty.resolveWith((states) {
+            final color = states.contains(WidgetState.selected)
+                ? colors.border.brandDefault
+                : colors.border.neutralDefault;
+            return BorderSide(color: color);
+          }),
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(borderRadius: theme.borderRadius.l),
+          ),
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.focused)) {
+              return theme.overlays.interactionFocus;
+            }
+            if (states.contains(WidgetState.hovered)) {
+              return theme.overlays.interactionHover;
+            }
+            if (states.contains(WidgetState.pressed)) {
+              return theme.overlays.interactionPressed;
+            }
+            return null;
+          }),
         ),
       ),
     );

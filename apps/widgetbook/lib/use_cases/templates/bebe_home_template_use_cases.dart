@@ -10,8 +10,6 @@ import 'package:widgetbook_annotation/widgetbook_annotation.dart' as widgetbook;
 )
 Widget homeTemplateDefault(BuildContext context) {
   return BebeHomeTemplate(
-    title: 'BebéApp',
-    onNotificationPressed: () {},
     activeBabyHeader: const BebeActiveBabyHeader(
       name: 'Mateo Reyes',
       ageLabel: '2 meses',
@@ -132,7 +130,6 @@ Widget homeTemplateDefault(BuildContext context) {
 )
 Widget homeTemplateLoading(BuildContext context) {
   return const BebeHomeTemplate(
-    title: 'BebéApp',
     isLoading: true,
     activeBabyHeader: SizedBox.shrink(),
     todaySummary: SizedBox.shrink(),
@@ -149,7 +146,6 @@ Widget homeTemplateLoading(BuildContext context) {
 )
 Widget homeTemplateError(BuildContext context) {
   return BebeHomeTemplate(
-    title: 'BebéApp',
     errorMessage: 'No pudimos cargar el Inicio.',
     onRetry: () {},
     activeBabyHeader: const SizedBox.shrink(),

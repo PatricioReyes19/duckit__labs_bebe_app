@@ -15,6 +15,8 @@ import 'package:widgetbook_app/use_cases/atoms/bebe_avatar_use_cases.dart'
     as _widgetbook_app_use_cases_atoms_bebe_avatar_use_cases;
 import 'package:widgetbook_app/use_cases/atoms/bebe_button_use_cases.dart'
     as _widgetbook_app_use_cases_atoms_bebe_button_use_cases;
+import 'package:widgetbook_app/use_cases/atoms/bebe_form_label_use_cases.dart'
+    as _widgetbook_app_use_cases_atoms_bebe_form_label_use_cases;
 import 'package:widgetbook_app/use_cases/atoms/bebe_icon_button_use_cases.dart'
     as _widgetbook_app_use_cases_atoms_bebe_icon_button_use_cases;
 import 'package:widgetbook_app/use_cases/atoms/bebe_icon_use_cases.dart'
@@ -39,6 +41,8 @@ import 'package:widgetbook_app/use_cases/molecules/filter_chip_use_cases.dart'
     as _widgetbook_app_use_cases_molecules_filter_chip_use_cases;
 import 'package:widgetbook_app/use_cases/molecules/info_banner.dart'
     as _widgetbook_app_use_cases_molecules_info_banner;
+import 'package:widgetbook_app/use_cases/molecules/register_form_controls_use_cases.dart'
+    as _widgetbook_app_use_cases_molecules_register_form_controls_use_cases;
 import 'package:widgetbook_app/use_cases/molecules/selectable_date_cell_use_cases.dart'
     as _widgetbook_app_use_cases_molecules_selectable_date_cell_use_cases;
 import 'package:widgetbook_app/use_cases/molecules/time_block_uses_cases.dart'
@@ -57,6 +61,8 @@ import 'package:widgetbook_app/use_cases/organisms/category_filters.dart'
     as _widgetbook_app_use_cases_organisms_category_filters;
 import 'package:widgetbook_app/use_cases/organisms/compact_calendar.dart'
     as _widgetbook_app_use_cases_organisms_compact_calendar;
+import 'package:widgetbook_app/use_cases/organisms/register_organisms_use_cases.dart'
+    as _widgetbook_app_use_cases_organisms_register_organisms_use_cases;
 import 'package:widgetbook_app/use_cases/templates/agenda_template.dart'
     as _widgetbook_app_use_cases_templates_agenda_template;
 import 'package:widgetbook_app/use_cases/templates/bebe_family_overview_template_use_cases.dart'
@@ -65,6 +71,8 @@ import 'package:widgetbook_app/use_cases/templates/bebe_home_template_use_cases.
     as _widgetbook_app_use_cases_templates_bebe_home_template_use_cases;
 import 'package:widgetbook_app/use_cases/templates/bebe_settings_overview_template_use_cases.dart'
     as _widgetbook_app_use_cases_templates_bebe_settings_overview_template_use_cases;
+import 'package:widgetbook_app/use_cases/templates/register_event_forms_use_cases.dart'
+    as _widgetbook_app_use_cases_templates_register_event_forms_use_cases;
 import 'package:widgetbook_app/use_cases/templates/salud_template.dart'
     as _widgetbook_app_use_cases_templates_salud_template;
 
@@ -128,7 +136,7 @@ final directories = <_widgetbook.WidgetbookNode>[
         name: 'Acciones rápidas',
         children: [
           _widgetbook.WidgetbookComponent(
-            name: 'CategoryActionTile',
+            name: 'BebeCategoryActionTile',
             useCases: [
               _widgetbook.WidgetbookUseCase(
                 name: 'Categorías BebéApp',
@@ -363,6 +371,125 @@ final directories = <_widgetbook.WidgetbookNode>[
     ],
   ),
   _widgetbook.WidgetbookCategory(
+    name: 'Moléculas',
+    children: [
+      _widgetbook.WidgetbookFolder(
+        name: 'Formularios',
+        children: [
+          _widgetbook.WidgetbookComponent(
+            name: 'BebeFormField',
+            useCases: [
+              _widgetbook.WidgetbookUseCase(
+                name: 'Campo compuesto',
+                builder:
+                    _widgetbook_app_use_cases_molecules_register_form_controls_use_cases
+                        .bebeFormFieldUseCase,
+              )
+            ],
+          ),
+          _widgetbook.WidgetbookComponent(
+            name: 'BebeNotesField',
+            useCases: [
+              _widgetbook.WidgetbookUseCase(
+                name: 'Notas',
+                builder:
+                    _widgetbook_app_use_cases_molecules_register_form_controls_use_cases
+                        .bebeNotesFieldUseCase,
+              )
+            ],
+          ),
+          _widgetbook.WidgetbookComponent(
+            name: 'BebePhotoPicker',
+            useCases: [
+              _widgetbook.WidgetbookUseCase(
+                name: 'Fotos vacío y con preview',
+                builder:
+                    _widgetbook_app_use_cases_molecules_register_form_controls_use_cases
+                        .bebePhotoPickerUseCase,
+              )
+            ],
+          ),
+          _widgetbook.WidgetbookComponent(
+            name: 'BebePickerField',
+            useCases: [
+              _widgetbook.WidgetbookUseCase(
+                name: 'Fecha, hora y selección',
+                builder:
+                    _widgetbook_app_use_cases_molecules_register_form_controls_use_cases
+                        .bebePickerFieldUseCase,
+              )
+            ],
+          ),
+          _widgetbook.WidgetbookComponent(
+            name: 'BebeSegmentedFormField<String>',
+            useCases: [
+              _widgetbook.WidgetbookUseCase(
+                name: 'Selector segmentado con label',
+                builder:
+                    _widgetbook_app_use_cases_molecules_register_form_controls_use_cases
+                        .bebeSegmentedFormFieldUseCase,
+              )
+            ],
+          ),
+        ],
+      )
+    ],
+  ),
+  _widgetbook.WidgetbookCategory(
+    name: 'Organismos',
+    children: [
+      _widgetbook.WidgetbookFolder(
+        name: 'Registro',
+        children: [
+          _widgetbook.WidgetbookComponent(
+            name: 'BebeRegisterActionBar',
+            useCases: [
+              _widgetbook.WidgetbookUseCase(
+                name: 'Guardar y cancelar',
+                builder:
+                    _widgetbook_app_use_cases_organisms_register_organisms_use_cases
+                        .registerActionBarUseCase,
+              )
+            ],
+          ),
+          _widgetbook.WidgetbookComponent(
+            name: 'BebeRegisterCategorySelector<String>',
+            useCases: [
+              _widgetbook.WidgetbookUseCase(
+                name: 'Seis categorías',
+                builder:
+                    _widgetbook_app_use_cases_organisms_register_organisms_use_cases
+                        .registerCategorySelectorUseCase,
+              )
+            ],
+          ),
+          _widgetbook.WidgetbookComponent(
+            name: 'BebeRegisterFormSection',
+            useCases: [
+              _widgetbook.WidgetbookUseCase(
+                name: 'Sección',
+                builder:
+                    _widgetbook_app_use_cases_organisms_register_organisms_use_cases
+                        .registerFormSectionUseCase,
+              )
+            ],
+          ),
+          _widgetbook.WidgetbookComponent(
+            name: 'BebeResponsiveFormGrid',
+            useCases: [
+              _widgetbook.WidgetbookUseCase(
+                name: 'Responsive 1–3 columnas',
+                builder:
+                    _widgetbook_app_use_cases_organisms_register_organisms_use_cases
+                        .responsiveFormGridUseCase,
+              )
+            ],
+          ),
+        ],
+      )
+    ],
+  ),
+  _widgetbook.WidgetbookCategory(
     name: 'Organisms',
     children: [
       _widgetbook.WidgetbookFolder(
@@ -557,6 +684,99 @@ final directories = <_widgetbook.WidgetbookNode>[
           )
         ],
       ),
+      _widgetbook.WidgetbookFolder(
+        name: 'Registro',
+        children: [
+          _widgetbook.WidgetbookComponent(
+            name: 'BebeRegisterEventTemplate',
+            useCases: [
+              _widgetbook.WidgetbookUseCase(
+                name: 'Template responsive',
+                builder:
+                    _widgetbook_app_use_cases_templates_register_event_forms_use_cases
+                        .registerEventTemplateUseCase,
+              )
+            ],
+          ),
+          _widgetbook.WidgetbookComponent(
+            name: 'ClinicalObservationRegisterForm',
+            useCases: [
+              _widgetbook.WidgetbookUseCase(
+                name: 'Observación clínica',
+                builder:
+                    _widgetbook_app_use_cases_templates_register_event_forms_use_cases
+                        .clinicalObservationRegisterUseCase,
+              )
+            ],
+          ),
+          _widgetbook.WidgetbookComponent(
+            name: 'DiaperRegisterForm',
+            useCases: [
+              _widgetbook.WidgetbookUseCase(
+                name: 'Pañal',
+                builder:
+                    _widgetbook_app_use_cases_templates_register_event_forms_use_cases
+                        .diaperRegisterUseCase,
+              )
+            ],
+          ),
+          _widgetbook.WidgetbookComponent(
+            name: 'FeedingRegisterForm',
+            useCases: [
+              _widgetbook.WidgetbookUseCase(
+                name: 'Alimentación',
+                builder:
+                    _widgetbook_app_use_cases_templates_register_event_forms_use_cases
+                        .feedingRegisterUseCase,
+              )
+            ],
+          ),
+          _widgetbook.WidgetbookComponent(
+            name: 'MeasurementRegisterForm',
+            useCases: [
+              _widgetbook.WidgetbookUseCase(
+                name: 'Medición',
+                builder:
+                    _widgetbook_app_use_cases_templates_register_event_forms_use_cases
+                        .measurementRegisterUseCase,
+              )
+            ],
+          ),
+          _widgetbook.WidgetbookComponent(
+            name: 'MedicationRegisterForm',
+            useCases: [
+              _widgetbook.WidgetbookUseCase(
+                name: 'Medicamento',
+                builder:
+                    _widgetbook_app_use_cases_templates_register_event_forms_use_cases
+                        .medicationRegisterUseCase,
+              )
+            ],
+          ),
+          _widgetbook.WidgetbookComponent(
+            name: 'RegisterEventView',
+            useCases: [
+              _widgetbook.WidgetbookUseCase(
+                name: 'Shell controlado',
+                builder:
+                    _widgetbook_app_use_cases_templates_register_event_forms_use_cases
+                        .registerEventViewUseCase,
+              )
+            ],
+          ),
+          _widgetbook.WidgetbookComponent(
+            name: 'SleepRegisterForm',
+            useCases: [
+              _widgetbook.WidgetbookUseCase(
+                name: 'Sueño',
+                builder:
+                    _widgetbook_app_use_cases_templates_register_event_forms_use_cases
+                        .sleepRegisterUseCase,
+              )
+            ],
+          ),
+        ],
+      ),
     ],
   ),
   _widgetbook.WidgetbookCategory(
@@ -639,6 +859,17 @@ final directories = <_widgetbook.WidgetbookNode>[
         name: 'Formularios',
         children: [
           _widgetbook.WidgetbookComponent(
+            name: 'BebeFormLabel',
+            useCases: [
+              _widgetbook.WidgetbookUseCase(
+                name: 'Obligatorio y opcional',
+                builder:
+                    _widgetbook_app_use_cases_atoms_bebe_form_label_use_cases
+                        .bebeFormLabelUseCase,
+              )
+            ],
+          ),
+          _widgetbook.WidgetbookComponent(
             name: 'BebeTextField',
             useCases: [
               _widgetbook.WidgetbookUseCase(
@@ -654,7 +885,7 @@ final directories = <_widgetbook.WidgetbookNode>[
                         .bebeTextFieldPlayground,
               ),
             ],
-          )
+          ),
         ],
       ),
       _widgetbook.WidgetbookFolder(

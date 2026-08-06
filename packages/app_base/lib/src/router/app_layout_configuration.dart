@@ -42,6 +42,34 @@ const appLayoutTabs = <AppLayoutTabConfig>[
 
 const appLayoutVisibilityPolicy = AppLayoutVisibilityPolicy(
   rules: [
+    AppLayoutVisibilityRule.exact(
+      path: '/home',
+      chrome: AppLayoutChromeConfig(
+        title: 'BebéApp',
+        showBrandMark: false,
+      ),
+    ),
+    AppLayoutVisibilityRule.exact(
+      path: '/agenda',
+      chrome: AppLayoutChromeConfig(
+        title: 'Agenda de salud',
+        showBrandMark: false,
+      ),
+    ),
+    AppLayoutVisibilityRule.exact(
+      path: '/health',
+      chrome: AppLayoutChromeConfig(
+        title: 'Salud',
+        showBrandMark: false,
+      ),
+    ),
+    AppLayoutVisibilityRule.exact(
+      path: '/family',
+      chrome: AppLayoutChromeConfig(
+        title: 'BebéApp',
+        showBrandMark: false,
+      ),
+    ),
     AppLayoutVisibilityRule.prefix(
       path: '/register',
       chrome: AppLayoutChromeConfig(

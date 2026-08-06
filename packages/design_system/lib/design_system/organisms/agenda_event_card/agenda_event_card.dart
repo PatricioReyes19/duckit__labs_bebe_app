@@ -281,6 +281,7 @@ class _CompactAgendaEventLayout extends StatelessWidget {
         children: [
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Flexible(child: time),
               if (showChevron) ...[
@@ -301,17 +302,19 @@ class _CompactAgendaEventLayout extends StatelessWidget {
                   description: description,
                 ),
               ),
+              if (status != null ||
+                  syncIndicator != null ||
+                  caregiver != null) ...[
+                SizedBox(width: spacing.spacingM),
+                Wrap(
+                  spacing: spacing.spacingS,
+                  runSpacing: spacing.spacingS,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [?status, ?syncIndicator, ?caregiver],
+                ),
+              ],
             ],
           ),
-          if (status != null || syncIndicator != null || caregiver != null) ...[
-            SizedBox(height: spacing.spacingM),
-            Wrap(
-              spacing: spacing.spacingS,
-              runSpacing: spacing.spacingS,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [?status, ?syncIndicator, ?caregiver],
-            ),
-          ],
         ],
       ),
     );
