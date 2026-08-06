@@ -7,8 +7,13 @@ class BebeTodaySummary extends StatelessWidget {
     required this.title,
     this.actionLabel,
     this.onActionPressed,
+    this.historyActionLabel = 'Ver historial',
+    this.onHistoryPressed,
     super.key,
-  });
+  }) : assert(
+         onActionPressed == null || onHistoryPressed == null,
+         'Use onHistoryPressed or onActionPressed, not both.',
+       );
 
   final List<BebeTodayMetricData> items;
   final String title;
@@ -23,6 +28,14 @@ class BebeTodaySummary extends StatelessWidget {
   /// Debe proporcionarse junto con [actionLabel].
   final VoidCallback? onActionPressed;
 
+  /// Acción específica para abrir el detalle completo del día.
+  ///
+  /// La feature mantiene el control de la navegación mediante este callback.
+  final VoidCallback? onHistoryPressed;
+
+  /// Etiqueta mostrada cuando [onHistoryPressed] está disponible.
+  final String historyActionLabel;
+
   static const int _maximumInlineItems = 3;
 
   /// Ancho mínimo que necesita una métrica para conservar el layout inline.
@@ -34,14 +47,15 @@ class BebeTodaySummary extends StatelessWidget {
   static const double _horizontalCardWidth = 145;
 
   /// Altura reservada para el patrón compacto de Today Summary.
-  static const double _horizontalListHeight = 170;
-
-  static const double _accessibleHorizontalListHeight = 256;
   static const double _maximumInlineTextScale = 1.3;
 
   @override
   Widget build(BuildContext context) {
     final spacing = context.theme.spacing;
+    final effectiveAction = onHistoryPressed ?? onActionPressed;
+    final effectiveActionLabel = onHistoryPressed != null
+        ? historyActionLabel
+        : actionLabel ?? (onActionPressed == null ? null : historyActionLabel);
 
     return SizedBox(
       width: double.infinity,
@@ -50,8 +64,8 @@ class BebeTodaySummary extends StatelessWidget {
         children: [
           BebeTitleSection(
             title: title,
-            actionLabel: actionLabel,
-            onActionPressed: onActionPressed,
+            actionLabel: effectiveActionLabel,
+            onActionPressed: effectiveAction,
           ),
           SizedBox(height: spacing.spacingL),
           LayoutBuilder(
@@ -73,10 +87,7 @@ class BebeTodaySummary extends StatelessWidget {
                   textScale > _maximumInlineTextScale;
 
               if (shouldUseHorizontalList) {
-                return _TodayMetricsHorizontalList(
-                  items: items,
-                  textScale: textScale,
-                );
+                return _TodayMetricsHorizontalList(items: items);
               }
 
               return _TodayMetricsInlineRow(items: items);
@@ -111,38 +122,30 @@ class _TodayMetricsInlineRow extends StatelessWidget {
 }
 
 class _TodayMetricsHorizontalList extends StatelessWidget {
-  const _TodayMetricsHorizontalList({
-    required this.items,
-    required this.textScale,
-  });
+  const _TodayMetricsHorizontalList({required this.items});
 
   final List<BebeTodayMetricData> items;
-  final double textScale;
 
   @override
   Widget build(BuildContext context) {
     final spacing = context.theme.spacing;
 
-    final listHeight = textScale > BebeTodaySummary._maximumInlineTextScale
-        ? BebeTodaySummary._accessibleHorizontalListHeight
-        : BebeTodaySummary._horizontalListHeight;
-
-    return SizedBox(
-      height: listHeight,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        padding: EdgeInsets.zero,
-        itemCount: items.length,
-        separatorBuilder: (_, _) {
-          return SizedBox(width: spacing.spacingL);
-        },
-        itemBuilder: (context, index) {
-          return SizedBox(
-            width: BebeTodaySummary._horizontalCardWidth,
-            child: _TodayMetricItem(data: items[index]),
-          );
-        },
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (var index = 0; index < items.length; index++) ...[
+              SizedBox(
+                width: BebeTodaySummary._horizontalCardWidth,
+                child: _TodayMetricItem(data: items[index]),
+              ),
+              if (index < items.length - 1) SizedBox(width: spacing.spacingL),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -204,8 +207,6 @@ class _TodayMetricSupporting extends StatelessWidget {
       children: [
         Text(
           label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
           style: typography.styles.body.sm.regular.copyWith(
             color: colors.text.neutralBody,
           ),
@@ -213,8 +214,6 @@ class _TodayMetricSupporting extends StatelessWidget {
         SizedBox(height: spacing.spacingXs),
         Text(
           value,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
           style: typography.styles.label.lg.semibold.copyWith(
             color: contentColor,
           ),

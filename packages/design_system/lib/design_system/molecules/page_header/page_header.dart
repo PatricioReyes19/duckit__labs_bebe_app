@@ -42,8 +42,6 @@ class BebePageHeader extends StatelessWidget {
           Expanded(
             child: Text(
               title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
               style: typography.styles.title.lg.bold.copyWith(
                 color: colors.text.brandDefault,
               ),
@@ -69,8 +67,6 @@ class BebePageHeader extends StatelessWidget {
           Expanded(
             child: Text(
               title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
               style: typography.styles.title.lg.bold.copyWith(
                 color: colors.text.brandDefault,

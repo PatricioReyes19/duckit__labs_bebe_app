@@ -25,6 +25,7 @@ import 'package:shared_preferences/shared_preferences.dart' as _i460;
 
 import 'blocs_module.dart' as _i513;
 import 'config_module.dart' as _i689;
+import 'core_data_module.dart' as _i579;
 import 'register_module.dart' as _i291;
 import 'router_module.dart' as _i393;
 import 'startup_module.dart' as _i462;
@@ -43,41 +44,42 @@ extension GetItInjectableX on _i174.GetIt {
     );
     final blocsModule = _$BlocsModule();
     final vendorsModule = _$VendorsModule();
-    final registerModule = _$RegisterModule();
+    final coreDataModule = _$CoreDataModule();
     final startupModule = _$StartupModule();
     final routerModule = _$RouterModule();
+    final registerModule = _$RegisterModule();
     final configModule = _$ConfigModule();
     gh.factory<_i961.AppLayoutBloc>(() => blocsModule.appLayoutBloc());
-    gh.factory<_i1024.HomeBloc>(() => blocsModule.homeBloc());
-    gh.factory<_i914.AgendaBloc>(() => blocsModule.agendaBloc());
-    gh.factory<_i237.HealthBloc>(() => blocsModule.healthBloc());
-    gh.factory<_i1027.FamilyBloc>(() => blocsModule.familyBloc());
-    gh.factory<_i1027.SettingsBloc>(() => blocsModule.settingsBloc());
     await gh.factoryAsync<_i460.SharedPreferences>(
       () => vendorsModule.sharedPreferences(),
       preResolve: true,
     );
-    gh.lazySingleton<_i494.RegisterEventRepository>(
-        () => registerModule.registerEventRepository());
+    gh.lazySingleton<_i494.BebeDatabase>(() => coreDataModule.bebeDatabase());
     gh.lazySingleton<_i460.SharedPreferencesAsync>(
       () => startupModule.startupPreferences,
       instanceName: 'startupPreferences',
     );
-    gh.lazySingleton<_i494.SaveRegisterEvent>(() =>
-        registerModule.saveRegisterEvent(gh<_i494.RegisterEventRepository>()));
-    gh.lazySingleton<_i494.GetRegisterEvents>(() =>
-        registerModule.getRegisterEvents(gh<_i494.RegisterEventRepository>()));
-    gh.lazySingleton<_i494.DeleteRegisterEvent>(() => registerModule
-        .deleteRegisterEvent(gh<_i494.RegisterEventRepository>()));
     gh.lazySingleton<_i494.ThemeStorage>(
         () => blocsModule.themeStorage(gh<_i460.SharedPreferences>()));
     gh.lazySingleton<_i583.GoRouter>(
         () => routerModule.router(gh<_i460.SharedPreferences>()));
+    gh.lazySingleton<_i494.FamilyRepository>(
+        () => coreDataModule.familyRepository(gh<_i494.BebeDatabase>()));
+    gh.lazySingleton<_i494.AgendaRepository>(
+        () => coreDataModule.agendaRepository(gh<_i494.BebeDatabase>()));
+    gh.lazySingleton<_i494.HealthRepository>(
+        () => coreDataModule.healthRepository(gh<_i494.BebeDatabase>()));
+    gh.lazySingleton<_i494.AppSettingsRepository>(
+        () => coreDataModule.appSettingsRepository(gh<_i494.BebeDatabase>()));
+    gh.lazySingleton<_i494.RegisterEventRepository>(
+        () => registerModule.registerEventRepository(gh<_i494.BebeDatabase>()));
     gh.lazySingleton<_i662.AuthGateway>(() => startupModule.authGateway(
         gh<_i460.SharedPreferencesAsync>(instanceName: 'startupPreferences')));
     gh.lazySingleton<_i706.OnboardingRepository>(() =>
         startupModule.onboardingRepository(gh<_i460.SharedPreferencesAsync>(
             instanceName: 'startupPreferences')));
+    gh.lazySingleton<_i494.GetAgendaOverview>(
+        () => coreDataModule.getAgendaOverview(gh<_i494.AgendaRepository>()));
     gh.lazySingleton<_i662.AuthService>(
         () => startupModule.authService(gh<_i662.AuthGateway>()));
     await gh.factoryAsync<bool>(
@@ -90,11 +92,49 @@ extension GetItInjectableX on _i174.GetIt {
               gh<_i662.AuthGateway>(),
               gh<_i706.OnboardingRepository>(),
             ));
+    gh.lazySingleton<_i494.GetHealthOverview>(
+        () => coreDataModule.getHealthOverview(gh<_i494.HealthRepository>()));
+    gh.lazySingleton<_i494.SaveRegisterEvent>(() =>
+        registerModule.saveRegisterEvent(gh<_i494.RegisterEventRepository>()));
+    gh.lazySingleton<_i494.GetRegisterEvents>(() =>
+        registerModule.getRegisterEvents(gh<_i494.RegisterEventRepository>()));
+    gh.lazySingleton<_i494.DeleteRegisterEvent>(() => registerModule
+        .deleteRegisterEvent(gh<_i494.RegisterEventRepository>()));
+    gh.lazySingleton<_i494.UpdateRegisterEvent>(() => registerModule
+        .updateRegisterEvent(gh<_i494.RegisterEventRepository>()));
     gh.lazySingleton<_i1063.AppThemeBloc>(() => blocsModule.appThemeBloc(
           gh<_i1063.BebeTheme>(),
           gh<_i494.ThemeStorage>(),
           gh<bool>(instanceName: 'initialIsDark'),
         ));
+    gh.lazySingleton<_i494.GetHomeOverview>(
+        () => coreDataModule.getHomeOverview(
+              gh<_i494.FamilyRepository>(),
+              gh<_i494.RegisterEventRepository>(),
+              gh<_i494.HealthRepository>(),
+            ));
+    gh.lazySingleton<_i494.GetAppSettings>(
+        () => coreDataModule.getAppSettings(gh<_i494.AppSettingsRepository>()));
+    gh.lazySingleton<_i494.UpdateAppSettings>(() =>
+        coreDataModule.updateAppSettings(gh<_i494.AppSettingsRepository>()));
+    gh.factory<_i1024.HomeBloc>(
+        () => blocsModule.homeBloc(gh<_i494.GetHomeOverview>()));
+    gh.factory<_i1027.SettingsBloc>(() => blocsModule.settingsBloc(
+          gh<_i494.GetAppSettings>(),
+          gh<_i494.UpdateAppSettings>(),
+        ));
+    gh.lazySingleton<_i494.GetFamilyOverview>(
+        () => coreDataModule.getFamilyOverview(gh<_i494.FamilyRepository>()));
+    gh.lazySingleton<_i494.SetActiveFamilyBaby>(
+        () => coreDataModule.setActiveFamilyBaby(gh<_i494.FamilyRepository>()));
+    gh.factory<_i1027.FamilyBloc>(() => blocsModule.familyBloc(
+          gh<_i494.GetFamilyOverview>(),
+          gh<_i494.SetActiveFamilyBaby>(),
+        ));
+    gh.factory<_i914.AgendaBloc>(
+        () => blocsModule.agendaBloc(gh<_i494.GetAgendaOverview>()));
+    gh.factory<_i237.HealthBloc>(
+        () => blocsModule.healthBloc(gh<_i494.GetHealthOverview>()));
     return this;
   }
 }
@@ -103,10 +143,12 @@ class _$BlocsModule extends _i513.BlocsModule {}
 
 class _$VendorsModule extends _i16.VendorsModule {}
 
-class _$RegisterModule extends _i291.RegisterModule {}
+class _$CoreDataModule extends _i579.CoreDataModule {}
 
 class _$StartupModule extends _i462.StartupModule {}
 
 class _$RouterModule extends _i393.RouterModule {}
+
+class _$RegisterModule extends _i291.RegisterModule {}
 
 class _$ConfigModule extends _i689.ConfigModule {}

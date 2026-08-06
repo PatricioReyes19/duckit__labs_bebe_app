@@ -47,8 +47,6 @@ class BebeSettingsValueTile extends StatelessWidget {
               children: [
                 Text(
                   effectiveTitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   style: theme.typography.styles.title.sm.semibold.copyWith(
                     color: colors.text.neutralTitle,
                   ),
@@ -57,8 +55,6 @@ class BebeSettingsValueTile extends StatelessWidget {
                   SizedBox(height: spacing.spacingXs),
                   Text(
                     effectiveDescription,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                     style: theme.typography.styles.body.sm.regular.copyWith(
                       color: colors.text.neutralBody,
                     ),
@@ -71,8 +67,6 @@ class BebeSettingsValueTile extends StatelessWidget {
           Flexible(
             child: Text(
               effectiveValue,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.end,
               style: theme.typography.styles.body.sm.regular.copyWith(
                 color: colors.text.neutralBody,

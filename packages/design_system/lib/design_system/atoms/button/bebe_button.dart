@@ -96,7 +96,6 @@ class BebeButton extends StatelessWidget {
               Flexible(
                 child: Text(
                   label,
-                  maxLines: 2,
                   textAlign: TextAlign.center,
                   style: theme.typography.styles.label.lg.semibold.copyWith(
                     color: foreground,
@@ -118,8 +117,8 @@ class BebeButton extends StatelessWidget {
       enabled: _isEnabled,
       label: semanticLabel ?? label,
       value: isLoading ? 'Cargando' : null,
-      child: SizedBox(
-        height: size.height,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: size.height),
         child: FilledButton(
           onPressed: _isEnabled ? onPressed : null,
           style: ButtonStyle(
@@ -161,7 +160,10 @@ class BebeButton extends StatelessWidget {
               RoundedRectangleBorder(borderRadius: theme.borderRadius.xl),
             ),
             padding: WidgetStatePropertyAll(
-              EdgeInsets.symmetric(horizontal: spacing.spacing2xl),
+              EdgeInsets.symmetric(
+                horizontal: spacing.spacing2xl,
+                vertical: spacing.spacingM,
+              ),
             ),
           ),
           child: content,

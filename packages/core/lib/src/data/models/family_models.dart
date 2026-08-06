@@ -1,0 +1,118 @@
+import '../../domain/entities/family/family.dart';
+
+class FamilyModel {
+  const FamilyModel({
+    required this.id,
+    required this.name,
+    required this.activeBabyId,
+  });
+
+  final String id;
+  final String name;
+  final String activeBabyId;
+
+  factory FamilyModel.fromRow(Map<String, Object?> row) => FamilyModel(
+    id: row['id']! as String,
+    name: row['name']! as String,
+    activeBabyId: row['active_baby_id']! as String,
+  );
+
+  Map<String, Object?> toRow() => {
+    'id': id,
+    'name': name,
+    'active_baby_id': activeBabyId,
+  };
+}
+
+class BabyModel {
+  const BabyModel({
+    required this.id,
+    required this.familyId,
+    required this.name,
+    required this.birthDate,
+    this.avatarAssetPath,
+  });
+
+  final String id;
+  final String familyId;
+  final String name;
+  final DateTime birthDate;
+  final String? avatarAssetPath;
+
+  factory BabyModel.fromRow(Map<String, Object?> row) => BabyModel(
+    id: row['id']! as String,
+    familyId: row['family_id']! as String,
+    name: row['name']! as String,
+    birthDate: DateTime.fromMillisecondsSinceEpoch(
+      row['birth_date']! as int,
+      isUtc: true,
+    ),
+    avatarAssetPath: row['avatar_asset_path'] as String?,
+  );
+
+  Map<String, Object?> toRow() => {
+    'id': id,
+    'family_id': familyId,
+    'name': name,
+    'birth_date': birthDate.toUtc().millisecondsSinceEpoch,
+    'avatar_asset_path': avatarAssetPath,
+  };
+
+  BabyEntity toEntity() => BabyEntity(
+    id: id,
+    familyId: familyId,
+    name: name,
+    birthDate: birthDate,
+    avatarAssetPath: avatarAssetPath,
+  );
+}
+
+class FamilyMemberModel {
+  const FamilyMemberModel({
+    required this.id,
+    required this.familyId,
+    required this.name,
+    required this.role,
+    required this.accessDescription,
+    required this.status,
+  });
+
+  final String id;
+  final String familyId;
+  final String name;
+  final String role;
+  final String accessDescription;
+  final FamilyMemberStatus status;
+
+  factory FamilyMemberModel.fromRow(Map<String, Object?> row) =>
+      FamilyMemberModel(
+        id: row['id']! as String,
+        familyId: row['family_id']! as String,
+        name: row['name']! as String,
+        role: row['role']! as String,
+        accessDescription: row['access_description']! as String,
+        status: switch (row['status']! as String) {
+          'active' => FamilyMemberStatus.active,
+          'pending' => FamilyMemberStatus.pending,
+          final value => throw FormatException('Unknown member status: $value'),
+        },
+      );
+
+  Map<String, Object?> toRow() => {
+    'id': id,
+    'family_id': familyId,
+    'name': name,
+    'role': role,
+    'access_description': accessDescription,
+    'status': status.name,
+  };
+
+  FamilyMemberEntity toEntity() => FamilyMemberEntity(
+    id: id,
+    familyId: familyId,
+    name: name,
+    role: role,
+    accessDescription: accessDescription,
+    status: status,
+  );
+}

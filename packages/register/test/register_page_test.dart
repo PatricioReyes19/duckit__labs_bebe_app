@@ -41,8 +41,85 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(
+      router.routeInformationProvider.value.uri.path,
+      '/register/medication',
+    );
     expect(find.byType(MedicationRegisterForm), findsOneWidget);
     expect(find.byType(FeedingRegisterForm), findsNothing);
+  });
+
+  testWidgets('observation is a child route and back returns to register', (
+    tester,
+  ) async {
+    final repository = _MemoryRepository();
+    final router = _router(
+      repository: repository,
+      initialLocation: RegisterPage.fullPath,
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp.router(
+        theme: bebeTheme.lightTheme(),
+        routerConfig: router,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final observation = find.byWidgetPredicate(
+      (widget) =>
+          widget is BebeCategoryActionTile && widget.label == 'Observación',
+    );
+    await tester.ensureVisible(observation);
+    await tester.pumpAndSettle();
+    tester.widget<BebeCategoryActionTile>(observation).onPressed!();
+    await tester.pumpAndSettle();
+
+    final observationForm = find.byType(ClinicalObservationRegisterForm);
+    expect(observationForm, findsOneWidget);
+    expect(
+      GoRouterState.of(tester.element(observationForm)).uri.path,
+      '/register/observation',
+    );
+
+    final back = find.byWidgetPredicate(
+      (widget) => widget is BebeIconButton && widget.semanticLabel == 'Volver',
+    );
+    tester.widget<BebeIconButton>(back).onPressed!();
+    await tester.pumpAndSettle();
+
+    expect(
+      router.routeInformationProvider.value.uri.path,
+      RegisterPage.fullPath,
+    );
+    expect(find.byType(FeedingRegisterForm), findsOneWidget);
+    expect(find.byType(ClinicalObservationRegisterForm), findsNothing);
+  });
+
+  testWidgets('invalid register child redirects to the register root', (
+    tester,
+  ) async {
+    final repository = _MemoryRepository();
+    final router = _router(
+      repository: repository,
+      initialLocation: '/register/unknown',
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp.router(
+        theme: bebeTheme.lightTheme(),
+        routerConfig: router,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      router.routeInformationProvider.value.uri.path,
+      RegisterPage.fullPath,
+    );
+    expect(find.byType(FeedingRegisterForm), findsOneWidget);
   });
 
   testWidgets('measurement form saves through the routed use case', (
@@ -94,7 +171,11 @@ GoRouter _router({
       RegisterPage(
         saveRegisterEvent: (_) => SaveRegisterEvent(repository),
         onSaved: (_, event) => onSaved?.call(event),
-        onCancel: (_) {},
+        onCancel: (context) {
+          if (context.canPop()) {
+            context.pop();
+          }
+        },
       ),
     ],
   );
@@ -124,6 +205,13 @@ class _MemoryRepository implements RegisterEventRepository {
 
   @override
   Future<RegisteredEvent?> findById(String id) async => null;
+
+  @override
+  Future<RegisteredEvent?> update(
+    String id,
+    RegisterEventPatch patch,
+  ) async =>
+      null;
 
   @override
   Future<List<RegisteredEvent>> listByBaby(

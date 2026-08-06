@@ -19,7 +19,9 @@ class BebeFamilyContextHeader extends StatelessWidget {
     this.babyAge,
     this.supportingText,
     this.onContextPressed,
+    this.secondaryContext,
     this.settingsAction,
+    this.showFamilyName = true,
     this.semanticLabel,
     super.key,
   });
@@ -50,17 +52,23 @@ class BebeFamilyContextHeader extends StatelessWidget {
   /// Si es nula, el bloque se presenta como contenido informativo.
   final VoidCallback? onContextPressed;
 
+  /// Optional selector or profile shown beside/below the active baby.
+  final Widget? secondaryContext;
+
   /// Acción opcional situada en la esquina superior derecha.
   ///
   /// Puede contener un botón de configuración o preferencias.
   final Widget? settingsAction;
+
+  /// Whether the family name is visible above the active baby's name.
+  final bool showFamilyName;
 
   /// Etiqueta accesible completa.
   ///
   /// Cuando no se proporciona, se genera a partir de los textos visibles.
   final String? semanticLabel;
 
-  static const double _avatarSize = 72;
+  static const double _avatarSize = 56;
   static const double _contextChevronSize = 24;
 
   bool get _isInteractive => onContextPressed != null;
@@ -99,15 +107,15 @@ class BebeFamilyContextHeader extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  effectiveFamilyName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.typography.styles.label.sm.semibold.copyWith(
-                    color: colors.text.brandDefault,
+                if (showFamilyName) ...[
+                  Text(
+                    effectiveFamilyName,
+                    style: theme.typography.styles.label.sm.semibold.copyWith(
+                      color: colors.text.brandDefault,
+                    ),
                   ),
-                ),
-                SizedBox(height: spacing.spacingXs),
+                  SizedBox(height: spacing.spacingXs),
+                ],
                 Wrap(
                   spacing: spacing.spacingS,
                   runSpacing: spacing.spacingXs,
@@ -115,8 +123,6 @@ class BebeFamilyContextHeader extends StatelessWidget {
                   children: [
                     Text(
                       effectiveBabyName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                       style: theme.typography.styles.title.md.semibold.copyWith(
                         color: colors.text.neutralTitle,
                       ),
@@ -124,8 +130,6 @@ class BebeFamilyContextHeader extends StatelessWidget {
                     if (effectiveBabyAge != null)
                       Text(
                         '· $effectiveBabyAge',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                         style: theme.typography.styles.body.md.regular.copyWith(
                           color: colors.text.neutralBody,
                         ),
@@ -145,8 +149,6 @@ class BebeFamilyContextHeader extends StatelessWidget {
                       Expanded(
                         child: Text(
                           effectiveSupportingText,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
                           style: theme.typography.styles.body.sm.regular
                               .copyWith(color: colors.text.neutralBody),
                         ),
@@ -207,17 +209,6 @@ class BebeFamilyContextHeader extends StatelessWidget {
       ),
     );
 
-    final visualContent = Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(child: card),
-        if (settingsAction != null) ...[
-          SizedBox(width: spacing.spacingM),
-          settingsAction!,
-        ],
-      ],
-    );
-
     final generatedSemanticLabel = [
       effectiveFamilyName,
       effectiveBabyName,
@@ -228,21 +219,53 @@ class BebeFamilyContextHeader extends StatelessWidget {
     final resolvedSemanticLabel =
         effectiveSemanticLabel ?? generatedSemanticLabel;
 
-    if (_isInteractive) {
-      return Semantics(
-        container: true,
-        button: true,
-        enabled: true,
-        label: resolvedSemanticLabel,
-        hint: 'Cambiar contexto familiar',
-        child: ExcludeSemantics(child: visualContent),
-      );
-    }
-
-    return Semantics(
+    final primaryCard = Semantics(
       container: true,
+      button: _isInteractive,
+      enabled: _isInteractive ? true : null,
       label: resolvedSemanticLabel,
-      child: ExcludeSemantics(child: visualContent),
+      hint: _isInteractive ? 'Cambiar contexto familiar' : null,
+      child: ExcludeSemantics(child: card),
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final textScale = MediaQuery.textScalerOf(context).scale(1);
+        final stackAccessories = constraints.maxWidth < 300 || textScale > 1.3;
+        final accessories = <Widget>[?secondaryContext, ?settingsAction];
+
+        if (accessories.isEmpty) return primaryCard;
+
+        if (stackAccessories) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              primaryCard,
+              for (final accessory in accessories) ...[
+                SizedBox(height: spacing.spacingM),
+                accessory,
+              ],
+            ],
+          );
+        }
+
+        return IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(flex: 3, child: primaryCard),
+              if (secondaryContext != null) ...[
+                SizedBox(width: spacing.spacingM),
+                Expanded(child: secondaryContext!),
+              ],
+              if (settingsAction != null) ...[
+                SizedBox(width: spacing.spacingM),
+                Align(child: settingsAction!),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 

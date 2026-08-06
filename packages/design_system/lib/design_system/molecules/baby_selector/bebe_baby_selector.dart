@@ -8,6 +8,8 @@ class BebeBabySelector extends StatelessWidget {
     required this.avatar,
     required this.isSelected,
     this.contextLabel,
+    this.compact = false,
+    this.showTrailing = true,
     this.onPressed,
     this.semanticLabel,
     super.key,
@@ -15,9 +17,11 @@ class BebeBabySelector extends StatelessWidget {
 
   final String name;
   final String ageLabel;
-  final BebeAvatar avatar;
+  final Widget avatar;
   final bool isSelected;
   final String? contextLabel;
+  final bool compact;
+  final bool showTrailing;
   final VoidCallback? onPressed;
   final String? semanticLabel;
 
@@ -40,7 +44,7 @@ class BebeBabySelector extends StatelessWidget {
     final card = Material(
       color: backgroundColor,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(radius.radius3xl),
+        borderRadius: BorderRadius.circular(radius.radiusXl),
         side: BorderSide(color: borderColor),
       ),
       clipBehavior: Clip.antiAlias,
@@ -67,6 +71,8 @@ class BebeBabySelector extends StatelessWidget {
           avatar: avatar,
           contextLabel: contextLabel,
           isSelected: isSelected,
+          compact: compact,
+          showTrailing: showTrailing,
         ),
       ),
     );
@@ -85,7 +91,7 @@ class BebeBabySelector extends StatelessWidget {
         width: double.infinity,
         child: DecoratedBox(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(radius.radius3xl),
+            borderRadius: BorderRadius.circular(radius.radiusXl),
             boxShadow: elevation.low,
           ),
           child: card,
@@ -102,13 +108,17 @@ class _BabySelectorContent extends StatelessWidget {
     required this.avatar,
     required this.contextLabel,
     required this.isSelected,
+    required this.compact,
+    required this.showTrailing,
   });
 
   final String name;
   final String ageLabel;
-  final BebeAvatar avatar;
+  final Widget avatar;
   final String? contextLabel;
   final bool isSelected;
+  final bool compact;
+  final bool showTrailing;
 
   @override
   Widget build(BuildContext context) {
@@ -116,6 +126,8 @@ class _BabySelectorContent extends StatelessWidget {
     final spacing = theme.spacing;
     final colors = theme.colors;
     final typography = theme.typography;
+    final effectiveCompact =
+        compact || MediaQuery.textScalerOf(context).scale(1) > 1.3;
 
     final nameColor = colors.text.neutralTitle;
 
@@ -125,14 +137,16 @@ class _BabySelectorContent extends StatelessWidget {
 
     return Padding(
       padding: EdgeInsets.symmetric(
-        horizontal: spacing.spacingXl,
-        vertical: spacing.spacingL,
+        horizontal: effectiveCompact ? spacing.spacingS : spacing.spacingXl,
+        vertical: spacing.spacingM,
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           avatar,
-          SizedBox(width: spacing.spacingL),
+          SizedBox(
+            width: effectiveCompact ? spacing.spacingS : spacing.spacingL,
+          ),
           Expanded(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -143,20 +157,22 @@ class _BabySelectorContent extends StatelessWidget {
                     children: [
                       TextSpan(
                         text: name,
-                        style: typography.styles.title.md.semibold.copyWith(
-                          color: nameColor,
-                        ),
+                        style:
+                            (effectiveCompact
+                                    ? typography.styles.title.sm.semibold
+                                    : typography.styles.title.md.semibold)
+                                .copyWith(color: nameColor),
                       ),
                       TextSpan(
                         text: ' · $ageLabel',
-                        style: typography.styles.body.md.regular.copyWith(
-                          color: ageColor,
-                        ),
+                        style:
+                            (effectiveCompact
+                                    ? typography.styles.body.sm.regular
+                                    : typography.styles.body.md.regular)
+                                .copyWith(color: ageColor),
                       ),
                     ],
                   ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
                 if (contextLabel != null &&
                     contextLabel!.trim().isNotEmpty) ...[
@@ -172,8 +188,6 @@ class _BabySelectorContent extends StatelessWidget {
                       Expanded(
                         child: Text(
                           contextLabel!,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
                           style: typography.styles.body.sm.regular.copyWith(
                             color: colors.text.neutralBody,
                           ),
@@ -185,16 +199,18 @@ class _BabySelectorContent extends StatelessWidget {
               ],
             ),
           ),
-          SizedBox(width: spacing.spacingM),
-          Icon(
-            isSelected
-                ? Icons.keyboard_arrow_down_rounded
-                : Icons.chevron_right_rounded,
-            size: 20,
-            color: isSelected
-                ? colors.icons.accentDefault
-                : colors.icons.neutralAlternative,
-          ),
+          if (showTrailing) ...[
+            SizedBox(width: spacing.spacingM),
+            Icon(
+              isSelected
+                  ? Icons.keyboard_arrow_down_rounded
+                  : Icons.chevron_right_rounded,
+              size: 20,
+              color: isSelected
+                  ? colors.icons.accentDefault
+                  : colors.icons.neutralAlternative,
+            ),
+          ],
         ],
       ),
     );

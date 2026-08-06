@@ -14,8 +14,14 @@ class RegisterPageView extends StatefulWidget {
     required this.babyName,
     required this.babyAge,
     required this.familyContextLabel,
+    required this.onKindChanged,
     required this.onSaved,
     required this.onCancel,
+    this.onNotificationsPressed,
+    this.onHomePressed,
+    this.onAgendaPressed,
+    this.onHealthPressed,
+    this.onFamilyPressed,
     super.key,
   });
 
@@ -23,14 +29,21 @@ class RegisterPageView extends StatefulWidget {
   final String babyName;
   final String babyAge;
   final String familyContextLabel;
+  final ValueChanged<RegisterEventKind> onKindChanged;
   final ValueChanged<RegisteredEvent> onSaved;
   final VoidCallback onCancel;
+  final VoidCallback? onNotificationsPressed;
+  final VoidCallback? onHomePressed;
+  final VoidCallback? onAgendaPressed;
+  final VoidCallback? onHealthPressed;
+  final VoidCallback? onFamilyPressed;
 
   @override
   State<RegisterPageView> createState() => _RegisterPageViewState();
 }
 
 class _RegisterPageViewState extends State<RegisterPageView> {
+  final _feedingAmount = TextEditingController();
   final _feedingNotes = TextEditingController();
   final _feedingSymptoms = TextEditingController();
   final _sleepNotes = TextEditingController();
@@ -46,10 +59,11 @@ class _RegisterPageViewState extends State<RegisterPageView> {
   final _imagePicker = ImagePicker();
   final Map<String, Uint8List> _photoPreviews = {};
 
-  late RegisterEventKind _kind = widget.initialKind;
+  late final RegisterEventKind _kind = widget.initialKind;
 
   @override
   void dispose() {
+    _feedingAmount.dispose();
     _feedingNotes.dispose();
     _feedingSymptoms.dispose();
     _sleepNotes.dispose();
@@ -120,7 +134,9 @@ class _RegisterPageViewState extends State<RegisterPageView> {
           contextDescription: 'Guarda el tipo, horario y duración.',
           onSave: cubit.submit,
           form: FeedingRegisterForm(
+            subtype: cubit.subtype,
             side: cubit.side,
+            amountController: _feedingAmount,
             startTime: _time(context, cubit.startedAt),
             duration: _duration(cubit.durationMinutes),
             endTime:
@@ -129,6 +145,7 @@ class _RegisterPageViewState extends State<RegisterPageView> {
             notesController: _feedingNotes,
             symptomsController: _feedingSymptoms,
             onSideChanged: cubit.sideChanged,
+            onAmountChanged: cubit.amountMlChanged,
             onStartTimePressed: () => _pickTime(
               cubit.startedAt,
               cubit.timeChanged,
@@ -214,11 +231,14 @@ class _RegisterPageViewState extends State<RegisterPageView> {
           contextDescription: 'Guarda sus características y el horario.',
           onSave: cubit.submit,
           form: DiaperRegisterForm(
+            subtype: cubit.subtype,
             date: _date(context, cubit.occurredAt),
             time: _time(context, cubit.occurredAt),
             appearance: cubit.appearance,
             color: cubit.color,
             amount: cubit.amount,
+            urineColor: cubit.urineColor,
+            urineAmount: cubit.urineAmount,
             notesController: _diaperNotes,
             symptomsController: _diaperSymptoms,
             onDatePressed: () => _pickDate(
@@ -232,6 +252,8 @@ class _RegisterPageViewState extends State<RegisterPageView> {
             onAppearanceChanged: cubit.appearanceChanged,
             onColorChanged: cubit.colorChanged,
             onAmountChanged: cubit.amountChanged,
+            onUrineColorChanged: cubit.urineColorChanged,
+            onUrineAmountChanged: cubit.urineAmountChanged,
             onNotesChanged: cubit.notesChanged,
             onSymptomsChanged: cubit.symptomsChanged,
           ),
@@ -249,6 +271,7 @@ class _RegisterPageViewState extends State<RegisterPageView> {
           kind: RegisterEventKind.observation,
           title: 'Nueva observación clínica',
           showEventContext: false,
+          useFormSurface: false,
           onSave: cubit.submit,
           form: ClinicalObservationRegisterForm(
             observationType: cubit.observationType,
@@ -306,6 +329,7 @@ class _RegisterPageViewState extends State<RegisterPageView> {
           contextDescription: 'La dosis quedará disponible sin conexión.',
           onSave: cubit.submit,
           form: MedicationRegisterForm(
+            subtype: cubit.subtype,
             nameController: _medicationName,
             doseController: _medicationDose,
             unit: cubit.unit,
@@ -367,6 +391,7 @@ class _RegisterPageViewState extends State<RegisterPageView> {
           contextDescription: 'Se guardará en el historial de crecimiento.',
           onSave: cubit.submit,
           form: MeasurementRegisterForm(
+            measurementType: cubit.measurementType,
             valueController: _measurementValue,
             unit: cubit.unit,
             date: _date(context, cubit.occurredAt),
@@ -397,6 +422,7 @@ class _RegisterPageViewState extends State<RegisterPageView> {
     required VoidCallback onSave,
     String title = 'Registrar evento',
     bool showEventContext = true,
+    bool useFormSurface = true,
     List<BebeSegmentedItem<String>> subcategories = const [],
     String? selectedSubcategory,
     ValueChanged<String>? onSubcategoryChanged,
@@ -406,11 +432,12 @@ class _RegisterPageViewState extends State<RegisterPageView> {
     return RegisterEventView(
       title: title,
       selectedKind: kind,
-      onKindChanged: (value) => setState(() => _kind = value),
+      onKindChanged: widget.onKindChanged,
       babyName: widget.babyName,
       babyAge: widget.babyAge,
       familyContextLabel: widget.familyContextLabel,
       showEventContext: showEventContext,
+      useFormSurface: useFormSurface,
       subcategories: subcategories,
       selectedSubcategory: selectedSubcategory,
       onSubcategoryChanged: onSubcategoryChanged,
@@ -418,6 +445,13 @@ class _RegisterPageViewState extends State<RegisterPageView> {
       contextDescription: contextDescription,
       contextTrailing:
           contextTitle == null ? null : const Icon(Icons.info_outline_rounded),
+      onNotificationsPressed: widget.onNotificationsPressed,
+      bottomNavigationBar: RegisterBottomNavigation(
+        onHomePressed: widget.onHomePressed,
+        onAgendaPressed: widget.onAgendaPressed,
+        onHealthPressed: widget.onHealthPressed,
+        onFamilyPressed: widget.onFamilyPressed,
+      ),
       form: form,
       onBackPressed: widget.onCancel,
       onSavePressed: state.isSaving ? null : onSave,
@@ -552,29 +586,93 @@ class _RegisterPageViewState extends State<RegisterPageView> {
     'Una vez al día',
   ];
   static const _feedingTypes = <BebeSegmentedItem<String>>[
-    BebeSegmentedItem(value: 'breast', label: 'Pecho'),
-    BebeSegmentedItem(value: 'bottle', label: 'Mamadera'),
-    BebeSegmentedItem(value: 'expressed', label: 'Leche extraída'),
-    BebeSegmentedItem(value: 'formula', label: 'Fórmula'),
+    BebeSegmentedItem(
+      value: 'breast',
+      label: 'Pecho',
+      icon: Icon(Icons.child_care_rounded),
+    ),
+    BebeSegmentedItem(
+      value: 'bottle',
+      label: 'Mamadera',
+      icon: Icon(Icons.local_drink_outlined),
+    ),
+    BebeSegmentedItem(
+      value: 'expressed',
+      label: 'Leche extraída',
+      icon: Icon(Icons.water_drop_outlined),
+    ),
+    BebeSegmentedItem(
+      value: 'formula',
+      label: 'Fórmula',
+      icon: Icon(Icons.inventory_2_outlined),
+    ),
   ];
   static const _sleepTypes = <BebeSegmentedItem<String>>[
-    BebeSegmentedItem(value: 'nap', label: 'Siesta'),
-    BebeSegmentedItem(value: 'night', label: 'Sueño nocturno'),
-    BebeSegmentedItem(value: 'timer', label: 'Temporizador'),
+    BebeSegmentedItem(
+      value: 'nap',
+      label: 'Siesta',
+      icon: Icon(Icons.light_mode_outlined),
+    ),
+    BebeSegmentedItem(
+      value: 'night',
+      label: 'Sueño nocturno',
+      icon: Icon(Icons.dark_mode_outlined),
+    ),
+    BebeSegmentedItem(
+      value: 'timer',
+      label: 'Temporizador',
+      icon: Icon(Icons.timer_outlined),
+    ),
   ];
   static const _diaperTypes = <BebeSegmentedItem<String>>[
-    BebeSegmentedItem(value: 'wet', label: 'Mojado'),
-    BebeSegmentedItem(value: 'dirty', label: 'Sucio'),
-    BebeSegmentedItem(value: 'mixed', label: 'Mixto'),
+    BebeSegmentedItem(
+      value: 'wet',
+      label: 'Orina',
+      icon: Icon(Icons.water_drop_outlined),
+    ),
+    BebeSegmentedItem(
+      value: 'dirty',
+      label: 'Deposición',
+      icon: Icon(Icons.layers_outlined),
+    ),
+    BebeSegmentedItem(
+      value: 'mixed',
+      label: 'Mixto',
+      icon: Icon(Icons.water_drop_rounded),
+    ),
   ];
   static const _medicationTypes = <BebeSegmentedItem<String>>[
-    BebeSegmentedItem(value: 'medication', label: 'Medicamento'),
-    BebeSegmentedItem(value: 'supplement', label: 'Suplemento'),
-    BebeSegmentedItem(value: 'vitamin', label: 'Vitamina'),
+    BebeSegmentedItem(
+      value: 'medication',
+      label: 'Medicamento',
+      icon: Icon(Icons.medication_outlined),
+    ),
+    BebeSegmentedItem(
+      value: 'supplement',
+      label: 'Suplemento',
+      icon: Icon(Icons.eco_outlined),
+    ),
+    BebeSegmentedItem(
+      value: 'vitamin',
+      label: 'Vitamina',
+      icon: Icon(Icons.health_and_safety_outlined),
+    ),
   ];
   static const _measurementTypes = <BebeSegmentedItem<String>>[
-    BebeSegmentedItem(value: 'weight', label: 'Peso'),
-    BebeSegmentedItem(value: 'height', label: 'Talla'),
-    BebeSegmentedItem(value: 'head', label: 'Perímetro cefálico'),
+    BebeSegmentedItem(
+      value: 'weight',
+      label: 'Peso',
+      icon: Icon(Icons.monitor_weight_outlined),
+    ),
+    BebeSegmentedItem(
+      value: 'height',
+      label: 'Talla',
+      icon: Icon(Icons.height_rounded),
+    ),
+    BebeSegmentedItem(
+      value: 'head',
+      label: 'Perímetro cefálico',
+      icon: Icon(Icons.face_outlined),
+    ),
   ];
 }

@@ -43,19 +43,25 @@ class BebeSettingsOverviewTemplate extends StatelessWidget {
       ?sessionActions,
     ];
 
-    return BebeResponsiveContent(
-      maxWidth: maximumContentWidth,
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: effectivePadding),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (var index = 0; index < sections.length; index++) ...[
-              sections[index],
-              if (index < sections.length - 1)
-                SizedBox(height: spacing.spacingXl),
-            ],
-          ],
+    return ColoredBox(
+      color: context.theme.colors.background.neutralsSurface,
+      child: SingleChildScrollView(
+        padding: EdgeInsets.only(bottom: spacing.spacing4xl),
+        child: BebeResponsiveContent(
+          maxWidth: maximumContentWidth,
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: effectivePadding),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (var index = 0; index < sections.length; index++) ...[
+                  sections[index],
+                  if (index < sections.length - 1)
+                    SizedBox(height: spacing.spacingXl),
+                ],
+              ],
+            ),
+          ),
         ),
       ),
     );

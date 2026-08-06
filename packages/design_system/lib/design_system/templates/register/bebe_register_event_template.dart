@@ -13,6 +13,7 @@ class BebeRegisterEventTemplate extends StatelessWidget {
     this.categorySelector,
     this.subcategorySelector,
     this.contextBanner,
+    this.bottomNavigationBar,
     this.controller,
     this.maximumContentWidth = BebeLayout.formContentMaxWidth,
     this.semanticLabel = 'Registrar evento',
@@ -24,6 +25,7 @@ class BebeRegisterEventTemplate extends StatelessWidget {
   final Widget? categorySelector;
   final Widget? subcategorySelector;
   final Widget? contextBanner;
+  final Widget? bottomNavigationBar;
   final Widget form;
   final ScrollController? controller;
   final double maximumContentWidth;
@@ -35,7 +37,8 @@ class BebeRegisterEventTemplate extends StatelessWidget {
     final spacing = theme.spacing;
 
     return Scaffold(
-      backgroundColor: theme.colors.background.neutralsPage,
+      backgroundColor: theme.colors.background.neutralsSurface,
+      bottomNavigationBar: bottomNavigationBar,
       body: SafeArea(
         child: Semantics(
           container: true,
@@ -46,9 +49,9 @@ class BebeRegisterEventTemplate extends StatelessWidget {
             slivers: [
               SliverPadding(
                 padding: EdgeInsets.fromLTRB(
-                  spacing.spacingL,
+                  spacing.spacingXl,
                   spacing.spacingM,
-                  spacing.spacingL,
+                  spacing.spacingXl,
                   spacing.spacing4xl,
                 ),
                 sliver: SliverToBoxAdapter(
@@ -63,18 +66,18 @@ class BebeRegisterEventTemplate extends StatelessWidget {
                           babySelector!,
                         ],
                         if (categorySelector != null) ...[
-                          SizedBox(height: spacing.spacing2xl),
+                          SizedBox(height: spacing.spacingXl),
                           categorySelector!,
                         ],
                         if (subcategorySelector != null) ...[
-                          SizedBox(height: spacing.spacingXl),
+                          SizedBox(height: spacing.spacingL),
                           subcategorySelector!,
                         ],
                         if (contextBanner != null) ...[
-                          SizedBox(height: spacing.spacingXl),
+                          SizedBox(height: spacing.spacingL),
                           contextBanner!,
                         ],
-                        SizedBox(height: spacing.spacingXl),
+                        SizedBox(height: spacing.spacingL),
                         form,
                       ],
                     ),

@@ -4,3 +4,7 @@ export 'onboarding_repository/onboarding_repository.dart';
 export 'baby_repository/baby_repository.dart';
 export 'care_circle/care_circle.dart';
 export 'register_event/register_event.dart';
+export 'agenda/agenda_repository.dart';
+export 'family/family_repository.dart';
+export 'health/health_repository.dart';
+export 'settings/app_settings_repository.dart';

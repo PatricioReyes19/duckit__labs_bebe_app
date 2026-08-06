@@ -53,8 +53,6 @@ class MetricCardHeader extends StatelessWidget {
         Expanded(
           child: Text(
             label,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
             style: typography.styles.label.sm.semibold.copyWith(
               color: palette.content,
             ),

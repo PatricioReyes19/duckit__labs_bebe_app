@@ -8,6 +8,7 @@ class BebeNotesField extends StatelessWidget {
     this.controller,
     this.hintText = 'Escribe algo…',
     this.maxLength = 200,
+    this.compact = false,
     this.optional = true,
     this.enabled = true,
     this.errorText,
@@ -20,6 +21,7 @@ class BebeNotesField extends StatelessWidget {
   final TextEditingController? controller;
   final String hintText;
   final int maxLength;
+  final bool compact;
   final bool optional;
   final bool enabled;
   final String? errorText;
@@ -31,12 +33,14 @@ class BebeNotesField extends StatelessWidget {
     return BebeFormField(
       label: label,
       optional: optional,
+      compactLabel: compact,
       child: BebeTextField(
         controller: controller,
         hintText: hintText,
-        minLines: 3,
-        maxLines: 5,
+        minLines: compact ? 2 : 3,
+        maxLines: compact ? 4 : 5,
         maxLength: maxLength,
+        dense: compact,
         enabled: enabled,
         errorText: errorText,
         onChanged: onChanged,

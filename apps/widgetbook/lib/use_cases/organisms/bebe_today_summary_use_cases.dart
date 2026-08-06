@@ -44,8 +44,8 @@ Widget todaySummaryDefault(BuildContext context) {
     width: double.infinity,
     child: BebeTodaySummary(
       items: metrics,
-      onActionPressed: () {},
-      title: '',
+      onHistoryPressed: () {},
+      title: 'Resumen de hoy',
     ),
   );
 }

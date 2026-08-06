@@ -10,12 +10,14 @@ class HomeView extends StatelessWidget {
     required this.openRegister,
     required this.openAgenda,
     required this.openHealth,
+    required this.openTodayHistory,
     super.key,
   });
 
   final void Function(BuildContext context, String actionId) openRegister;
   final void Function(BuildContext context) openAgenda;
   final void Function(BuildContext context) openHealth;
+  final void Function(BuildContext context) openTodayHistory;
 
   @override
   Widget build(BuildContext context) {
@@ -46,6 +48,7 @@ class HomeView extends StatelessWidget {
               openRegister: openRegister,
               openAgenda: openAgenda,
               openHealth: openHealth,
+              openTodayHistory: openTodayHistory,
             ),
         };
       },
@@ -59,12 +62,14 @@ class _LoadedHome extends StatelessWidget {
     required this.openRegister,
     required this.openAgenda,
     required this.openHealth,
+    required this.openTodayHistory,
   });
 
   final HomeOverviewVm overview;
   final void Function(BuildContext context, String actionId) openRegister;
   final void Function(BuildContext context) openAgenda;
   final void Function(BuildContext context) openHealth;
+  final void Function(BuildContext context) openTodayHistory;
 
   @override
   Widget build(BuildContext context) {
@@ -78,17 +83,20 @@ class _LoadedHome extends StatelessWidget {
         ageLabel: baby.ageLabel,
         avatar: AssetImage(baby.avatarAssetPath),
         familyContextLabel: baby.familyContextLabel,
-        sibling: baby.sibling == null
-            ? null
-            : BebeSiblingSummaryData(
-                name: baby.sibling!.name,
-                ageLabel: baby.sibling!.ageLabel,
-                avatar: AssetImage(baby.sibling!.avatarAssetPath),
-              ),
+        siblings: baby.sibling == null
+            ? []
+            : [
+                BebeSiblingSummaryData(
+                  name: baby.sibling!.name,
+                  ageLabel: baby.sibling!.ageLabel,
+                  avatar: AssetImage(baby.sibling!.avatarAssetPath),
+                )
+              ],
       ),
       todaySummary: BebeTodaySummary(
         title: 'Actividad del día',
         items: overview.todayMetrics.map(_metric).toList(growable: false),
+        onHistoryPressed: () => openTodayHistory(context),
       ),
       quickActions: BebeQuickRegistrationActions(
         items: overview.quickActions.map(_action).toList(growable: false),

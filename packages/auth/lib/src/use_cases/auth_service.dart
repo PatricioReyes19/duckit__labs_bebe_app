@@ -18,8 +18,9 @@ class AuthService {
     required String password,
   }) async {
     final errors = <String, String>{
-      if (AuthValidation.email(email) case final error?) 'email': error,
-      if (AuthValidation.password(password) case final error?)
+      if (AuthValidation.loginIdentifier(email) case final error?)
+        'email': error,
+      if (AuthValidation.signInPassword(password) case final error?)
         'password': error,
     };
     if (errors.isNotEmpty) {

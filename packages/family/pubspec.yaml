@@ -10,6 +10,7 @@ environment:
   flutter: ">=1.17.0"
 
 dependencies:
+  core:
   design_system: ^0.0.1
   equatable: ^2.1.0
   flutter:

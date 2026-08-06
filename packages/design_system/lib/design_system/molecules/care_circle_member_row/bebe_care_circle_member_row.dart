@@ -63,8 +63,6 @@ class BebeCareCircleMemberRow extends StatelessWidget {
                   children: [
                     Text(
                       effectiveName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                       style: theme.typography.styles.title.sm.semibold.copyWith(
                         color: colors.text.neutralTitle,
                       ),
@@ -81,8 +79,6 @@ class BebeCareCircleMemberRow extends StatelessWidget {
                         ),
                         child: Text(
                           effectiveRole,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                           style: theme.typography.styles.label.sm.semibold
                               .copyWith(color: roleColors.foreground),
                         ),
@@ -94,8 +90,6 @@ class BebeCareCircleMemberRow extends StatelessWidget {
                   SizedBox(height: spacing.spacingXs),
                   Text(
                     effectiveAccessDescription,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                     style: theme.typography.styles.body.sm.regular.copyWith(
                       color: _resolveDescriptionColor(colors),
                     ),

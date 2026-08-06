@@ -11,7 +11,7 @@ class SettingsPage extends GoRoute {
     super.name,
     super.routes,
   }) : super(
-         path: fullPath,
+         path: relativePath,
          pageBuilder: (context, state) {
            return CupertinoPage<void>(
              key: const ValueKey('settings'),
@@ -26,7 +26,9 @@ class SettingsPage extends GoRoute {
        );
 
   static const nameRoute = 'Settings';
-  static const fullPath = '/settings';
+  static const relativePath = 'settings';
+  static const fullPath = '${FamilyPage.fullPath}/$relativePath';
+  static const legacyFullPath = '/settings';
 
   static void open(BuildContext context) => context.push(fullPath);
 }

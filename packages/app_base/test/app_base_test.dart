@@ -2,7 +2,7 @@ import 'package:app_base/src/dependencies/startup_module.dart';
 import 'package:app_base/src/router/navigation_session_store.dart';
 import 'package:app_base/src/router/startup_route_mapper.dart';
 import 'package:auth/auth.dart';
-import 'package:core/core.dart';
+import 'package:core/core.dart' hide BabyDraft;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:onboarding/onboarding.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,7 +13,6 @@ void main() {
       final resolver = LocalResolveEntryDestination(
         _FakeAuthGateway(),
         _FakeOnboardingRepository(completed: false),
-        bypassEnabled: false,
       );
 
       final result = await resolver();
@@ -25,7 +24,6 @@ void main() {
       final resolver = LocalResolveEntryDestination(
         _FakeAuthGateway(session: _session),
         _FakeOnboardingRepository(completed: false),
-        bypassEnabled: false,
       );
 
       final result = await resolver();
@@ -37,19 +35,6 @@ void main() {
       final resolver = LocalResolveEntryDestination(
         _FakeAuthGateway(session: _session),
         _FakeOnboardingRepository(completed: true),
-        bypassEnabled: false,
-      );
-
-      final result = await resolver();
-
-      expect(result.destination, EntryDestination.home);
-    });
-
-    test('el bypass temporal abre home sin sesion', () async {
-      final resolver = LocalResolveEntryDestination(
-        _FakeAuthGateway(),
-        _FakeOnboardingRepository(completed: false),
-        bypassEnabled: true,
       );
 
       final result = await resolver();
@@ -102,6 +87,32 @@ void main() {
       await store.remember(Uri.parse(StartupPaths.splash));
 
       expect(store.initialLocation, StartupPaths.splash);
+    });
+
+    test('login y crear cuenta restauran el selector de acceso', () async {
+      SharedPreferences.setMockInitialValues({});
+      final preferences = await SharedPreferences.getInstance();
+      final store = NavigationSessionStore(preferences);
+
+      await store.remember(Uri.parse(StartupPaths.authEntry));
+      await store.remember(Uri.parse(StartupPaths.signUp));
+      await store.remember(Uri.parse(StartupPaths.login));
+
+      expect(store.initialLocation, StartupPaths.authEntry);
+    });
+
+    test('restaura subrutas funcionales sin perder su nivel padre', () async {
+      SharedPreferences.setMockInitialValues({});
+      final preferences = await SharedPreferences.getInstance();
+      final store = NavigationSessionStore(preferences);
+
+      await store.remember(Uri.parse('/register/observation'));
+
+      expect(store.initialLocation, '/register/observation');
+
+      await store.remember(Uri.parse('/family/settings'));
+
+      expect(store.initialLocation, '/family/settings');
     });
   });
 }

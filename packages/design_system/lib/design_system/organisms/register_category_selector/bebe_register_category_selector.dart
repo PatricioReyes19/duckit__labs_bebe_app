@@ -47,37 +47,54 @@ class BebeRegisterCategorySelector<T> extends StatelessWidget {
     );
 
     final spacing = context.theme.spacing;
-    final tileWidth = spacing.spacing8xl + spacing.spacing5xl;
+    final gap = spacing.spacingM;
+    const minimumFittedTileWidth = 48.0;
+    const scrolledTileWidth = 96.0;
 
     return Semantics(
       container: true,
       label: semanticLabel,
       explicitChildNodes: true,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (var index = 0; index < items.length; index++) ...[
-              SizedBox(
-                width: tileWidth,
-                child: BebeCategoryActionTile(
-                  variant: items[index].variant,
-                  label: items[index].label,
-                  icon: items[index].icon,
-                  isSelected: items[index].value == selectedValue,
-                  enabled: items[index].enabled,
-                  semanticLabel: items[index].semanticLabel,
-                  onPressed: onChanged == null || !items[index].enabled
-                      ? null
-                      : () => onChanged!(items[index].value),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final totalGap = gap * (items.length - 1);
+          final fittedWidth = (constraints.maxWidth - totalGap) / items.length;
+          final textScale = MediaQuery.textScalerOf(context).scale(1);
+          final fits =
+              fittedWidth >= minimumFittedTileWidth && textScale <= 1.3;
+          final tileWidth = fits ? fittedWidth : scrolledTileWidth;
+
+          final row = Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (var index = 0; index < items.length; index++) ...[
+                SizedBox(
+                  width: tileWidth,
+                  child: BebeCategoryActionTile(
+                    variant: items[index].variant,
+                    label: items[index].label,
+                    icon: items[index].icon,
+                    compact: true,
+                    isSelected: items[index].value == selectedValue,
+                    enabled: items[index].enabled,
+                    semanticLabel: items[index].semanticLabel,
+                    onPressed: onChanged == null || !items[index].enabled
+                        ? null
+                        : () => onChanged!(items[index].value),
+                  ),
                 ),
-              ),
-              if (index < items.length - 1) SizedBox(width: spacing.spacingM),
+                if (index < items.length - 1) SizedBox(width: gap),
+              ],
             ],
-          ],
-        ),
+          );
+
+          if (fits) return row;
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            child: row,
+          );
+        },
       ),
     );
   }

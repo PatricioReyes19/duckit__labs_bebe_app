@@ -5,7 +5,10 @@ import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:register/register.dart';
+import 'package:register/models/register_event_kind.dart';
+import 'package:register/pages/views/forms/feeding_register_form.dart';
+import 'package:register/pages/views/register_bottom_navigation.dart';
+import 'package:register/pages/views/register_event_view.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -89,10 +92,8 @@ Future<ByteData> _loadFont(String name) async {
 }
 
 Future<ByteData> _loadMaterialIcons() async {
-  final executablePath = File(Platform.resolvedExecutable)
-      .absolute
-      .path
-      .replaceAll('\\', '/');
+  final executablePath =
+      File(Platform.resolvedExecutable).absolute.path.replaceAll('\\', '/');
   const cacheMarker = '/bin/cache/';
   final markerIndex = executablePath.indexOf(cacheMarker);
   if (markerIndex < 0) {
@@ -119,10 +120,26 @@ class _GoldenRegisterView extends StatelessWidget {
       selectedKind: RegisterEventKind.feeding,
       onKindChanged: (_) {},
       subcategories: const [
-        BebeSegmentedItem(value: 'breast', label: 'Pecho'),
-        BebeSegmentedItem(value: 'bottle', label: 'Mamadera'),
-        BebeSegmentedItem(value: 'expressed', label: 'Leche extraída'),
-        BebeSegmentedItem(value: 'formula', label: 'Fórmula'),
+        BebeSegmentedItem(
+          value: 'breast',
+          label: 'Pecho',
+          icon: Icon(Icons.child_care_rounded),
+        ),
+        BebeSegmentedItem(
+          value: 'bottle',
+          label: 'Mamadera',
+          icon: Icon(Icons.local_drink_outlined),
+        ),
+        BebeSegmentedItem(
+          value: 'expressed',
+          label: 'Leche extraída',
+          icon: Icon(Icons.water_drop_outlined),
+        ),
+        BebeSegmentedItem(
+          value: 'formula',
+          label: 'Fórmula',
+          icon: Icon(Icons.inventory_2_outlined),
+        ),
       ],
       selectedSubcategory: 'breast',
       onSubcategoryChanged: (_) {},
@@ -141,6 +158,7 @@ class _GoldenRegisterView extends StatelessWidget {
       onBabyPressed: () {},
       onSavePressed: () {},
       onCancelPressed: () {},
+      bottomNavigationBar: const RegisterBottomNavigation(),
     );
   }
 }

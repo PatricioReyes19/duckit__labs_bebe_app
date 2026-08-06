@@ -105,4 +105,33 @@ void main() {
 
     expect(await repository.findById(saved.id), isNull);
   });
+
+  test('patches only supplied fields and supports explicit nulls', () async {
+    final saved = await repository.save(
+      RegisterEventDraft(
+        babyId: 'baby-1',
+        type: RegisterEventType.medication,
+        occurredAt: createdAt,
+        caregiverId: 'mother',
+        notes: 'Original',
+        details: const {'name': 'Vitamina D', 'dose': 1},
+      ),
+    );
+
+    final updated = await repository.update(
+      saved.id,
+      RegisterEventPatch(
+        details: const {'dose': 2},
+        clearNotes: true,
+        clearCaregiverId: true,
+      ),
+    );
+
+    expect(updated, isNotNull);
+    expect(updated!.details['dose'], 2);
+    expect(updated.details['name'], 'Vitamina D');
+    expect(updated.notes, isNull);
+    expect(updated.caregiverId, isNull);
+    expect(updated.createdAt, saved.createdAt);
+  });
 }

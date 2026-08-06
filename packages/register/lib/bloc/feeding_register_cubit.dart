@@ -11,6 +11,7 @@ class FeedingRegisterCubit extends RegisterFormCubit {
           initialValues: {
             'subtype': 'breast',
             'side': 'both',
+            'amountMl': '',
             'startedAt': initialDateTime ?? DateTime.now(),
             'durationMinutes': 15,
             'endAt': null,
@@ -22,6 +23,7 @@ class FeedingRegisterCubit extends RegisterFormCubit {
 
   String get subtype => state.value<String>('subtype');
   String get side => state.value<String>('side');
+  String get amountMl => state.value<String>('amountMl');
   DateTime get startedAt => state.value<DateTime>('startedAt');
   int get durationMinutes => state.value<int>('durationMinutes');
   DateTime? get endAt => state.optionalValue<DateTime>('endAt');
@@ -31,6 +33,7 @@ class FeedingRegisterCubit extends RegisterFormCubit {
 
   void subtypeChanged(String value) => setValue('subtype', value);
   void sideChanged(String value) => setValue('side', value);
+  void amountMlChanged(String value) => setValue('amountMl', value);
   void dateChanged(DateTime value) =>
       setValue('startedAt', replaceDate(startedAt, value));
   void timeChanged(int hour, int minute) =>
@@ -47,6 +50,15 @@ class FeedingRegisterCubit extends RegisterFormCubit {
 
   @override
   RegisterEventDraft buildDraft() {
+    final numericAmount = subtype == 'breast'
+        ? null
+        : double.tryParse(amountMl.trim().replaceAll(',', '.'));
+    if (subtype != 'breast' && (numericAmount == null || numericAmount <= 0)) {
+      throw const RegisterValidationException(
+        'Ingresa la cantidad tomada en mL.',
+      );
+    }
+
     return RegisterEventDraft(
       babyId: babyId,
       type: RegisterEventType.feeding,
@@ -54,7 +66,8 @@ class FeedingRegisterCubit extends RegisterFormCubit {
       notes: notes,
       details: {
         'subtype': subtype,
-        'side': side,
+        if (subtype == 'breast') 'side': side,
+        if (numericAmount != null) 'amount_ml': numericAmount,
         'duration_minutes': durationMinutes,
         'end_at': endAt?.toUtc().toIso8601String(),
         'mood': mood,

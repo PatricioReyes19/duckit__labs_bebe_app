@@ -53,8 +53,6 @@ class BebeAccountSummary extends StatelessWidget {
               children: [
                 Text(
                   name.trim(),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   style: theme.typography.styles.title.md.semibold.copyWith(
                     color: colors.text.neutralTitle,
                   ),
@@ -63,8 +61,6 @@ class BebeAccountSummary extends StatelessWidget {
                   SizedBox(height: spacing.spacingXs),
                   Text(
                     effectiveEmail,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                     style: theme.typography.styles.body.sm.regular.copyWith(
                       color: colors.text.neutralBody,
                     ),

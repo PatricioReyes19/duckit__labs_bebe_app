@@ -26,7 +26,6 @@ class BebeBabyProfileCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = context.theme;
-    final spacing = theme.spacing;
     final colors = theme.colors;
     final radius = theme.borderRadius;
     final elevation = theme.elevation;
@@ -37,59 +36,20 @@ class BebeBabyProfileCard extends StatelessWidget {
     final borderColor = isActive
         ? colors.border.brandAlternative
         : colors.border.neutralDefault;
-    final supportingColor = isActive
-        ? colors.text.brandDefault
-        : colors.text.neutralBody;
     final cardRadius = BorderRadius.circular(radius.radius3xl);
 
-    final content = Padding(
-      padding: EdgeInsets.all(spacing.spacingL),
-      child: Row(
-        children: [
-          SizedBox.square(
-            dimension: _avatarSize,
-            child: ClipOval(child: avatar),
-          ),
-          SizedBox(width: spacing.spacingL),
-          Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  effectiveName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.typography.styles.title.sm.semibold.copyWith(
-                    color: colors.text.neutralTitle,
-                  ),
-                ),
-                if (effectiveSupportingText != null) ...[
-                  SizedBox(height: spacing.spacingXs),
-                  Text(
-                    effectiveSupportingText,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.typography.styles.body.sm.regular.copyWith(
-                      color: supportingColor,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          if (_isInteractive) ...[
-            SizedBox(width: spacing.spacingM),
-            Icon(
-              Icons.chevron_right_rounded,
-              size: _chevronSize,
-              color: isActive
-                  ? colors.text.brandDefault
-                  : colors.icons.neutralAlternative,
-            ),
-          ],
-        ],
-      ),
+    final content = LayoutBuilder(
+      builder: (context, constraints) {
+        final textScale = MediaQuery.textScalerOf(context).scale(1);
+        return _BabyProfileCardContent(
+          name: effectiveName,
+          supportingText: effectiveSupportingText,
+          avatar: avatar,
+          isActive: isActive,
+          interactive: _isInteractive,
+          compact: constraints.maxWidth < 220 || textScale > 1.3,
+        );
+      },
     );
 
     final materialContent = _isInteractive
@@ -150,5 +110,93 @@ class BebeBabyProfileCard extends StatelessWidget {
   static String? _normalizeText(String? value) {
     final normalized = value?.trim();
     return normalized == null || normalized.isEmpty ? null : normalized;
+  }
+}
+
+class _BabyProfileCardContent extends StatelessWidget {
+  const _BabyProfileCardContent({
+    required this.name,
+    required this.supportingText,
+    required this.avatar,
+    required this.isActive,
+    required this.interactive,
+    required this.compact,
+  });
+
+  final String name;
+  final String? supportingText;
+  final Widget avatar;
+  final bool isActive;
+  final bool interactive;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    final spacing = theme.spacing;
+    final colors = theme.colors;
+    final supportingColor = isActive
+        ? colors.text.brandDefault
+        : colors.text.neutralBody;
+    final avatarView = SizedBox.square(
+      dimension: compact ? 40 : BebeBabyProfileCard._avatarSize,
+      child: ClipOval(child: avatar),
+    );
+    final copy = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          name,
+          style: theme.typography.styles.title.sm.semibold.copyWith(
+            color: colors.text.neutralTitle,
+          ),
+        ),
+        if (supportingText != null) ...[
+          SizedBox(height: spacing.spacingXs),
+          Text(
+            supportingText!,
+            style: theme.typography.styles.body.sm.regular.copyWith(
+              color: supportingColor,
+            ),
+          ),
+        ],
+      ],
+    );
+    final chevron = Icon(
+      Icons.chevron_right_rounded,
+      size: BebeBabyProfileCard._chevronSize,
+      color: isActive
+          ? colors.text.brandDefault
+          : colors.icons.neutralAlternative,
+    );
+
+    return Padding(
+      padding: EdgeInsets.all(compact ? spacing.spacingS : spacing.spacingL),
+      child: compact
+          ? Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                avatarView,
+                SizedBox(width: spacing.spacingS),
+                Expanded(child: copy),
+                if (interactive) ...[
+                  SizedBox(width: spacing.spacingS),
+                  chevron,
+                ],
+              ],
+            )
+          : Row(
+              children: [
+                avatarView,
+                SizedBox(width: spacing.spacingL),
+                Expanded(child: copy),
+                if (interactive) ...[
+                  SizedBox(width: spacing.spacingM),
+                  chevron,
+                ],
+              ],
+            ),
+    );
   }
 }

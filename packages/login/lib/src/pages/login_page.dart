@@ -9,6 +9,7 @@ class LoginPage extends StatelessWidget {
   const LoginPage({
     required this.authService,
     required this.onAuthenticated,
+    required this.onBackPressed,
     required this.onSignUpPressed,
     this.invitationPending = false,
     super.key,
@@ -16,6 +17,7 @@ class LoginPage extends StatelessWidget {
 
   final AuthService authService;
   final VoidCallback onAuthenticated;
+  final VoidCallback onBackPressed;
   final VoidCallback onSignUpPressed;
   final bool invitationPending;
 
@@ -25,6 +27,7 @@ class LoginPage extends StatelessWidget {
       create: (_) => LoginCubit(authService),
       child: LoginView(
         onAuthenticated: onAuthenticated,
+        onBackPressed: onBackPressed,
         onSignUpPressed: onSignUpPressed,
         invitationPending: invitationPending,
       ),

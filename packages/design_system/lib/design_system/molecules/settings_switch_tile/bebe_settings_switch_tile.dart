@@ -43,8 +43,6 @@ class BebeSettingsSwitchTile extends StatelessWidget {
               children: [
                 Text(
                   effectiveTitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   style: theme.typography.styles.title.sm.semibold.copyWith(
                     color: _isEnabled
                         ? colors.text.neutralTitle
@@ -55,8 +53,6 @@ class BebeSettingsSwitchTile extends StatelessWidget {
                   SizedBox(height: spacing.spacingXs),
                   Text(
                     effectiveDescription,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                     style: theme.typography.styles.body.sm.regular.copyWith(
                       color: _isEnabled
                           ? colors.text.neutralBody

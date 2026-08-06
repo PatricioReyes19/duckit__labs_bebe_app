@@ -53,38 +53,41 @@ class BebeHealthOverviewTemplate extends StatelessWidget {
       );
     }
 
-    return SingleChildScrollView(
-      physics: onRefresh != null
-          ? const AlwaysScrollableScrollPhysics()
-          : const ClampingScrollPhysics(),
-      padding: EdgeInsets.all(spacing.spacingXs),
-      child: BebeResponsiveContent(
-        maxWidth: maximumContentWidth,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            padded(primaryActions),
-            if (supportAction != null) ...[
+    return ColoredBox(
+      color: context.theme.colors.background.neutralsSurface,
+      child: SingleChildScrollView(
+        physics: onRefresh != null
+            ? const AlwaysScrollableScrollPhysics()
+            : const ClampingScrollPhysics(),
+        padding: EdgeInsets.all(spacing.spacingXs),
+        child: BebeResponsiveContent(
+          maxWidth: maximumContentWidth,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              padded(primaryActions),
+              if (supportAction != null) ...[
+                SizedBox(height: spacing.spacingXl),
+                padded(supportAction!),
+              ],
               SizedBox(height: spacing.spacingXl),
-              padded(supportAction!),
-            ],
-            SizedBox(height: spacing.spacingXl),
-            padded(upcomingHeader),
-            SizedBox(height: spacing.spacingL),
+              padded(upcomingHeader),
+              SizedBox(height: spacing.spacingL),
 
-            // Intencionalmente sin padding horizontal.
-            upcomingCarousel,
+              // Intencionalmente sin padding horizontal.
+              upcomingCarousel,
 
-            if (quickSummary != null) ...[
-              SizedBox(height: spacing.spacingXl),
-              padded(quickSummary!),
+              if (quickSummary != null) ...[
+                SizedBox(height: spacing.spacingXl),
+                padded(quickSummary!),
+              ],
+              if (historyAction != null) ...[
+                SizedBox(height: spacing.spacingXl),
+                padded(historyAction!),
+              ],
             ],
-            if (historyAction != null) ...[
-              SizedBox(height: spacing.spacingXl),
-              padded(historyAction!),
-            ],
-          ],
+          ),
         ),
       ),
     );

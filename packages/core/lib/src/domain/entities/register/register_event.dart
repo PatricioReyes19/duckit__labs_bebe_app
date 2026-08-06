@@ -4,24 +4,7 @@ enum RegisterEventType {
   diaper,
   clinicalObservation,
   medication,
-  measurement;
-
-  String get storageKey => switch (this) {
-    RegisterEventType.feeding => 'feeding',
-    RegisterEventType.sleep => 'sleep',
-    RegisterEventType.diaper => 'diaper',
-    RegisterEventType.clinicalObservation => 'clinical_observation',
-    RegisterEventType.medication => 'medication',
-    RegisterEventType.measurement => 'measurement',
-  };
-
-  static RegisterEventType fromStorageKey(String value) {
-    return RegisterEventType.values.firstWhere(
-      (type) => type.storageKey == value,
-      orElse: () =>
-          throw FormatException('Unknown register event type: $value'),
-    );
-  }
+  measurement,
 }
 
 /// Input accepted by the register domain.
@@ -71,4 +54,38 @@ class RegisteredEvent {
   final String? notes;
   final String? caregiverId;
   final int schemaVersion;
+}
+
+/// Partial changes accepted by the register domain.
+///
+/// The explicit clear flags preserve PATCH semantics: an omitted nullable
+/// value is different from intentionally setting that value to `null`.
+class RegisterEventPatch {
+  RegisterEventPatch({
+    this.occurredAt,
+    this.details,
+    this.notes,
+    this.clearNotes = false,
+    this.caregiverId,
+    this.clearCaregiverId = false,
+    this.schemaVersion,
+  }) : assert(notes == null || !clearNotes),
+       assert(caregiverId == null || !clearCaregiverId);
+
+  final DateTime? occurredAt;
+  final Map<String, Object?>? details;
+  final String? notes;
+  final bool clearNotes;
+  final String? caregiverId;
+  final bool clearCaregiverId;
+  final int? schemaVersion;
+
+  bool get isEmpty =>
+      occurredAt == null &&
+      details == null &&
+      notes == null &&
+      !clearNotes &&
+      caregiverId == null &&
+      !clearCaregiverId &&
+      schemaVersion == null;
 }

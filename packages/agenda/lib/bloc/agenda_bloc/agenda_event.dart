@@ -15,6 +15,6 @@ sealed class AgendaEvent with _$AgendaEvent {
     required DateTime focusedDay,
   }) = _MonthDaySelected;
   const factory AgendaEvent.monthChanged(DateTime focusedDay) = _MonthChanged;
-  const factory AgendaEvent.categorySelected(AgendaCategory category) =
+  const factory AgendaEvent.categorySelected(AgendaFilterCategory category) =
       _CategorySelected;
 }

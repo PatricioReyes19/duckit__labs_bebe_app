@@ -21,7 +21,7 @@ class BebeRegisterFormSection extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: theme.colors.background.neutralsSurface,
-          borderRadius: theme.borderRadius.x3l,
+          borderRadius: theme.borderRadius.xl,
           border: Border.all(color: theme.colors.border.neutralDefault),
           boxShadow: theme.elevation.low,
         ),

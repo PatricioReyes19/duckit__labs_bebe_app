@@ -6,16 +6,16 @@ class BebeInformationContent extends StatelessWidget {
     required this.title,
     this.description,
     this.metadata,
-    this.maxTitleLines = 2,
-    this.maxDescriptionLines = 3,
+    this.maxTitleLines,
+    this.maxDescriptionLines,
     super.key,
   });
 
   final String title;
   final String? description;
   final Widget? metadata;
-  final int maxTitleLines;
-  final int maxDescriptionLines;
+  final int? maxTitleLines;
+  final int? maxDescriptionLines;
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +33,7 @@ class BebeInformationContent extends StatelessWidget {
         Text(
           title,
           maxLines: maxTitleLines,
-          overflow: TextOverflow.ellipsis,
+          overflow: maxTitleLines == null ? null : TextOverflow.ellipsis,
           style: typography.styles.title.sm.semibold.copyWith(
             color: colors.text.neutralTitle,
           ),
@@ -48,7 +48,9 @@ class BebeInformationContent extends StatelessWidget {
           Text(
             effectiveDescription,
             maxLines: maxDescriptionLines,
-            overflow: TextOverflow.ellipsis,
+            overflow: maxDescriptionLines == null
+                ? null
+                : TextOverflow.ellipsis,
             style: typography.styles.body.sm.regular.copyWith(
               color: colors.text.neutralBody,
             ),

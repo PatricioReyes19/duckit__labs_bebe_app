@@ -75,8 +75,8 @@ class BebeLeadingIcon extends StatelessWidget {
       ),
 
       BebeLeadingIconSize.large => _BebeLeadingIconDimensions(
-        containerSize: 40,
-        iconSize: 24,
+        containerSize: 56,
+        iconSize: 28,
       ),
     };
   }

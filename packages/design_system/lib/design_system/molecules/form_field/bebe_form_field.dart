@@ -7,6 +7,7 @@ class BebeFormField extends StatelessWidget {
     required this.label,
     required this.child,
     this.optional = false,
+    this.compactLabel = false,
     this.helperText,
     this.errorText,
     this.semanticLabel,
@@ -16,6 +17,7 @@ class BebeFormField extends StatelessWidget {
   final String label;
   final Widget child;
   final bool optional;
+  final bool compactLabel;
   final String? helperText;
   final String? errorText;
   final String? semanticLabel;
@@ -32,7 +34,11 @@ class BebeFormField extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          BebeFormLabel(label: label, optional: optional),
+          BebeFormLabel(
+            label: label,
+            optional: optional,
+            compact: compactLabel,
+          ),
           SizedBox(height: spacing.spacingM),
           child,
           if (feedback != null && feedback.trim().isNotEmpty) ...[

@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:core/core.dart' as domain;
 
 class HomeOverviewVm extends Equatable {
   const HomeOverviewVm({
@@ -14,6 +15,185 @@ class HomeOverviewVm extends Equatable {
   final List<HomeQuickActionVm> quickActions;
   final HomeUpcomingHealthVm upcomingHealth;
   final HomeRecentInformationVm recentInformation;
+
+  factory HomeOverviewVm.fromEntity(
+    domain.HomeOverviewEntity entity, {
+    required DateTime referenceDate,
+  }) {
+    final siblings = entity.family.babies
+        .where((baby) => baby.id != entity.activeBaby.id)
+        .toList(growable: false);
+    final upcoming = entity.upcomingHealthEvent;
+    final recent = entity.mostRecentEvent;
+    return HomeOverviewVm(
+      activeBaby: HomeActiveBabyVm(
+        name: entity.activeBaby.name,
+        ageLabel: _ageLabel(entity.activeBaby.birthDate, referenceDate),
+        avatarAssetPath: entity.activeBaby.avatarAssetPath ??
+            'assets/images/baby_avatar.png',
+        familyContextLabel: entity.family.name,
+        sibling: siblings.isEmpty
+            ? null
+            : HomeSiblingVm(
+                name: siblings.first.name,
+                ageLabel: _ageLabel(siblings.first.birthDate, referenceDate),
+                avatarAssetPath: siblings.first.avatarAssetPath ??
+                    'assets/images/baby_avatar.png',
+              ),
+      ),
+      todayMetrics: entity.metrics
+          .map((metric) => _metric(metric, referenceDate))
+          .toList(growable: false),
+      quickActions: const [
+        HomeQuickActionVm(
+          id: 'feeding',
+          type: HomeQuickActionKind.feeding,
+          label: 'Alimentación',
+        ),
+        HomeQuickActionVm(
+          id: 'sleep',
+          type: HomeQuickActionKind.sleep,
+          label: 'Sueño',
+        ),
+        HomeQuickActionVm(
+          id: 'diaper',
+          type: HomeQuickActionKind.diaper,
+          label: 'Cambio',
+        ),
+        HomeQuickActionVm(
+          id: 'observation',
+          type: HomeQuickActionKind.observation,
+          label: 'Observación',
+        ),
+        HomeQuickActionVm(
+          id: 'medicine',
+          type: HomeQuickActionKind.medicine,
+          label: 'Medicina',
+        ),
+      ],
+      upcomingHealth: HomeUpcomingHealthVm(
+        title: upcoming?.title ?? 'Sin próximos controles',
+        dateLabel:
+            upcoming == null ? 'Agenda al día' : _dateLabel(upcoming.startsAt),
+        timeLabel: upcoming == null ? '--:--' : _timeLabel(upcoming.startsAt),
+        caregiverLabel: upcoming?.caregiver == null
+            ? 'Sin cuidador asignado'
+            : 'Acompaña: ${upcoming!.caregiver!.role}',
+        type: switch (upcoming?.type) {
+          domain.HealthEventType.vaccine => HomeUpcomingHealthKind.vaccine,
+          domain.HealthEventType.pediatricControl ||
+          domain.HealthEventType.growthControl =>
+            HomeUpcomingHealthKind.control,
+          null => HomeUpcomingHealthKind.control,
+        },
+      ),
+      recentInformation: HomeRecentInformationVm(
+        title: recent == null
+            ? 'Sin actividad reciente'
+            : _eventTitle(recent.type),
+        dateLabel: recent == null
+            ? 'Hoy'
+            : _relativeTime(recent.occurredAt, referenceDate),
+        description: recent == null
+            ? 'Los nuevos registros aparecerán en esta sección.'
+            : 'Registro guardado correctamente en este dispositivo.',
+        status: recent == null
+            ? HomeRecentStatus.information
+            : HomeRecentStatus.success,
+        statusLabel: recent == null ? 'Sin registros' : 'Completado',
+      ),
+    );
+  }
+
+  static HomeTodayMetricVm _metric(
+    domain.HomeMetricEntity metric,
+    DateTime referenceDate,
+  ) {
+    final type = switch (metric.type) {
+      domain.HomeMetricType.feeding => HomeMetricType.feeding,
+      domain.HomeMetricType.sleep => HomeMetricType.sleep,
+      domain.HomeMetricType.diaper => HomeMetricType.diaper,
+    };
+    return HomeTodayMetricVm(
+      type: type,
+      label: switch (type) {
+        HomeMetricType.feeding => 'Alimentación',
+        HomeMetricType.sleep => 'Sueño',
+        HomeMetricType.diaper => 'Pañales',
+      },
+      value: type == HomeMetricType.sleep
+          ? _duration(metric.totalMinutes)
+          : '${metric.count}',
+      unit: switch (type) {
+        HomeMetricType.feeding => 'tomas',
+        HomeMetricType.sleep => 'total',
+        HomeMetricType.diaper => 'cambios',
+      },
+      lastLabel: 'Última vez',
+      lastValue: metric.lastOccurredAt == null
+          ? 'Sin registros'
+          : _relativeTime(metric.lastOccurredAt!, referenceDate),
+    );
+  }
+
+  static String _duration(int minutes) {
+    final hours = minutes ~/ 60;
+    final remainder = minutes % 60;
+    if (hours == 0) return '$remainder min';
+    return remainder == 0 ? '$hours h' : '$hours h $remainder min';
+  }
+
+  static String _eventTitle(domain.RegisterEventType type) => switch (type) {
+        domain.RegisterEventType.feeding => 'Alimentación registrada',
+        domain.RegisterEventType.sleep => 'Sueño registrado',
+        domain.RegisterEventType.diaper => 'Cambio registrado',
+        domain.RegisterEventType.clinicalObservation =>
+          'Observación registrada',
+        domain.RegisterEventType.medication => 'Medicación registrada',
+        domain.RegisterEventType.measurement => 'Medición registrada',
+      };
+
+  static String _relativeTime(DateTime value, DateTime referenceDate) {
+    final difference = referenceDate.difference(value.toLocal());
+    if (difference.inMinutes < 1) return 'Ahora';
+    if (difference.inHours < 1) return 'Hace ${difference.inMinutes} min';
+    if (difference.inDays < 1) return 'Hace ${difference.inHours} h';
+    return _dateLabel(value);
+  }
+
+  static String _dateLabel(DateTime value) {
+    const months = [
+      'enero',
+      'febrero',
+      'marzo',
+      'abril',
+      'mayo',
+      'junio',
+      'julio',
+      'agosto',
+      'septiembre',
+      'octubre',
+      'noviembre',
+      'diciembre',
+    ];
+    final local = value.toLocal();
+    return '${local.day} de ${months[local.month - 1]}';
+  }
+
+  static String _timeLabel(DateTime value) {
+    final local = value.toLocal();
+    return '${local.hour.toString().padLeft(2, '0')}:'
+        '${local.minute.toString().padLeft(2, '0')}';
+  }
+
+  static String _ageLabel(DateTime birthDate, DateTime referenceDate) {
+    final birth = birthDate.toLocal();
+    final reference = referenceDate.toLocal();
+    var months =
+        (reference.year - birth.year) * 12 + reference.month - birth.month;
+    if (reference.day < birth.day) months--;
+    return months <= 0 ? 'Menos de un mes' : '$months meses';
+  }
 
   @override
   List<Object?> get props => [

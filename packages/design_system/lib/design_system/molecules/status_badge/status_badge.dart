@@ -54,8 +54,6 @@ class BebeStatusBadge extends StatelessWidget {
                 Flexible(
                   child: Text(
                     label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                     style: typography.styles.label.sm.semibold.copyWith(
                       color: palette.content,
                     ),

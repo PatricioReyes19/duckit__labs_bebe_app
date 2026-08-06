@@ -60,6 +60,37 @@ void main() {
     expect(selected, 'clinic');
   });
 
+  testWidgets('register subcategory selector keeps icons and forwards value', (
+    tester,
+  ) async {
+    String? selected;
+    await tester.pumpWidget(
+      _TestApp(
+        theme: bebeTheme.lightTheme(),
+        child: BebeRegisterSubcategorySelector<String>(
+          items: const [
+            BebeSegmentedItem(
+              value: 'wet',
+              label: 'Orina',
+              icon: Icon(Icons.water_drop_outlined),
+            ),
+            BebeSegmentedItem(
+              value: 'dirty',
+              label: 'Deposición',
+              icon: Icon(Icons.layers_outlined),
+            ),
+          ],
+          selectedValue: 'wet',
+          onChanged: (value) => selected = value,
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Deposición'));
+    expect(selected, 'dirty');
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'register categories use semantic clinical palette in dark mode',
     (tester) async {

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 /// Controlled visual form for medication records.
 class MedicationRegisterForm extends StatelessWidget {
   const MedicationRegisterForm({
+    this.subtype = 'medication',
     this.nameController,
     this.doseController,
     this.unit = 'mL',
@@ -25,6 +26,7 @@ class MedicationRegisterForm extends StatelessWidget {
     super.key,
   });
 
+  final String subtype;
   final TextEditingController? nameController;
   final TextEditingController? doseController;
   final String unit;
@@ -47,21 +49,27 @@ class MedicationRegisterForm extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final spacing = context.theme.spacing;
+    final itemLabel = switch (subtype) {
+      'supplement' => 'suplemento',
+      'vitamin' => 'vitamina',
+      _ => 'medicamento',
+    };
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         BebeFormField(
-          label: 'Nombre del medicamento',
+          label: 'Nombre del $itemLabel',
           child: BebeTextField(
             controller: nameController,
             hintText: 'Ej. Paracetamol',
             onChanged: onNameChanged,
             textCapitalization: TextCapitalization.sentences,
-            semanticLabel: 'Nombre del medicamento',
+            semanticLabel: 'Nombre del $itemLabel',
           ),
         ),
         SizedBox(height: spacing.spacingXl),
         BebeResponsiveFormGrid(
+          minimumItemWidth: 96,
           children: [
             BebeFormField(
               label: 'Dosis',
@@ -76,12 +84,14 @@ class MedicationRegisterForm extends StatelessWidget {
               ),
             ),
             BebePickerField(
+              compact: true,
               label: 'Unidad',
               value: unit,
               kind: BebePickerFieldKind.selection,
               onPressed: onUnitPressed,
             ),
             BebePickerField(
+              compact: true,
               label: 'Hora',
               value: time,
               kind: BebePickerFieldKind.time,
@@ -91,6 +101,7 @@ class MedicationRegisterForm extends StatelessWidget {
         ),
         SizedBox(height: spacing.spacingXl),
         BebePickerField(
+          compact: true,
           label: 'Frecuencia',
           value: frequency,
           kind: BebePickerFieldKind.selection,
@@ -98,6 +109,7 @@ class MedicationRegisterForm extends StatelessWidget {
         ),
         SizedBox(height: spacing.spacingXl),
         BebePickerField(
+          compact: true,
           label: 'Duración o fecha de término',
           value: endDate,
           placeholder: 'Selecciona una fecha',
@@ -115,6 +127,7 @@ class MedicationRegisterForm extends StatelessWidget {
         ),
         SizedBox(height: spacing.spacingXl),
         BebeNotesField(
+          compact: true,
           label: 'Notas',
           controller: notesController,
           onChanged: onNotesChanged,

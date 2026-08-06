@@ -14,6 +14,8 @@ class DiaperRegisterCubit extends RegisterFormCubit {
             'appearance': 'normal',
             'color': 'yellow',
             'amount': 'normal',
+            'urineColor': 'clear',
+            'urineAmount': 'normal',
             'notes': '',
             'symptoms': '',
           },
@@ -24,6 +26,8 @@ class DiaperRegisterCubit extends RegisterFormCubit {
   String get appearance => state.value<String>('appearance');
   String get color => state.value<String>('color');
   String get amount => state.value<String>('amount');
+  String get urineColor => state.value<String>('urineColor');
+  String get urineAmount => state.value<String>('urineAmount');
   String get notes => state.value<String>('notes');
   String get symptoms => state.value<String>('symptoms');
 
@@ -35,11 +39,15 @@ class DiaperRegisterCubit extends RegisterFormCubit {
   void appearanceChanged(String value) => setValue('appearance', value);
   void colorChanged(String value) => setValue('color', value);
   void amountChanged(String value) => setValue('amount', value);
+  void urineColorChanged(String value) => setValue('urineColor', value);
+  void urineAmountChanged(String value) => setValue('urineAmount', value);
   void notesChanged(String value) => setValue('notes', value);
   void symptomsChanged(String value) => setValue('symptoms', value);
 
   @override
   RegisterEventDraft buildDraft() {
+    final includesUrine = subtype == 'wet' || subtype == 'mixed';
+    final includesStool = subtype == 'dirty' || subtype == 'mixed';
     return RegisterEventDraft(
       babyId: babyId,
       type: RegisterEventType.diaper,
@@ -47,9 +55,11 @@ class DiaperRegisterCubit extends RegisterFormCubit {
       notes: notes,
       details: {
         'subtype': subtype,
-        'appearance': appearance,
-        'color': color,
-        'amount': amount,
+        if (includesUrine) 'urine_color': urineColor,
+        if (includesUrine) 'urine_amount': urineAmount,
+        if (includesStool) 'appearance': appearance,
+        if (includesStool) 'color': color,
+        if (includesStool) 'amount': amount,
         'symptoms': symptoms.trim(),
       },
     );

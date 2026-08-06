@@ -82,8 +82,6 @@ class BebeDetailActionCard extends StatelessWidget {
               children: [
                 Text(
                   effectiveTitle,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                   style: theme.typography.styles.title.sm.semibold.copyWith(
                     color: palette.title,
                   ),
@@ -92,8 +90,6 @@ class BebeDetailActionCard extends StatelessWidget {
                   SizedBox(height: spacing.spacingXs),
                   Text(
                     effectiveDescription,
-                    maxLines: 4,
-                    overflow: TextOverflow.ellipsis,
                     style: theme.typography.styles.body.sm.regular.copyWith(
                       color: palette.body,
                     ),
@@ -103,8 +99,6 @@ class BebeDetailActionCard extends StatelessWidget {
                   SizedBox(height: spacing.spacingS),
                   Text(
                     effectiveMetadata,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                     style: theme.typography.styles.label.sm.semibold.copyWith(
                       color: palette.metadata,
                     ),

@@ -11,5 +11,7 @@ abstract interface class RegisterEventRepository {
     int? limit,
   });
 
+  Future<RegisteredEvent?> update(String id, RegisterEventPatch patch);
+
   Future<void> delete(String id);
 }

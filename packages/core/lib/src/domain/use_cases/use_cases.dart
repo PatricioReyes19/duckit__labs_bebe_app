@@ -4,3 +4,8 @@ export 'session/session.dart';
 export 'onboarding/onboarding.dart';
 export 'care_circle/care_circle.dart';
 export 'register/register.dart';
+export 'agenda/agenda.dart';
+export 'family/family.dart';
+export 'health/health.dart';
+export 'home/home.dart';
+export 'settings/settings.dart';

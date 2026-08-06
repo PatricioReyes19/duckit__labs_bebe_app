@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 /// Controlled visual form for growth and measurement records.
 class MeasurementRegisterForm extends StatelessWidget {
   const MeasurementRegisterForm({
+    this.measurementType = 'weight',
     this.valueController,
     this.unit = 'kg',
     this.date = '20 may 2024',
@@ -19,6 +20,7 @@ class MeasurementRegisterForm extends StatelessWidget {
     super.key,
   });
 
+  final String measurementType;
   final TextEditingController? valueController;
   final String unit;
   final String date;
@@ -35,14 +37,20 @@ class MeasurementRegisterForm extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final spacing = context.theme.spacing;
+    final measurementLabel = switch (measurementType) {
+      'height' => 'Talla',
+      'head' => 'Perímetro cefálico',
+      _ => 'Peso',
+    };
+    final example = measurementType == 'weight' ? 'Ej. 5,9' : 'Ej. 58,5';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         BebeFormField(
-          label: 'Medición ($unit)',
+          label: '$measurementLabel ($unit)',
           child: BebeTextField(
             controller: valueController,
-            hintText: 'Ej. 5,9',
+            hintText: example,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             trailing: _UnitLabel(unit: unit),
             onChanged: onValueChanged,
@@ -51,15 +59,18 @@ class MeasurementRegisterForm extends StatelessWidget {
         ),
         SizedBox(height: spacing.spacingXl),
         BebeResponsiveFormGrid(
+          minimumItemWidth: 140,
           maximumColumnCount: 2,
           children: [
             BebePickerField(
+              compact: true,
               label: 'Fecha',
               value: date,
               kind: BebePickerFieldKind.date,
               onPressed: onDatePressed,
             ),
             BebePickerField(
+              compact: true,
               label: 'Hora',
               value: time,
               kind: BebePickerFieldKind.time,
@@ -88,6 +99,7 @@ class MeasurementRegisterForm extends StatelessWidget {
         ),
         SizedBox(height: spacing.spacingXl),
         BebeNotesField(
+          compact: true,
           label: 'Notas',
           controller: notesController,
           onChanged: onNotesChanged,
@@ -98,6 +110,7 @@ class MeasurementRegisterForm extends StatelessWidget {
           type: BebeStatusBannerType.information,
           leading: const Icon(Icons.show_chart_rounded),
           trailing: const Icon(Icons.chevron_right_rounded),
+          compact: true,
           onPressed: onGrowthPressed,
         ),
       ],

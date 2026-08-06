@@ -1,2 +1,7 @@
 export 'startup/startup.dart';
 export 'register/register.dart';
+export 'agenda/agenda.dart';
+export 'family/family.dart';
+export 'health/health.dart';
+export 'home/home.dart';
+export 'settings/app_settings.dart';

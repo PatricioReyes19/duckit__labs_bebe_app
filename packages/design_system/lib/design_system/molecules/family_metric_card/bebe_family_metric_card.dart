@@ -31,7 +31,6 @@ class BebeFamilyMetricCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = context.theme;
-    final spacing = theme.spacing;
     final colors = theme.colors;
     final radius = theme.borderRadius;
     final elevation = theme.elevation;
@@ -45,64 +44,19 @@ class BebeFamilyMetricCard extends StatelessWidget {
     final effectiveLabel = label.trim();
     final effectiveSemanticLabel = _normalizeText(semanticLabel);
 
-    final content = Padding(
-      padding: EdgeInsets.all(spacing.spacingM),
-      child: Row(
-        children: [
-          SizedBox.square(
-            dimension: _iconContainerSize,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: palette.iconSurface,
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: IconTheme(
-                  data: IconThemeData(
-                    size: _iconSize,
-                    color: palette.iconContent,
-                  ),
-                  child: icon,
-                ),
-              ),
-            ),
-          ),
-          SizedBox(width: spacing.spacingM),
-          Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  effectiveValue,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.typography.styles.title.md.semibold.copyWith(
-                    color: palette.value,
-                  ),
-                ),
-                SizedBox(height: spacing.spacingXs),
-                Text(
-                  effectiveLabel,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.typography.styles.body.sm.regular.copyWith(
-                    color: palette.label,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (_isInteractive) ...[
-            SizedBox(width: spacing.spacingS),
-            Icon(
-              Icons.chevron_right_rounded,
-              size: _chevronSize,
-              color: palette.chevron,
-            ),
-          ],
-        ],
-      ),
+    final content = LayoutBuilder(
+      builder: (context, constraints) {
+        final textScale = MediaQuery.textScalerOf(context).scale(1);
+        final compact = constraints.maxWidth < 160 || textScale > 1.3;
+        return _FamilyMetricCardContent(
+          value: effectiveValue,
+          label: effectiveLabel,
+          icon: icon,
+          palette: palette,
+          interactive: _isInteractive,
+          compact: compact,
+        );
+      },
     );
 
     final materialContent = _isInteractive
@@ -160,5 +114,104 @@ class BebeFamilyMetricCard extends StatelessWidget {
   static String? _normalizeText(String? value) {
     final normalized = value?.trim();
     return normalized == null || normalized.isEmpty ? null : normalized;
+  }
+}
+
+class _FamilyMetricCardContent extends StatelessWidget {
+  const _FamilyMetricCardContent({
+    required this.value,
+    required this.label,
+    required this.icon,
+    required this.palette,
+    required this.interactive,
+    required this.compact,
+  });
+
+  final String value;
+  final String label;
+  final Widget icon;
+  final BebeFamilyMetricCardPalette palette;
+  final bool interactive;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    final spacing = theme.spacing;
+    final leading = SizedBox.square(
+      dimension: compact ? 32 : BebeFamilyMetricCard._iconContainerSize,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: palette.iconSurface,
+          shape: BoxShape.circle,
+        ),
+        child: Center(
+          child: IconTheme(
+            data: IconThemeData(
+              size: compact ? 18 : BebeFamilyMetricCard._iconSize,
+              color: palette.iconContent,
+            ),
+            child: icon,
+          ),
+        ),
+      ),
+    );
+    final copy = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          value,
+          style: theme.typography.styles.title.md.semibold.copyWith(
+            color: palette.value,
+          ),
+        ),
+        SizedBox(height: spacing.spacingXs),
+        Text(
+          label,
+          style: theme.typography.styles.body.sm.regular.copyWith(
+            color: palette.label,
+          ),
+        ),
+      ],
+    );
+    final chevron = Icon(
+      Icons.chevron_right_rounded,
+      size: BebeFamilyMetricCard._chevronSize,
+      color: palette.chevron,
+    );
+
+    return Padding(
+      padding: EdgeInsets.all(compact ? spacing.spacingS : spacing.spacingM),
+      child: compact
+          ? interactive
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(children: [leading, const Spacer(), chevron]),
+                      SizedBox(height: spacing.spacingM),
+                      copy,
+                    ],
+                  )
+                : Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      leading,
+                      SizedBox(width: spacing.spacingS),
+                      Expanded(child: copy),
+                    ],
+                  )
+          : Row(
+              children: [
+                leading,
+                SizedBox(width: spacing.spacingM),
+                Expanded(child: copy),
+                if (interactive) ...[
+                  SizedBox(width: spacing.spacingS),
+                  chevron,
+                ],
+              ],
+            ),
+    );
   }
 }

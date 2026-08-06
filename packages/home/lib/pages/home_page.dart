@@ -11,6 +11,7 @@ class HomePage extends GoRoute {
     required void Function(BuildContext context, String actionId) openRegister,
     required void Function(BuildContext context) openAgenda,
     required void Function(BuildContext context) openHealth,
+    required void Function(BuildContext context) openTodayHistory,
     super.name,
     super.routes,
   }) : super(
@@ -26,6 +27,7 @@ class HomePage extends GoRoute {
                   openRegister: openRegister,
                   openAgenda: openAgenda,
                   openHealth: openHealth,
+                  openTodayHistory: openTodayHistory,
                 ),
               ),
             );

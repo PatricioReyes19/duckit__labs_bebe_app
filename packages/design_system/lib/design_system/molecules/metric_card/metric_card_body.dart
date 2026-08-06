@@ -23,8 +23,6 @@ class MetricCardValue extends StatelessWidget {
       children: [
         Text(
           value,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
           style: typography.styles.headline.md.bold.copyWith(
             color: colors.text.neutralHeadline,
           ),
@@ -34,8 +32,6 @@ class MetricCardValue extends StatelessWidget {
             padding: EdgeInsets.only(bottom: spacing.spacingXs),
             child: Text(
               effectiveUnit,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
               style: typography.styles.body.sm.regular.copyWith(
                 color: colors.text.neutralBody,
               ),

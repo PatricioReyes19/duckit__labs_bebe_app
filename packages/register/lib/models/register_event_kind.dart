@@ -17,13 +17,20 @@ enum RegisterEventKind {
         RegisterEventKind.measurement => 'measurement',
       };
 
-  static RegisterEventKind fromRouteValue(String? value) {
-    if (value == 'medicine') {
+  static RegisterEventKind fromRouteValue(String? value) =>
+      tryFromRouteValue(value) ?? RegisterEventKind.feeding;
+
+  static RegisterEventKind? tryFromRouteValue(String? value) {
+    final normalized = value?.trim().toLowerCase();
+    if (normalized == 'medicine') {
       return RegisterEventKind.medication;
     }
-    return RegisterEventKind.values.firstWhere(
-      (kind) => kind.routeValue == value,
-      orElse: () => RegisterEventKind.feeding,
-    );
+
+    for (final kind in RegisterEventKind.values) {
+      if (kind.routeValue == normalized) {
+        return kind;
+      }
+    }
+    return null;
   }
 }

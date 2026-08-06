@@ -28,7 +28,8 @@ class BebeRatingStar extends StatelessWidget {
       size: size,
       color: selected ? selectedColor : unselectedColor,
     );
-    final label = semanticLabel ??
+    final label =
+        semanticLabel ??
         (selected ? 'Estrella seleccionada' : 'Estrella no seleccionada');
 
     if (onPressed == null) {

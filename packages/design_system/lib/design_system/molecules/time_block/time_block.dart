@@ -71,8 +71,6 @@ class BebeTimeBlock extends StatelessWidget {
         if (effectiveDate != null && effectiveDate.isNotEmpty) ...[
           Text(
             effectiveDate,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
             textAlign: textAlign,
             style: secondaryStyle.copyWith(color: secondaryColor),
           ),
@@ -80,8 +78,6 @@ class BebeTimeBlock extends StatelessWidget {
         ],
         Text(
           timeLabel,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
           textAlign: textAlign,
           style: timeStyle.copyWith(color: contentColor),
         ),
@@ -89,8 +85,6 @@ class BebeTimeBlock extends StatelessWidget {
           SizedBox(height: spacing.spacingXs),
           Text(
             effectivePeriod,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
             textAlign: textAlign,
             style: secondaryStyle.copyWith(color: secondaryColor),
           ),

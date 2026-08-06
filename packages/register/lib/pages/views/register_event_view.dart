@@ -28,7 +28,9 @@ class RegisterEventView extends StatelessWidget {
     this.contextDescription,
     this.contextLeading,
     this.contextTrailing,
+    this.bottomNavigationBar,
     this.showEventContext = true,
+    this.useFormSurface = true,
     this.isSaving = false,
     this.errorMessage,
     this.scrollController,
@@ -58,7 +60,9 @@ class RegisterEventView extends StatelessWidget {
   final String? contextDescription;
   final Widget? contextLeading;
   final Widget? contextTrailing;
+  final Widget? bottomNavigationBar;
   final bool showEventContext;
+  final bool useFormSurface;
   final bool isSaving;
   final String? errorMessage;
   final ScrollController? scrollController;
@@ -66,6 +70,26 @@ class RegisterEventView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = context.theme;
+    final formContent = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (errorMessage != null) ...[
+          BebeStatusBanner(
+            title: errorMessage!,
+            type: BebeStatusBannerType.error,
+            leading: const Icon(Icons.error_outline_rounded),
+          ),
+          SizedBox(height: theme.spacing.spacingXl),
+        ],
+        form,
+        SizedBox(height: theme.spacing.spacing2xl),
+        BebeRegisterActionBar(
+          onSavePressed: onSavePressed,
+          onCancelPressed: onCancelPressed,
+          isSaving: isSaving,
+        ),
+      ],
+    );
     return BebeRegisterEventTemplate(
       controller: scrollController,
       header: BebePageHeader(
@@ -108,11 +132,10 @@ class RegisterEventView extends StatelessWidget {
           : null,
       subcategorySelector: subcategories.isEmpty
           ? null
-          : BebeSegmentedSelector<String>(
+          : BebeRegisterSubcategorySelector<String>(
               items: subcategories,
               selectedValue: selectedSubcategory!,
               onChanged: onSubcategoryChanged,
-              allowWrap: true,
               semanticLabel: 'Tipo de ${_kindLabel(selectedKind)}',
             ),
       contextBanner: contextTitle == null
@@ -123,29 +146,12 @@ class RegisterEventView extends StatelessWidget {
               type: BebeStatusBannerType.information,
               leading: contextLeading ?? const Icon(Icons.schedule_outlined),
               trailing: contextTrailing,
+              compact: true,
             ),
-      form: BebeRegisterFormSection(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (errorMessage != null) ...[
-              BebeStatusBanner(
-                title: errorMessage!,
-                type: BebeStatusBannerType.error,
-                leading: const Icon(Icons.error_outline_rounded),
-              ),
-              SizedBox(height: theme.spacing.spacingXl),
-            ],
-            form,
-            SizedBox(height: theme.spacing.spacing2xl),
-            BebeRegisterActionBar(
-              onSavePressed: onSavePressed,
-              onCancelPressed: onCancelPressed,
-              isSaving: isSaving,
-            ),
-          ],
-        ),
-      ),
+      bottomNavigationBar: bottomNavigationBar,
+      form: useFormSurface
+          ? BebeRegisterFormSection(child: formContent)
+          : formContent,
     );
   }
 

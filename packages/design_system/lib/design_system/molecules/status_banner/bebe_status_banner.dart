@@ -1,3 +1,4 @@
+import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
 enum BebeStatusBannerType {
@@ -18,6 +19,7 @@ class BebeStatusBanner extends StatelessWidget {
     this.leading,
     this.trailing,
     this.onPressed,
+    this.compact = false,
     this.semanticLabel,
     super.key,
   });
@@ -28,6 +30,7 @@ class BebeStatusBanner extends StatelessWidget {
   final Widget? leading;
   final Widget? trailing;
   final VoidCallback? onPressed;
+  final bool compact;
   final String? semanticLabel;
 
   @override
@@ -55,7 +58,9 @@ class BebeStatusBanner extends StatelessWidget {
     };
 
     final body = Padding(
-      padding: const EdgeInsets.all(16),
+      padding: compact
+          ? const EdgeInsets.symmetric(horizontal: 16, vertical: 6)
+          : const EdgeInsets.all(16),
       child: Row(
         children: [
           if (leading != null) ...[
@@ -71,18 +76,24 @@ class BebeStatusBanner extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: foreground,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: compact
+                      ? context.theme.typography.styles.label.lg.semibold
+                            .copyWith(color: foreground)
+                      : Theme.of(context).textTheme.titleSmall?.copyWith(
+                          color: foreground,
+                          fontWeight: FontWeight.w700,
+                        ),
                 ),
                 if (description != null) ...[
                   const SizedBox(height: 4),
                   Text(
                     description!,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyMedium?.copyWith(color: foreground),
+                    style: compact
+                        ? context.theme.typography.styles.body.sm.regular
+                              .copyWith(color: foreground)
+                        : Theme.of(
+                            context,
+                          ).textTheme.bodyMedium?.copyWith(color: foreground),
                   ),
                 ],
               ],

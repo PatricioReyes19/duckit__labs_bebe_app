@@ -18,6 +18,7 @@ class BebePickerField extends StatelessWidget {
     this.placeholder,
     this.errorText,
     this.enabled = true,
+    this.compact = false,
     this.semanticLabel,
     super.key,
   });
@@ -30,6 +31,7 @@ class BebePickerField extends StatelessWidget {
   final String? placeholder;
   final String? errorText;
   final bool enabled;
+  final bool compact;
   final String? semanticLabel;
 
   IconData get _leadingIcon => switch (kind) {
@@ -60,9 +62,7 @@ class BebePickerField extends StatelessWidget {
       label: semanticLabel ?? label,
       value: displayValue,
       child: ConstrainedBox(
-        constraints: BoxConstraints(
-          minHeight: BebeButtonSize.medium.height,
-        ),
+        constraints: BoxConstraints(minHeight: BebeButtonSize.medium.height),
         child: Material(
           color: enabled
               ? colors.background.neutralsSurface
@@ -92,35 +92,43 @@ class BebePickerField extends StatelessWidget {
             }),
             child: Padding(
               padding: EdgeInsets.symmetric(
-                horizontal: spacing.spacingXl,
-                vertical: spacing.spacingL,
+                horizontal: compact ? 10 : spacing.spacingXl,
+                vertical: compact ? spacing.spacingM : spacing.spacingL,
               ),
               child: Row(
                 children: [
                   Icon(
                     _leadingIcon,
-                    size: BebeIconSize.sm.value,
+                    size: compact ? 18 : BebeIconSize.sm.value,
                     color: enabled
                         ? colors.icons.neutralAlternative
                         : colors.icons.neutralDisabled,
                   ),
-                  SizedBox(width: spacing.spacingL),
+                  SizedBox(
+                    width: compact ? spacing.spacingM : spacing.spacingL,
+                  ),
                   Expanded(
                     child: Text(
                       displayValue,
                       maxLines: 2,
-                      style: theme.typography.styles.body.md.regular.copyWith(
-                        color: value.trim().isEmpty
-                            ? colors.text.neutralDisabled
-                            : colors.text.neutralBody,
-                      ),
+                      style:
+                          (compact
+                                  ? theme.typography.styles.body.sm.regular
+                                  : theme.typography.styles.body.md.regular)
+                              .copyWith(
+                                color: value.trim().isEmpty
+                                    ? colors.text.neutralDisabled
+                                    : colors.text.neutralBody,
+                              ),
                     ),
                   ),
                   if (_showsChevron) ...[
-                    SizedBox(width: spacing.spacingM),
+                    SizedBox(
+                      width: compact ? spacing.spacingS : spacing.spacingM,
+                    ),
                     Icon(
                       Icons.keyboard_arrow_down_rounded,
-                      size: BebeIconSize.sm.value,
+                      size: compact ? 18 : BebeIconSize.sm.value,
                       color: colors.icons.neutralAlternative,
                     ),
                   ],
@@ -135,6 +143,7 @@ class BebePickerField extends StatelessWidget {
     return BebeFormField(
       label: label,
       optional: optional,
+      compactLabel: compact,
       errorText: errorText,
       child: field,
     );

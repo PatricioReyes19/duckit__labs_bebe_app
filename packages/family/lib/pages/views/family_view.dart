@@ -70,6 +70,9 @@ class _FamilyContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final activeBaby = overview.activeBaby;
+    final secondaryBabies = overview.babies
+        .where((baby) => baby.id != overview.activeBabyId)
+        .toList(growable: false);
     final bloc = context.read<FamilyBloc>();
 
     return BebeFamilyOverviewTemplate(
@@ -77,16 +80,38 @@ class _FamilyContent extends StatelessWidget {
         familyName: overview.familyName,
         babyName: activeBaby.name,
         babyAge: activeBaby.ageLabel,
-        supportingText: '${overview.babies.length} bebés en este núcleo',
+        supportingText: '${overview.babies.length} bebés en la familia',
+        showFamilyName: false,
         avatar: _FamilyAvatar(
           initials: activeBaby.initials,
           variant: activeBaby.avatarVariant,
         ),
         onContextPressed: onFamilyContextPressed ?? _emptyCallback,
+        secondaryContext: secondaryBabies.isEmpty
+            ? null
+            : BebeBabySelector(
+                name: secondaryBabies.first.name,
+                ageLabel: secondaryBabies.first.ageLabel,
+                avatar: SizedBox.square(
+                  dimension: 32,
+                  child: _FamilyAvatar(
+                    initials: secondaryBabies.first.initials,
+                    variant: secondaryBabies.first.avatarVariant,
+                  ),
+                ),
+                isSelected: false,
+                compact: true,
+                showTrailing: false,
+                onPressed: () => bloc.add(
+                  FamilyEvent.babySelected(secondaryBabies.first.id),
+                ),
+              ),
       ),
       familySummary: _FamilySummary(overview: overview),
       babiesSection: BebeBabyProfilesSection(
         title: 'Bebés',
+        minimumItemWidth: 136,
+        maximumColumnCount: 2,
         trailing: BebeInlineAction(
           label: 'Agregar',
           onPressed: onAddBabyPressed ?? _emptyCallback,
@@ -156,10 +181,10 @@ class _FamilySummary extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const BebeTitleSection(title: 'Resumen familiar'),
+        const BebeTitleSection(title: 'Mi familia'),
         SizedBox(height: spacing.spacingL),
         BebeFamilySummary(
-          minimumItemWidth: 140,
+          minimumItemWidth: 88,
           maximumColumnCount: 3,
           children: [
             BebeFamilyMetricCard(
@@ -167,14 +192,12 @@ class _FamilySummary extends StatelessWidget {
               label: 'bebés',
               icon: const Icon(Icons.child_care_outlined),
               variant: BebeFamilyMetricCardVariant.brand,
-              onPressed: _emptyCallback,
             ),
             BebeFamilyMetricCard(
               value: '${activeMembers.length}',
               label: 'cuidadores',
               icon: const Icon(Icons.groups_2_outlined),
               variant: BebeFamilyMetricCardVariant.accent,
-              onPressed: _emptyCallback,
             ),
             BebeFamilyMetricCard(
               value: '${overview.pendingInvitations}',
@@ -183,7 +206,6 @@ class _FamilySummary extends StatelessWidget {
                   : 'invitaciones pendientes',
               icon: const Icon(Icons.mail_outline_rounded),
               variant: BebeFamilyMetricCardVariant.warning,
-              onPressed: _emptyCallback,
             ),
           ],
         ),

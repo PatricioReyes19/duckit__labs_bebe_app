@@ -214,8 +214,6 @@ class _InfoBannerText extends StatelessWidget {
       children: [
         Text(
           title,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
           style: typography.styles.title.sm.semibold.copyWith(
             color: colors.text.neutralTitle,
           ),
@@ -223,8 +221,6 @@ class _InfoBannerText extends StatelessWidget {
         SizedBox(height: spacing.spacingS),
         Text(
           description,
-          maxLines: 3,
-          overflow: TextOverflow.ellipsis,
           style: typography.styles.body.sm.regular.copyWith(
             color: colors.text.neutralBody,
           ),

@@ -18,9 +18,7 @@ class _ThrowingResolver implements ResolveEntryDestination {
 }
 
 void main() {
-  for (final destination in EntryDestination.values.where(
-    (destination) => destination != EntryDestination.authEntry,
-  )) {
+  for (final destination in EntryDestination.values) {
     blocTest<SplashBloc, SplashState>(
       'solicita la ruta de $destination cuando el inicio la resuelve',
       build: () => SplashBloc(
@@ -36,23 +34,6 @@ void main() {
       ],
     );
   }
-
-  blocTest<SplashBloc, SplashState>(
-    'sin sesión muestra entrada de autenticación',
-    build: () => SplashBloc(
-      minimumDisplayDuration: Duration.zero,
-      resolveEntryDestination: _FakeResolver(
-        const EntryResolution(
-          destination: EntryDestination.authEntry,
-        ),
-      ),
-    ),
-    wait: const Duration(milliseconds: 10),
-    expect: () => const [
-      SplashState.resolving(),
-      SplashState.authEntry(),
-    ],
-  );
 
   Object? reportedError;
   blocTest<SplashBloc, SplashState>(

@@ -87,10 +87,13 @@ class BebeConsultationDetailTemplate extends StatelessWidget {
       ),
     );
 
-    return Semantics(
-      container: true,
-      label: semanticLabel,
-      child: useSafeArea ? SafeArea(bottom: false, child: body) : body,
+    return ColoredBox(
+      color: theme.colors.background.neutralsSurface,
+      child: Semantics(
+        container: true,
+        label: semanticLabel,
+        child: useSafeArea ? SafeArea(bottom: false, child: body) : body,
+      ),
     );
   }
 }

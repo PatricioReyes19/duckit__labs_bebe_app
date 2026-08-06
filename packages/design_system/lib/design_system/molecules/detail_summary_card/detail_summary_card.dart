@@ -133,8 +133,6 @@ class _BebeDetailSummaryRow extends StatelessWidget {
               Expanded(
                 child: Text(
                   item.label,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                   style: typography.styles.body.md.regular.copyWith(
                     color: colors.text.neutralBody,
                   ),
@@ -148,8 +146,6 @@ class _BebeDetailSummaryRow extends StatelessWidget {
                   children: [
                     Text(
                       item.value,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.end,
                       style: typography.styles.label.md.semibold.copyWith(
                         color: colors.text.neutralTitle,
@@ -160,8 +156,6 @@ class _BebeDetailSummaryRow extends StatelessWidget {
                       SizedBox(height: spacing.spacingXs),
                       Text(
                         effectiveSupportingText,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.end,
                         style: typography.styles.body.sm.regular.copyWith(
                           color: colors.text.neutralBody,

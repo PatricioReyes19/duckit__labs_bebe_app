@@ -12,8 +12,7 @@ class NavigationSessionStore {
   static const _locationKey = 'bebeapp.navigation.last_location';
 
   static const _restorablePaths = <String>{
-    StartupPaths.login,
-    StartupPaths.signUp,
+    StartupPaths.authEntry,
     StartupPaths.onboarding,
     StartupPaths.invitation,
     StartupPaths.createCareCircle,
@@ -21,11 +20,19 @@ class NavigationSessionStore {
     StartupPaths.createBaby,
     StartupPaths.selectBaby,
     StartupPaths.home,
+    '/home/history',
     '/agenda',
     '/health',
     '/family',
+    '/family/settings',
     '/register',
+    '/register/sleep',
+    '/register/diaper',
+    '/register/observation',
+    '/register/medication',
+    '/register/measurement',
     '/notifications',
+    // Se conserva temporalmente para migrar sesiones de la ruta anterior.
     '/settings',
   };
 

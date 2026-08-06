@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../domain/auth_gateway.dart';
+import '../domain/auth_failure.dart';
 import '../domain/entities/auth_session.dart';
 import '../domain/entities/auth_user.dart';
 
@@ -21,6 +22,8 @@ class LocalAuthGateway implements AuthGateway {
   static const userEmailKey = 'bebeapp.session.email';
   static const displayNameKey = 'bebeapp.session.display_name';
   static const onboardingCompletedKey = 'bebeapp.onboarding.completed';
+  static const defaultUsername = 'bypass';
+  static const defaultPassword = '12345';
 
   @override
   Future<AuthSession?> currentSession() async {
@@ -55,14 +58,21 @@ class LocalAuthGateway implements AuthGateway {
     required String email,
     required String password,
   }) async {
-    final session = AuthSession(
+    final username = email.trim().toLowerCase();
+    if (username != defaultUsername || password != defaultPassword) {
+      throw const AuthFailure(
+        AuthFailureCode.invalidCredentials,
+        'Usuario o contraseña incorrectos.',
+      );
+    }
+    const session = AuthSession(
       user: AuthUser(
-        id: _idFor(email),
-        email: email,
-        displayName:
-            await _preferences.getString(displayNameKey) ?? _nameFor(email),
+        id: 'local-bypass',
+        email: 'bypass@local.bebeapp',
+        displayName: 'Usuario Bypass',
       ),
     );
+    await _preferences.setBool(onboardingCompletedKey, true);
     await _persist(session);
     return session;
   }

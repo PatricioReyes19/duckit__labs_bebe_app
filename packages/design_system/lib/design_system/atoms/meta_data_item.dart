@@ -18,7 +18,7 @@ class BebeMetadataItem extends StatelessWidget {
     required this.label,
     this.variant = BebeMetadataItemVariant.neutral,
     this.size = BebeMetadataItemSize.small,
-    this.maxLines = 1,
+    this.maxLines,
     this.semanticLabel,
     super.key,
   });
@@ -27,7 +27,7 @@ class BebeMetadataItem extends StatelessWidget {
   final String label;
   final BebeMetadataItemVariant variant;
   final BebeMetadataItemSize size;
-  final int maxLines;
+  final int? maxLines;
   final String? semanticLabel;
 
   @override
@@ -60,7 +60,7 @@ class BebeMetadataItem extends StatelessWidget {
           child: Text(
             label,
             maxLines: maxLines,
-            overflow: TextOverflow.ellipsis,
+            overflow: maxLines == null ? null : TextOverflow.ellipsis,
             style: textStyle.copyWith(color: contentColor),
           ),
         ),

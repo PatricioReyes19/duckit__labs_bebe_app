@@ -88,8 +88,6 @@ class BebeInlineAction extends StatelessWidget {
                   Flexible(
                     child: Text(
                       label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                       style: textStyle.copyWith(color: contentColor),
                     ),
                   ),

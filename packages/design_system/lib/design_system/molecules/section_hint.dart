@@ -28,8 +28,6 @@ class BebeSectionHint extends StatelessWidget {
           Flexible(
             child: Text(
               label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
               style: typography.styles.caption.md.regular.copyWith(
                 color: colors.text.neutralCaption,
               ),

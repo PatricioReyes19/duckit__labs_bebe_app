@@ -48,12 +48,6 @@ class SplashBloc extends Bloc<SplashEvent, SplashState> {
     try {
       final resolution = await _resolveEntryDestination();
       await _waitForMinimumDisplayDuration(displayStopwatch.elapsed);
-
-      if (resolution.destination == EntryDestination.authEntry) {
-        emit(const SplashState.authEntry());
-        return;
-      }
-
       emit(SplashState.routeRequested(destination: resolution.destination));
     } on Object catch (error, stackTrace) {
       _errorReporter?.call(error, stackTrace);

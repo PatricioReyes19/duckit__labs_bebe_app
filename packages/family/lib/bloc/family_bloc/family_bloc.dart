@@ -1,3 +1,4 @@
+import 'package:core/core.dart';
 import 'package:family/models/family_overview_vm.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
@@ -6,104 +7,70 @@ part 'family_bloc.freezed.dart';
 part 'family_event.dart';
 part 'family_state.dart';
 
+typedef FamilyClock = DateTime Function();
+
 class FamilyBloc extends Bloc<FamilyEvent, FamilyState> {
-  FamilyBloc() : super(const FamilyState.initial()) {
+  FamilyBloc({
+    required GetFamilyOverview getFamilyOverview,
+    required SetActiveFamilyBaby setActiveBaby,
+    FamilyClock? clock,
+  }) : _getFamilyOverview = getFamilyOverview,
+       _setActiveBaby = setActiveBaby,
+       _clock = clock ?? DateTime.now,
+       super(const FamilyState.initial()) {
     on<_Started>(_onStarted);
-    on<_Retried>((event, emit) => add(const FamilyEvent.started()));
+    on<_Retried>(_onStarted);
     on<_BabySelected>(_onBabySelected);
   }
 
-  Future<void> _onStarted(
-    _Started event,
-    Emitter<FamilyState> emit,
-  ) async {
+  final GetFamilyOverview _getFamilyOverview;
+  final SetActiveFamilyBaby _setActiveBaby;
+  final FamilyClock _clock;
+
+  Future<void> _onStarted(FamilyEvent event, Emitter<FamilyState> emit) async {
     emit(const FamilyState.loading());
-    await Future<void>.delayed(const Duration(milliseconds: 250));
-    emit(FamilyState.loaded(overview: _mockOverview()));
+    try {
+      final entity = await _getFamilyOverview();
+      emit(
+        FamilyState.loaded(
+          overview: FamilyOverviewVm.fromEntity(
+            entity,
+            referenceDate: _clock(),
+          ),
+        ),
+      );
+    } on Object catch (error) {
+      emit(
+        FamilyState.failure(message: 'No pudimos cargar la familia: $error'),
+      );
+    }
   }
 
-  void _onBabySelected(
+  Future<void> _onBabySelected(
     _BabySelected event,
     Emitter<FamilyState> emit,
-  ) {
+  ) async {
     final current = state;
-    if (current is! FamilyLoaded) {
+    if (current is! FamilyLoaded ||
+        !current.overview.babies.any((baby) => baby.id == event.babyId)) {
       return;
     }
-
-    final exists = current.overview.babies.any(
-      (baby) => baby.id == event.babyId,
-    );
-
-    if (!exists) {
-      return;
+    try {
+      final entity = await _setActiveBaby(event.babyId);
+      emit(
+        FamilyState.loaded(
+          overview: FamilyOverviewVm.fromEntity(
+            entity,
+            referenceDate: _clock(),
+          ),
+        ),
+      );
+    } on Object catch (error) {
+      emit(
+        FamilyState.failure(
+          message: 'No pudimos cambiar el bebé activo: $error',
+        ),
+      );
     }
-
-    emit(
-      FamilyState.loaded(
-        overview: current.overview.copyWith(
-          activeBabyId: event.babyId,
-        ),
-      ),
-    );
-  }
-
-  FamilyOverviewVm _mockOverview() {
-    return const FamilyOverviewVm(
-      familyName: 'Familia Reyes González',
-      activeBabyId: 'emilia',
-      pendingInvitations: 1,
-      babies: [
-        FamilyBabyVm(
-          id: 'emilia',
-          name: 'Emilia Reyes',
-          ageLabel: '2 meses y 8 días',
-          initials: 'ER',
-          avatarVariant: FamilyAvatarVariant.brand,
-        ),
-        FamilyBabyVm(
-          id: 'sofia',
-          name: 'Sofía Reyes',
-          ageLabel: '8 meses',
-          initials: 'SR',
-          avatarVariant: FamilyAvatarVariant.accent,
-        ),
-      ],
-      members: [
-        FamilyMemberVm(
-          id: 'gesslien',
-          name: 'Gesslien González',
-          role: 'Mamá',
-          accessDescription: 'Puede registrar y ver salud',
-          initials: 'GG',
-          avatarVariant: FamilyAvatarVariant.brand,
-        ),
-        FamilyMemberVm(
-          id: 'patricio',
-          name: 'Patricio Reyes',
-          role: 'Papá',
-          accessDescription: 'Puede registrar y ver salud',
-          initials: 'PR',
-          avatarVariant: FamilyAvatarVariant.information,
-        ),
-        FamilyMemberVm(
-          id: 'rosa',
-          name: 'Rosa González',
-          role: 'Abuela',
-          accessDescription: 'Acceso de colaboración',
-          initials: 'RG',
-          avatarVariant: FamilyAvatarVariant.accent,
-        ),
-        FamilyMemberVm(
-          id: 'carolina',
-          name: 'Carolina Soto',
-          role: 'Tía',
-          accessDescription: 'Invitación pendiente',
-          initials: 'CS',
-          avatarVariant: FamilyAvatarVariant.warning,
-          status: FamilyMemberStatus.pending,
-        ),
-      ],
-    );
   }
 }

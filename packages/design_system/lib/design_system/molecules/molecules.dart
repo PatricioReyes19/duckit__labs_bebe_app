@@ -34,3 +34,6 @@ export 'settings_action_tile/settings_action_tile.dart';
 export 'settings_switch_tile/settings_switch_tile.dart';
 export 'settings_value_tile/settings_value_tile.dart';
 export 'theme_mode_selector/theme_mode_selector.dart';
+export 'compact_metric_card/compact_metric_card.dart';
+export 'progress_steps/progress_steps.dart';
+export 'rating_selector/rating_selector.dart';

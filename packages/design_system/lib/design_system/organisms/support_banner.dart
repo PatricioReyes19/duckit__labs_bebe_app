@@ -272,8 +272,6 @@ class _AgendaSupportBannerContent extends StatelessWidget {
         if (effectiveTitle != null && effectiveTitle.isNotEmpty) ...[
           Text(
             effectiveTitle,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
             style: typography.styles.label.md.semibold.copyWith(
               color: palette.title,
             ),
@@ -282,8 +280,6 @@ class _AgendaSupportBannerContent extends StatelessWidget {
         ],
         Text(
           description,
-          maxLines: 3,
-          overflow: TextOverflow.ellipsis,
           style: typography.styles.body.sm.regular.copyWith(
             color: palette.body,
           ),
@@ -355,8 +351,6 @@ class _AgendaSupportBannerAction extends StatelessWidget {
                   Flexible(
                     child: Text(
                       label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                       style: typography.styles.label.sm.semibold.copyWith(
                         color: palette.action,
                       ),

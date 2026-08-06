@@ -157,9 +157,9 @@ class _AgendaContent extends StatelessWidget {
         selectedId: overview.selectedCategory.name,
         onItemPressed: (id) => bloc.add(
           AgendaEvent.categorySelected(
-            AgendaCategory.values.firstWhere(
+            AgendaFilterCategory.values.firstWhere(
               (category) => category.name == id,
-              orElse: () => AgendaCategory.all,
+              orElse: () => AgendaFilterCategory.all,
             ),
           ),
         ),
@@ -238,8 +238,11 @@ class _AgendaContent extends StatelessWidget {
         onRetryPressed: () => bloc.add(const AgendaEvent.retried()),
       ),
       onRefresh: () async {
+        final completed = bloc.stream.firstWhere(
+          (state) => state is AgendaLoaded || state is AgendaFailure,
+        );
         bloc.add(const AgendaEvent.refreshed());
-        await Future<void>.delayed(const Duration(milliseconds: 450));
+        await completed;
       },
       useSafeArea: false,
       bottomSpacing: spacing.spacing8xl + spacing.spacing4xl,
@@ -419,7 +422,6 @@ Widget _eventIcon(AgendaCategory category) => switch (category) {
   AgendaCategory.controls => const Icon(Icons.medical_services_outlined),
   AgendaCategory.medication => const Icon(Icons.medication_outlined),
   AgendaCategory.exams => const Icon(Icons.science_outlined),
-  AgendaCategory.all => const Icon(Icons.event_outlined),
 };
 
 BebeAgendaEventCardVariant _eventVariant(AgendaCategory category) {
@@ -427,8 +429,7 @@ BebeAgendaEventCardVariant _eventVariant(AgendaCategory category) {
     AgendaCategory.vaccines => BebeAgendaEventCardVariant.accent,
     AgendaCategory.controls => BebeAgendaEventCardVariant.information,
     AgendaCategory.medication => BebeAgendaEventCardVariant.warning,
-    AgendaCategory.exams ||
-    AgendaCategory.all => BebeAgendaEventCardVariant.brand,
+    AgendaCategory.exams => BebeAgendaEventCardVariant.brand,
   };
 }
 
@@ -437,7 +438,7 @@ BebeEventPreviewVariant _previewVariant(AgendaCategory category) {
     AgendaCategory.vaccines => BebeEventPreviewVariant.accent,
     AgendaCategory.controls => BebeEventPreviewVariant.information,
     AgendaCategory.medication => BebeEventPreviewVariant.warning,
-    AgendaCategory.exams || AgendaCategory.all => BebeEventPreviewVariant.brand,
+    AgendaCategory.exams => BebeEventPreviewVariant.brand,
   };
 }
 
@@ -449,7 +450,6 @@ Color _markerColor(BuildContext context, AgendaCategory category) {
     AgendaCategory.controls => icons.brandDefault,
     AgendaCategory.medication => icons.warningDefault,
     AgendaCategory.exams => icons.infoDefault,
-    AgendaCategory.all => icons.brandDefault,
   };
 }
 
@@ -458,7 +458,6 @@ String _categoryLabel(AgendaCategory category) => switch (category) {
   AgendaCategory.controls => 'Control',
   AgendaCategory.medication => 'Medicación',
   AgendaCategory.exams => 'Examen',
-  AgendaCategory.all => 'Evento',
 };
 
 String _date(DateTime date) {

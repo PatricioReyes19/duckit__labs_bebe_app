@@ -911,7 +911,7 @@ return $default(_that.isLoading,_that.themeMode,_that.highContrast,_that.persona
 
 
 class _SettingsState implements SettingsState {
-  const _SettingsState({this.isLoading = false, this.themeMode = BebeThemeModeOption.system, this.highContrast = false, this.personalReminders = true, this.familyActivity = true, this.dailySummary = false, this.reduceMotion = false, this.wifiOnly = false, this.name = 'Patricio Reyes', this.email = 'patricio@example.com', this.language = 'Español', this.timeFormat = '24 horas', this.textSize = 'Predeterminado', this.localStorage = '124 MB', this.appVersion = '1.0.0', this.errorMessage});
+  const _SettingsState({this.isLoading = false, this.themeMode = BebeThemeModeOption.system, this.highContrast = false, this.personalReminders = true, this.familyActivity = true, this.dailySummary = false, this.reduceMotion = false, this.wifiOnly = false, this.name = '', this.email = '', this.language = '', this.timeFormat = '', this.textSize = '', this.localStorage = '', this.appVersion = '1.0.0', this.errorMessage});
   
 
 @override@JsonKey() final  bool isLoading;

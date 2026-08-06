@@ -4,8 +4,8 @@ import 'package:injectable/injectable.dart';
 @module
 abstract class RegisterModule {
   @lazySingleton
-  RegisterEventRepository registerEventRepository() {
-    return SqliteRegisterEventRepository();
+  RegisterEventRepository registerEventRepository(BebeDatabase database) {
+    return SqliteRegisterEventRepository(database: database);
   }
 
   @lazySingleton
@@ -23,5 +23,10 @@ abstract class RegisterModule {
     RegisterEventRepository repository,
   ) {
     return DeleteRegisterEvent(repository);
+  }
+
+  @lazySingleton
+  UpdateRegisterEvent updateRegisterEvent(RegisterEventRepository repository) {
+    return UpdateRegisterEvent(repository);
   }
 }

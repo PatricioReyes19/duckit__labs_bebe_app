@@ -25,6 +25,28 @@ abstract final class AuthValidation {
     return null;
   }
 
+  static String? loginIdentifier(String value) {
+    final normalized = value.trim();
+    if (normalized.isEmpty) {
+      return 'Ingresa tu usuario o correo electrónico.';
+    }
+    if (normalized.contains('@')) {
+      return email(normalized);
+    }
+    if (!RegExp(r'^[a-zA-Z0-9._-]{3,}$').hasMatch(normalized)) {
+      return 'Ingresa un usuario válido.';
+    }
+    return null;
+  }
+
+  static String? signInPassword(String value) {
+    if (value.isEmpty) return 'Ingresa tu contraseña.';
+    if (value.length < 5) {
+      return 'La contraseña debe tener al menos 5 caracteres.';
+    }
+    return null;
+  }
+
   static String? password(String value) {
     if (value.isEmpty) {
       return 'Ingresa tu contraseña.';

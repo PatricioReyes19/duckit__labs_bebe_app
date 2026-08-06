@@ -88,6 +88,73 @@ void main() {
     expect(repository.drafts, isEmpty);
   });
 
+  test('bottle feeding requires and persists milliliters instead of side',
+      () async {
+    final cubit = FeedingRegisterCubit(
+      saveRegisterEvent: saveRegisterEvent,
+      babyId: 'baby-1',
+    )
+      ..subtypeChanged('bottle')
+      ..amountMlChanged('90,5');
+    addTearDown(cubit.close);
+
+    await cubit.submit();
+
+    expect(cubit.state.status, RegisterSubmissionStatus.success);
+    expect(repository.drafts.single.details['amount_ml'], 90.5);
+    expect(repository.drafts.single.details.containsKey('side'), isFalse);
+  });
+
+  test('bottle feeding rejects a missing amount', () async {
+    final cubit = FeedingRegisterCubit(
+      saveRegisterEvent: saveRegisterEvent,
+      babyId: 'baby-1',
+    )..subtypeChanged('formula');
+    addTearDown(cubit.close);
+
+    await cubit.submit();
+
+    expect(cubit.state.status, RegisterSubmissionStatus.failure);
+    expect(cubit.state.message, 'Ingresa la cantidad tomada en mL.');
+    expect(repository.drafts, isEmpty);
+  });
+
+  test('wet diaper persists urine data without stool characteristics',
+      () async {
+    final cubit = DiaperRegisterCubit(
+      saveRegisterEvent: saveRegisterEvent,
+      babyId: 'baby-1',
+    )
+      ..subtypeChanged('wet')
+      ..urineColorChanged('yellow')
+      ..urineAmountChanged('much');
+    addTearDown(cubit.close);
+
+    await cubit.submit();
+
+    final details = repository.drafts.single.details;
+    expect(details['urine_color'], 'yellow');
+    expect(details['urine_amount'], 'much');
+    expect(details.containsKey('appearance'), isFalse);
+    expect(details.containsKey('color'), isFalse);
+  });
+
+  test('mixed diaper persists urine and stool data', () async {
+    final cubit = DiaperRegisterCubit(
+      saveRegisterEvent: saveRegisterEvent,
+      babyId: 'baby-1',
+    )..subtypeChanged('mixed');
+    addTearDown(cubit.close);
+
+    await cubit.submit();
+
+    final details = repository.drafts.single.details;
+    expect(details.containsKey('urine_color'), isTrue);
+    expect(details.containsKey('urine_amount'), isTrue);
+    expect(details.containsKey('appearance'), isTrue);
+    expect(details.containsKey('amount'), isTrue);
+  });
+
   test('measurement normalizes decimal comma before persistence', () async {
     final cubit = MeasurementRegisterCubit(
       saveRegisterEvent: saveRegisterEvent,
@@ -128,6 +195,13 @@ class _MemoryRegisterEventRepository implements RegisterEventRepository {
 
   @override
   Future<RegisteredEvent?> findById(String id) async => null;
+
+  @override
+  Future<RegisteredEvent?> update(
+    String id,
+    RegisterEventPatch patch,
+  ) async =>
+      null;
 
   @override
   Future<List<RegisteredEvent>> listByBaby(

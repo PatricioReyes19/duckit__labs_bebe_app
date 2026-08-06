@@ -21,6 +21,8 @@ import 'package:widgetbook_app/use_cases/atoms/bebe_icon_button_use_cases.dart'
     as _widgetbook_app_use_cases_atoms_bebe_icon_button_use_cases;
 import 'package:widgetbook_app/use_cases/atoms/bebe_icon_use_cases.dart'
     as _widgetbook_app_use_cases_atoms_bebe_icon_use_cases;
+import 'package:widgetbook_app/use_cases/atoms/bebe_rating_star_use_cases.dart'
+    as _widgetbook_app_use_cases_atoms_bebe_rating_star_use_cases;
 import 'package:widgetbook_app/use_cases/atoms/bebe_status_indicator_use_cases.dart'
     as _widgetbook_app_use_cases_atoms_bebe_status_indicator_use_cases;
 import 'package:widgetbook_app/use_cases/atoms/bebe_text_field_use_cases.dart'
@@ -41,6 +43,8 @@ import 'package:widgetbook_app/use_cases/molecules/filter_chip_use_cases.dart'
     as _widgetbook_app_use_cases_molecules_filter_chip_use_cases;
 import 'package:widgetbook_app/use_cases/molecules/info_banner.dart'
     as _widgetbook_app_use_cases_molecules_info_banner;
+import 'package:widgetbook_app/use_cases/molecules/mockup_patterns_use_cases.dart'
+    as _widgetbook_app_use_cases_molecules_mockup_patterns_use_cases;
 import 'package:widgetbook_app/use_cases/molecules/register_form_controls_use_cases.dart'
     as _widgetbook_app_use_cases_molecules_register_form_controls_use_cases;
 import 'package:widgetbook_app/use_cases/molecules/selectable_date_cell_use_cases.dart'
@@ -61,6 +65,8 @@ import 'package:widgetbook_app/use_cases/organisms/category_filters.dart'
     as _widgetbook_app_use_cases_organisms_category_filters;
 import 'package:widgetbook_app/use_cases/organisms/compact_calendar.dart'
     as _widgetbook_app_use_cases_organisms_compact_calendar;
+import 'package:widgetbook_app/use_cases/organisms/mockup_patterns_use_cases.dart'
+    as _widgetbook_app_use_cases_organisms_mockup_patterns_use_cases;
 import 'package:widgetbook_app/use_cases/organisms/register_organisms_use_cases.dart'
     as _widgetbook_app_use_cases_organisms_register_organisms_use_cases;
 import 'package:widgetbook_app/use_cases/templates/agenda_template.dart'
@@ -432,12 +438,92 @@ final directories = <_widgetbook.WidgetbookNode>[
             ],
           ),
         ],
-      )
+      ),
+      _widgetbook.WidgetbookFolder(
+        name: 'Métricas',
+        children: [
+          _widgetbook.WidgetbookComponent(
+            name: 'BebeCompactMetricCard',
+            useCases: [
+              _widgetbook.WidgetbookUseCase(
+                name: 'Métrica de informe',
+                builder:
+                    _widgetbook_app_use_cases_molecules_mockup_patterns_use_cases
+                        .bebeCompactMetricCardDefault,
+              )
+            ],
+          )
+        ],
+      ),
+      _widgetbook.WidgetbookFolder(
+        name: 'Progreso',
+        children: [
+          _widgetbook.WidgetbookComponent(
+            name: 'BebeProgressSteps',
+            useCases: [
+              _widgetbook.WidgetbookUseCase(
+                name: 'Tres pasos',
+                builder:
+                    _widgetbook_app_use_cases_molecules_mockup_patterns_use_cases
+                        .bebeProgressStepsDefault,
+              )
+            ],
+          )
+        ],
+      ),
+      _widgetbook.WidgetbookFolder(
+        name: 'Valoración',
+        children: [
+          _widgetbook.WidgetbookComponent(
+            name: 'BebeRatingSelector',
+            useCases: [
+              _widgetbook.WidgetbookUseCase(
+                name: 'Interactivo',
+                builder:
+                    _widgetbook_app_use_cases_molecules_mockup_patterns_use_cases
+                        .bebeRatingSelectorDefault,
+              )
+            ],
+          )
+        ],
+      ),
     ],
   ),
   _widgetbook.WidgetbookCategory(
     name: 'Organismos',
     children: [
+      _widgetbook.WidgetbookFolder(
+        name: 'Estados',
+        children: [
+          _widgetbook.WidgetbookComponent(
+            name: 'BebeStatePanel',
+            useCases: [
+              _widgetbook.WidgetbookUseCase(
+                name: 'Éxito',
+                builder:
+                    _widgetbook_app_use_cases_organisms_mockup_patterns_use_cases
+                        .bebeStatePanelSuccess,
+              )
+            ],
+          )
+        ],
+      ),
+      _widgetbook.WidgetbookFolder(
+        name: 'Historial',
+        children: [
+          _widgetbook.WidgetbookComponent(
+            name: 'BebeTimeline',
+            useCases: [
+              _widgetbook.WidgetbookUseCase(
+                name: 'Historial del día',
+                builder:
+                    _widgetbook_app_use_cases_organisms_mockup_patterns_use_cases
+                        .bebeTimelineDefault,
+              )
+            ],
+          )
+        ],
+      ),
       _widgetbook.WidgetbookFolder(
         name: 'Registro',
         children: [
@@ -486,7 +572,23 @@ final directories = <_widgetbook.WidgetbookNode>[
             ],
           ),
         ],
-      )
+      ),
+      _widgetbook.WidgetbookFolder(
+        name: 'Resumen',
+        children: [
+          _widgetbook.WidgetbookComponent(
+            name: 'BebeMetricsOverview',
+            useCases: [
+              _widgetbook.WidgetbookUseCase(
+                name: 'Tres métricas',
+                builder:
+                    _widgetbook_app_use_cases_organisms_mockup_patterns_use_cases
+                        .bebeMetricsOverviewDefault,
+              )
+            ],
+          )
+        ],
+      ),
     ],
   ),
   _widgetbook.WidgetbookCategory(
@@ -929,6 +1031,22 @@ final directories = <_widgetbook.WidgetbookNode>[
                 builder: _widgetbook_app_use_cases_atoms_bebe_avatar_use_cases
                     .bebeAvatarInitials,
               ),
+            ],
+          )
+        ],
+      ),
+      _widgetbook.WidgetbookFolder(
+        name: 'Valoración',
+        children: [
+          _widgetbook.WidgetbookComponent(
+            name: 'BebeRatingStar',
+            useCases: [
+              _widgetbook.WidgetbookUseCase(
+                name: 'Estados',
+                builder:
+                    _widgetbook_app_use_cases_atoms_bebe_rating_star_use_cases
+                        .bebeRatingStarStates,
+              )
             ],
           )
         ],

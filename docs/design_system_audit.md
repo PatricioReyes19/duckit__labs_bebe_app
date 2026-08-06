@@ -56,6 +56,17 @@ La auditoría detectó cuatro riesgos principales:
   propiedades sin consumidores en Home.
 - La acción rápida de Home ahora abre el tipo de registro seleccionado, en vez
   de enviar siempre el mismo identificador.
+- Se extrajeron de los mockups `BebeRatingStar`, `BebeCompactMetricCard`,
+  `BebeProgressSteps`, `BebeRatingSelector`, `BebeMetricsOverview`,
+  `BebeStatePanel` y `BebeTimeline` siguiendo Atomic Design.
+- Las cards, badges, botones y encabezados principales ahora crecen con el
+  contenido; los límites de líneas dejaron de ser el comportamiento por defecto.
+- Home permite abrir “Historial de hoy”, filtrar los registros locales y ver el
+  detalle completo de cada actividad.
+- Familia se alineó con la referencia móvil: bebé activo y secundario, bloque
+  “Mi familia” de tres métricas y perfiles en dos columnas cuando hay espacio.
+- Los templates principales comparten el fondo `neutralsSurface` para evitar
+  superficies neutrales inconsistentes entre pantallas.
 
 ## Cobertura funcional frente a los diseños
 

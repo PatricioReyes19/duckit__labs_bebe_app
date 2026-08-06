@@ -23,6 +23,7 @@ class BebeTextField extends StatelessWidget {
     this.minLines,
     this.maxLines = 1,
     this.maxLength,
+    this.dense = false,
     this.enabled = true,
     this.readOnly = false,
     this.obscureText = false,
@@ -48,6 +49,7 @@ class BebeTextField extends StatelessWidget {
   final int? minLines;
   final int maxLines;
   final int? maxLength;
+  final bool dense;
   final bool enabled;
   final bool readOnly;
   final bool obscureText;
@@ -94,6 +96,7 @@ class BebeTextField extends StatelessWidget {
           color: colors.text.neutralBody,
         ),
         decoration: InputDecoration(
+          isDense: dense,
           labelText: label,
           labelStyle: theme.typography.styles.label.md.regular.copyWith(
             color: colors.text.neutralLabel,
@@ -124,7 +127,7 @@ class BebeTextField extends StatelessWidget {
           focusedErrorBorder: border(colors.border.errorDefault, width: 2),
           contentPadding: EdgeInsets.symmetric(
             horizontal: spacing.spacingXl,
-            vertical: spacing.spacingL,
+            vertical: dense ? spacing.spacingM : spacing.spacingL,
           ),
           counterStyle: theme.typography.styles.body.sm.regular.copyWith(
             color: colors.text.neutralCaption,

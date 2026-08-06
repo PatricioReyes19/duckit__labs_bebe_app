@@ -45,39 +45,51 @@ abstract class BlocsModule {
   // Home
   //============================================================================
 
-  HomeBloc homeBloc() {
-    return HomeBloc();
+  HomeBloc homeBloc(GetHomeOverview getHomeOverview) {
+    return HomeBloc(getHomeOverview: getHomeOverview);
   }
 
   //============================================================================
   // Agenda
   //============================================================================
 
-  AgendaBloc agendaBloc() {
-    return AgendaBloc();
+  AgendaBloc agendaBloc(GetAgendaOverview getAgendaOverview) {
+    return AgendaBloc(getAgendaOverview: getAgendaOverview);
   }
 
   //============================================================================
   // Health
   //============================================================================
 
-  HealthBloc healthBloc() {
-    return HealthBloc();
+  HealthBloc healthBloc(GetHealthOverview getHealthOverview) {
+    return HealthBloc(getHealthOverview: getHealthOverview);
   }
 
   //============================================================================
   // Family
   //============================================================================
 
-  FamilyBloc familyBloc() {
-    return FamilyBloc();
+  FamilyBloc familyBloc(
+    GetFamilyOverview getFamilyOverview,
+    SetActiveFamilyBaby setActiveFamilyBaby,
+  ) {
+    return FamilyBloc(
+      getFamilyOverview: getFamilyOverview,
+      setActiveBaby: setActiveFamilyBaby,
+    );
   }
 
   //============================================================================
   // Settings
   //============================================================================
 
-  SettingsBloc settingsBloc() {
-    return SettingsBloc();
+  SettingsBloc settingsBloc(
+    GetAppSettings getAppSettings,
+    UpdateAppSettings updateAppSettings,
+  ) {
+    return SettingsBloc(
+      getAppSettings: getAppSettings,
+      updateAppSettings: updateAppSettings,
+    );
   }
 }

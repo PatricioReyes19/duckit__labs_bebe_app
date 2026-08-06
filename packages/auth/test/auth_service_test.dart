@@ -1,8 +1,18 @@
 import 'package:auth/auth.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   group('AuthService', () {
+    test('acepta un nombre de usuario y contraseña local de 5 caracteres',
+        () async {
+      final gateway = _FakeAuthGateway();
+      final service = AuthService(gateway);
+
+      await service.signIn(email: 'bypass', password: '12345');
+
+      expect(gateway.lastEmail, 'bypass');
+    });
     test('normaliza credenciales antes de crear una cuenta', () async {
       final gateway = _FakeAuthGateway();
       final service = AuthService(gateway);
@@ -40,6 +50,43 @@ void main() {
       expect(gateway.signUpCalls, 0);
     });
   });
+
+  group('LocalAuthGateway', () {
+    test('la cuenta bypass crea sesión y completa el onboarding local',
+        () async {
+      SharedPreferences.setMockInitialValues({});
+      final preferences = SharedPreferencesAsync();
+      final gateway = LocalAuthGateway(preferences);
+
+      final session = await gateway.signIn(
+        email: 'bypass',
+        password: '12345',
+      );
+
+      expect(session.user.id, 'local-bypass');
+      expect((await gateway.currentSession())?.user.id, 'local-bypass');
+      expect(
+        await preferences.getBool(LocalAuthGateway.onboardingCompletedKey),
+        isTrue,
+      );
+    });
+
+    test('rechaza cualquier otra credencial local', () async {
+      SharedPreferences.setMockInitialValues({});
+      final gateway = LocalAuthGateway(SharedPreferencesAsync());
+
+      await expectLater(
+        gateway.signIn(email: 'bypass', password: 'incorrecta'),
+        throwsA(
+          isA<AuthFailure>().having(
+            (failure) => failure.code,
+            'code',
+            AuthFailureCode.invalidCredentials,
+          ),
+        ),
+      );
+    });
+  });
 }
 
 class _FakeAuthGateway implements AuthGateway {
@@ -61,6 +108,7 @@ class _FakeAuthGateway implements AuthGateway {
     required String email,
     required String password,
   }) async {
+    lastEmail = email;
     return AuthSession(
       user: AuthUser(id: '1', email: email, displayName: 'María'),
     );

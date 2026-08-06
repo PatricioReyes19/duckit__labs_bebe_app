@@ -51,7 +51,7 @@ class ClinicalObservationRegisterForm extends StatelessWidget {
         const BebeFormLabel(label: 'Tipo de observación'),
         SizedBox(height: spacing.spacingM),
         FeatureActionGrid(
-          minimumItemWidth: 136,
+          minimumItemWidth: 100,
           maximumColumnCount: 3,
           semanticLabel: 'Tipos de observación clínica',
           children: [
@@ -101,15 +101,18 @@ class ClinicalObservationRegisterForm extends StatelessWidget {
         ),
         SizedBox(height: spacing.spacingXl),
         BebeResponsiveFormGrid(
+          minimumItemWidth: 140,
           maximumColumnCount: 2,
           children: [
             BebePickerField(
+              compact: true,
               label: 'Fecha',
               value: date,
               kind: BebePickerFieldKind.date,
               onPressed: onDatePressed,
             ),
             BebePickerField(
+              compact: true,
               label: 'Hora',
               value: time,
               kind: BebePickerFieldKind.time,
@@ -185,6 +188,7 @@ class _ObservationType extends StatelessWidget {
       variant: BebeCategoryActionTileVariant.observation,
       label: label,
       icon: Icon(icon),
+      compact: true,
       isSelected: selectedValue == value,
       onPressed: onChanged == null ? null : () => onChanged!(value),
     );

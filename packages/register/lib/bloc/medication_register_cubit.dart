@@ -50,8 +50,13 @@ class MedicationRegisterCubit extends RegisterFormCubit {
     final normalizedName = name.trim();
     final numericDose = double.tryParse(dose.trim().replaceAll(',', '.'));
     if (normalizedName.isEmpty) {
-      throw const RegisterValidationException(
-        'Ingresa el nombre del medicamento.',
+      final itemLabel = switch (subtype) {
+        'supplement' => 'suplemento',
+        'vitamin' => 'vitamina',
+        _ => 'medicamento',
+      };
+      throw RegisterValidationException(
+        'Ingresa el nombre del $itemLabel.',
       );
     }
     if (numericDose == null || numericDose <= 0) {

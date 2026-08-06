@@ -13,9 +13,8 @@ abstract class StartupModule {
   @lazySingleton
   AuthGateway authGateway(
     @Named('startupPreferences') SharedPreferencesAsync preferences,
-  ) {
-    return LocalAuthGateway(preferences);
-  }
+  ) =>
+      LocalAuthGateway(preferences);
 
   @lazySingleton
   AuthService authService(AuthGateway gateway) => AuthService(gateway);
@@ -23,47 +22,28 @@ abstract class StartupModule {
   @lazySingleton
   OnboardingRepository onboardingRepository(
     @Named('startupPreferences') SharedPreferencesAsync preferences,
-  ) {
-    return LocalOnboardingRepository(preferences);
-  }
+  ) =>
+      LocalOnboardingRepository(preferences);
 
   @lazySingleton
   ResolveEntryDestination resolveEntryDestination(
     AuthGateway authGateway,
     OnboardingRepository onboardingRepository,
-  ) {
-    return LocalResolveEntryDestination(authGateway, onboardingRepository);
-  }
+  ) =>
+      LocalResolveEntryDestination(authGateway, onboardingRepository);
 }
 
 class LocalResolveEntryDestination implements ResolveEntryDestination {
-  LocalResolveEntryDestination(
+  const LocalResolveEntryDestination(
     this._authGateway,
-    this._onboardingRepository, {
-    bool? bypassEnabled,
-  }) : _bypassEnabled = bypassEnabled ?? _temporaryStartupBypass;
+    this._onboardingRepository,
+  );
 
   final AuthGateway _authGateway;
   final OnboardingRepository _onboardingRepository;
-  final bool _bypassEnabled;
-
-  // Herramienta de desarrollo opt-in. El flujo normal siempre debe resolver
-  // sesión y onboarding; para saltarlo se requiere:
-  // --dart-define=BEBE_APP_BYPASS_STARTUP=true
-  static const _temporaryStartupBypass = bool.fromEnvironment(
-    'BEBE_APP_BYPASS_STARTUP',
-    defaultValue: false,
-  );
 
   @override
   Future<EntryResolution> call() async {
-    if (_bypassEnabled) {
-      return const EntryResolution(
-        destination: EntryDestination.home,
-        reason: 'Bypass temporal de inicio habilitado.',
-      );
-    }
-
     final session = await _authGateway.currentSession();
     if (session == null) {
       return const EntryResolution(

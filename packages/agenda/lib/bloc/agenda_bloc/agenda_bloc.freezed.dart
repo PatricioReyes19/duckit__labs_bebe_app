@@ -137,7 +137,7 @@ return categorySelected(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  started,TResult Function()?  retried,TResult Function()?  refreshed,TResult Function( DateTime selectedDay,  DateTime focusedDay)?  daySelected,TResult Function( DateTime focusedDay)?  weekChanged,TResult Function( DateTime selectedDay,  DateTime focusedDay)?  monthDaySelected,TResult Function( DateTime focusedDay)?  monthChanged,TResult Function( AgendaCategory category)?  categorySelected,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  started,TResult Function()?  retried,TResult Function()?  refreshed,TResult Function( DateTime selectedDay,  DateTime focusedDay)?  daySelected,TResult Function( DateTime focusedDay)?  weekChanged,TResult Function( DateTime selectedDay,  DateTime focusedDay)?  monthDaySelected,TResult Function( DateTime focusedDay)?  monthChanged,TResult Function( AgendaFilterCategory category)?  categorySelected,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Started() when started != null:
 return started();case _Retried() when retried != null:
@@ -165,7 +165,7 @@ return categorySelected(_that.category);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  started,required TResult Function()  retried,required TResult Function()  refreshed,required TResult Function( DateTime selectedDay,  DateTime focusedDay)  daySelected,required TResult Function( DateTime focusedDay)  weekChanged,required TResult Function( DateTime selectedDay,  DateTime focusedDay)  monthDaySelected,required TResult Function( DateTime focusedDay)  monthChanged,required TResult Function( AgendaCategory category)  categorySelected,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  started,required TResult Function()  retried,required TResult Function()  refreshed,required TResult Function( DateTime selectedDay,  DateTime focusedDay)  daySelected,required TResult Function( DateTime focusedDay)  weekChanged,required TResult Function( DateTime selectedDay,  DateTime focusedDay)  monthDaySelected,required TResult Function( DateTime focusedDay)  monthChanged,required TResult Function( AgendaFilterCategory category)  categorySelected,}) {final _that = this;
 switch (_that) {
 case _Started():
 return started();case _Retried():
@@ -189,7 +189,7 @@ return categorySelected(_that.category);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  started,TResult? Function()?  retried,TResult? Function()?  refreshed,TResult? Function( DateTime selectedDay,  DateTime focusedDay)?  daySelected,TResult? Function( DateTime focusedDay)?  weekChanged,TResult? Function( DateTime selectedDay,  DateTime focusedDay)?  monthDaySelected,TResult? Function( DateTime focusedDay)?  monthChanged,TResult? Function( AgendaCategory category)?  categorySelected,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  started,TResult? Function()?  retried,TResult? Function()?  refreshed,TResult? Function( DateTime selectedDay,  DateTime focusedDay)?  daySelected,TResult? Function( DateTime focusedDay)?  weekChanged,TResult? Function( DateTime selectedDay,  DateTime focusedDay)?  monthDaySelected,TResult? Function( DateTime focusedDay)?  monthChanged,TResult? Function( AgendaFilterCategory category)?  categorySelected,}) {final _that = this;
 switch (_that) {
 case _Started() when started != null:
 return started();case _Retried() when retried != null:
@@ -578,7 +578,7 @@ class _CategorySelected implements AgendaEvent {
   const _CategorySelected(this.category);
   
 
- final  AgendaCategory category;
+ final  AgendaFilterCategory category;
 
 /// Create a copy of AgendaEvent
 /// with the given fields replaced by the non-null parameter values.
@@ -610,7 +610,7 @@ abstract mixin class _$CategorySelectedCopyWith<$Res> implements $AgendaEventCop
   factory _$CategorySelectedCopyWith(_CategorySelected value, $Res Function(_CategorySelected) _then) = __$CategorySelectedCopyWithImpl;
 @useResult
 $Res call({
- AgendaCategory category
+ AgendaFilterCategory category
 });
 
 
@@ -630,7 +630,7 @@ class __$CategorySelectedCopyWithImpl<$Res>
 @pragma('vm:prefer-inline') $Res call({Object? category = null,}) {
   return _then(_CategorySelected(
 null == category ? _self.category : category // ignore: cast_nullable_to_non_nullable
-as AgendaCategory,
+as AgendaFilterCategory,
   ));
 }
 

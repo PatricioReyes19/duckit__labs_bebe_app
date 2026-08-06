@@ -43,21 +43,25 @@ class SleepRegisterForm extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         BebeResponsiveFormGrid(
+          minimumItemWidth: 96,
           semanticLabel: 'Horario del sueño',
           children: [
             BebePickerField(
+              compact: true,
               label: 'Hora de inicio',
               value: startTime,
               kind: BebePickerFieldKind.time,
               onPressed: onStartTimePressed,
             ),
             BebePickerField(
+              compact: true,
               label: 'Duración',
               value: duration,
               kind: BebePickerFieldKind.duration,
               onPressed: onDurationPressed,
             ),
             BebePickerField(
+              compact: true,
               label: 'Hora de término',
               value: endTime,
               optional: true,
@@ -102,12 +106,14 @@ class SleepRegisterForm extends StatelessWidget {
         ),
         SizedBox(height: spacing.spacingXl),
         BebeNotesField(
+          compact: true,
           label: 'Notas',
           controller: notesController,
           onChanged: onNotesChanged,
         ),
         SizedBox(height: spacing.spacingXl),
         BebeNotesField(
+          compact: true,
           label: 'Síntomas / observaciones',
           controller: symptomsController,
           onChanged: onSymptomsChanged,

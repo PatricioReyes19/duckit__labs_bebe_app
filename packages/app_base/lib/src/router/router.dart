@@ -71,8 +71,7 @@ GoRouter createAppRouter({
                     icon: const Icon(Icons.notifications_none_rounded),
                   ),
                 ],
-                onPrimaryActionPressed: () =>
-                    context.push(RegisterPage.fullPath),
+                onPrimaryActionPressed: () => RegisterPage.open(context),
                 child: navigationShell,
               );
             },
@@ -82,11 +81,20 @@ GoRouter createAppRouter({
                 routes: [
                   HomePage(
                     homeBloc: (_) => getIt<HomeBloc>(),
-                    openRegister: (context, actionId) => context.push(
-                      '${RegisterPage.fullPath}?type=$actionId',
+                    openRegister: (context, actionId) => RegisterPage.open(
+                      context,
+                      kind: RegisterEventKind.fromRouteValue(actionId),
                     ),
                     openAgenda: (context) => context.go(AgendaPage.fullPath),
                     openHealth: (context) => context.go(HealthPage.fullPath),
+                    openTodayHistory: (context) =>
+                        context.push(HomeDailyHistoryPage.fullPath),
+                    routes: [
+                      HomeDailyHistoryPage(
+                        getRegisterEvents: (_) => getIt<GetRegisterEvents>(),
+                        onRegisterPressed: RegisterPage.open,
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -107,6 +115,7 @@ GoRouter createAppRouter({
                 routes: [
                   FamilyPage(
                     familyBloc: (_) => getIt<FamilyBloc>(),
+                    openSettings: SettingsPage.open,
                     routes: [
                       SettingsPage(
                         settingsBloc: (_) => getIt<SettingsBloc>(),
@@ -120,9 +129,17 @@ GoRouter createAppRouter({
         ],
       ),
       GoRoute(
+        path: SettingsPage.legacyFullPath,
+        redirect: (_, __) => SettingsPage.fullPath,
+      ),
+      SplashAuthEntryPage(
         path: StartupPaths.authEntry,
         parentNavigatorKey: rootNavigatorKey,
-        redirect: (_, __) => SplashPage.fullPath,
+        onLoginPressed: (context) => context.push(StartupPaths.login),
+        onSignUpPressed: (context) => context.push(StartupPaths.signUp),
+        onInvitationPressed: (context) => context.push(
+          '${StartupPaths.login}?next=invitation',
+        ),
       ),
       GoRoute(
         path: StartupPaths.login,
@@ -133,6 +150,7 @@ GoRouter createAppRouter({
           return LoginPage(
             authService: getIt<AuthService>(),
             invitationPending: invitationPending,
+            onBackPressed: () => _backToAuthEntry(context),
             onAuthenticated: () {
               if (invitationPending) {
                 context.go(StartupPaths.invitation);
@@ -142,7 +160,7 @@ GoRouter createAppRouter({
             },
             onSignUpPressed: () {
               final suffix = invitationPending ? '?next=invitation' : '';
-              context.go('${StartupPaths.signUp}$suffix');
+              context.pushReplacement('${StartupPaths.signUp}$suffix');
             },
           );
         },
@@ -156,6 +174,7 @@ GoRouter createAppRouter({
           return SignUpPage(
             authService: getIt<AuthService>(),
             invitationPending: invitationPending,
+            onBackPressed: () => _backToAuthEntry(context),
             onAccountCreated: () {
               context.go(
                 invitationPending
@@ -165,7 +184,7 @@ GoRouter createAppRouter({
             },
             onLoginPressed: () {
               final suffix = invitationPending ? '?next=invitation' : '';
-              context.go('${StartupPaths.login}$suffix');
+              context.pushReplacement('${StartupPaths.login}$suffix');
             },
           );
         },
@@ -236,6 +255,11 @@ GoRouter createAppRouter({
       RegisterPage(
         parentNavigatorKey: rootNavigatorKey,
         saveRegisterEvent: (_) => getIt<SaveRegisterEvent>(),
+        onNotificationsPressed: (context) => context.push('/notifications'),
+        onHomePressed: (context) => context.go(StartupPaths.home),
+        onAgendaPressed: (context) => context.go(AgendaPage.fullPath),
+        onHealthPressed: (context) => context.go(HealthPage.fullPath),
+        onFamilyPressed: (context) => context.go(FamilyPage.fullPath),
         onSaved: (context, event) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -265,6 +289,14 @@ GoRouter createAppRouter({
       ),
     ],
   );
+}
+
+void _backToAuthEntry(BuildContext context) {
+  if (context.canPop()) {
+    context.pop();
+    return;
+  }
+  context.go(StartupPaths.authEntry);
 }
 
 Future<void> _openResolvedDestination(BuildContext context) async {

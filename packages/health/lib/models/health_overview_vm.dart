@@ -1,4 +1,6 @@
-enum HealthEventType { vaccine, pediatricControl, growthControl }
+import 'package:core/core.dart';
+
+export 'package:core/core.dart' show HealthEventType;
 
 enum HealthCaregiverRole { mother, father, other }
 
@@ -71,60 +73,83 @@ class HealthOverviewVm {
   final HealthVaccinesSummaryVm vaccinesSummary;
   final HealthGrowthSummaryVm growthSummary;
 
-  factory HealthOverviewVm.mock() {
-    return const HealthOverviewVm(
-      upcomingEvents: [
-        HealthUpcomingEventVm(
-          id: 'vaccine-pneumococcus-2',
-          type: HealthEventType.vaccine,
-          title: 'Vacuna Neumococo',
-          description: 'Segunda dosis',
-          dateLabel: 'Lun, 10 ago',
-          timeLabel: '10:00 AM',
-          caregiver: HealthCaregiverVm(
-            id: 'mother',
-            label: 'Mamá',
-            role: HealthCaregiverRole.mother,
-          ),
-        ),
-        HealthUpcomingEventVm(
-          id: 'pediatric-control',
-          type: HealthEventType.pediatricControl,
-          title: 'Control pediátrico',
-          description: 'Chequeo de rutina',
-          dateLabel: 'Vie, 14 ago',
-          timeLabel: '09:00 AM',
-          caregiver: HealthCaregiverVm(
-            id: 'father',
-            label: 'Papá',
-            role: HealthCaregiverRole.father,
-          ),
-        ),
-        HealthUpcomingEventVm(
-          id: 'growth-control',
-          type: HealthEventType.growthControl,
-          title: 'Control de crecimiento',
-          description: 'Registro de peso y talla',
-          dateLabel: 'Mar, 18 ago',
-          timeLabel: '11:30 AM',
-          caregiver: HealthCaregiverVm(
-            id: 'mother',
-            label: 'Mamá',
-            role: HealthCaregiverRole.mother,
-          ),
-        ),
-      ],
+  factory HealthOverviewVm.fromEntity(HealthOverviewEntity entity) {
+    final scheduled =
+        entity.events
+            .where((event) => event.status == HealthEventStatus.scheduled)
+            .toList(growable: false)
+          ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
+    final weights = entity.measurements
+        .where((item) => item.type == HealthMeasurementType.weight)
+        .toList(growable: false);
+    final heights = entity.measurements
+        .where((item) => item.type == HealthMeasurementType.height)
+        .toList(growable: false);
+    final vaccineEvents = scheduled
+        .where((event) => event.type == HealthEventType.vaccine)
+        .toList(growable: false);
+    final nextVaccine = vaccineEvents.isEmpty ? null : vaccineEvents.first;
+    return HealthOverviewVm(
+      upcomingEvents: scheduled
+          .map(
+            (event) => HealthUpcomingEventVm(
+              id: event.id,
+              type: event.type,
+              title: event.title,
+              description: event.description,
+              dateLabel: _dateLabel(event.startsAt),
+              timeLabel: _timeLabel(event.startsAt),
+              caregiver: HealthCaregiverVm(
+                id: event.caregiver?.id ?? 'unassigned',
+                label: event.caregiver?.role ?? 'Sin asignar',
+                role: switch (event.caregiver?.id) {
+                  'mother' => HealthCaregiverRole.mother,
+                  'father' => HealthCaregiverRole.father,
+                  _ => HealthCaregiverRole.other,
+                },
+              ),
+            ),
+          )
+          .toList(growable: false),
       vaccinesSummary: HealthVaccinesSummaryVm(
-        completed: 4,
-        pending: 1,
-        nextVaccineLabel: 'Próxima: Lun, 10 ago',
+        completed: entity.completedVaccines,
+        pending: entity.pendingVaccines,
+        nextVaccineLabel: nextVaccine == null
+            ? null
+            : 'Próxima: ${_dateLabel(nextVaccine.startsAt)}',
       ),
       growthSummary: HealthGrowthSummaryVm(
-        weightKg: 7.25,
-        heightCm: 65,
-        weightPercentile: 41,
-        recordedAtLabel: 'Actualizado hoy',
+        weightKg: weights.isEmpty ? 0 : weights.first.value,
+        heightCm: heights.isEmpty ? null : heights.first.value,
+        recordedAtLabel: weights.isEmpty ? null : 'Último registro disponible',
       ),
     );
+  }
+
+  static String _dateLabel(DateTime value) {
+    const weekdays = ['lun', 'mar', 'mié', 'jue', 'vie', 'sáb', 'dom'];
+    const months = [
+      'ene',
+      'feb',
+      'mar',
+      'abr',
+      'may',
+      'jun',
+      'jul',
+      'ago',
+      'sept',
+      'oct',
+      'nov',
+      'dic',
+    ];
+    final local = value.toLocal();
+    return '${weekdays[local.weekday - 1]}, '
+        '${local.day} ${months[local.month - 1]}';
+  }
+
+  static String _timeLabel(DateTime value) {
+    final local = value.toLocal();
+    return '${local.hour.toString().padLeft(2, '0')}:'
+        '${local.minute.toString().padLeft(2, '0')}';
   }
 }

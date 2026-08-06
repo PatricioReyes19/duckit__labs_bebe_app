@@ -6,6 +6,7 @@ class BebeFormLabel extends StatelessWidget {
   const BebeFormLabel({
     required this.label,
     this.optional = false,
+    this.compact = false,
     this.optionalLabel = 'opcional',
     this.semanticLabel,
     super.key,
@@ -13,18 +14,23 @@ class BebeFormLabel extends StatelessWidget {
 
   final String label;
   final bool optional;
+  final bool compact;
   final String optionalLabel;
   final String? semanticLabel;
 
   @override
   Widget build(BuildContext context) {
     final theme = context.theme;
-    final labelStyle = theme.typography.styles.label.lg.semibold.copyWith(
-      color: theme.colors.text.neutralTitle,
-    );
-    final optionalStyle = theme.typography.styles.body.sm.regular.copyWith(
-      color: theme.colors.text.neutralCaption,
-    );
+    final labelStyle =
+        (compact
+                ? theme.typography.styles.label.sm.semibold
+                : theme.typography.styles.label.lg.semibold)
+            .copyWith(color: theme.colors.text.neutralTitle);
+    final optionalStyle =
+        (compact
+                ? theme.typography.styles.label.sm.regular
+                : theme.typography.styles.body.sm.regular)
+            .copyWith(color: theme.colors.text.neutralCaption);
 
     return Semantics(
       label: semanticLabel ?? '$label${optional ? ', $optionalLabel' : ''}',

@@ -9,8 +9,8 @@ class BebeTitleSection extends StatelessWidget {
     this.onActionPressed,
     this.trailing,
     this.trailingIcon = Icons.chevron_right_rounded,
-    this.maxTitleLines = 2,
-    this.maxDescriptionLines = 3,
+    this.maxTitleLines,
+    this.maxDescriptionLines,
     super.key,
   });
 
@@ -23,8 +23,12 @@ class BebeTitleSection extends StatelessWidget {
   final Widget? trailing;
 
   final IconData trailingIcon;
-  final int maxTitleLines;
-  final int maxDescriptionLines;
+
+  /// Optional visual limits for exceptional dense surfaces.
+  ///
+  /// They default to null so section copy can grow with its content.
+  final int? maxTitleLines;
+  final int? maxDescriptionLines;
 
   static const double _minimumTouchTarget = 44;
   static const double _actionIconSize = 20;
@@ -47,56 +51,79 @@ class BebeTitleSection extends StatelessWidget {
     final typography = theme.typography;
     final colors = theme.colors;
 
+    final copy = Semantics(
+      header: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            title,
+            maxLines: maxTitleLines,
+            overflow: maxTitleLines == null ? null : TextOverflow.ellipsis,
+            style: typography.styles.title.lg.semibold.copyWith(
+              color: colors.text.neutralTitle,
+            ),
+          ),
+          if (_showDescription) ...[
+            SizedBox(height: spacing.spacingS),
+            Text(
+              description!,
+              maxLines: maxDescriptionLines,
+              overflow: maxDescriptionLines == null
+                  ? null
+                  : TextOverflow.ellipsis,
+              style: typography.styles.body.md.regular.copyWith(
+                color: colors.text.neutralBody,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+
+    final accessory =
+        trailing ??
+        (_showAction
+            ? _TitleSectionAction(
+                label: actionLabel!,
+                icon: trailingIcon,
+                onPressed: onActionPressed,
+              )
+            : null);
+
     return Semantics(
       container: true,
       child: SizedBox(
         width: double.infinity,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Expanded(
-              child: Semantics(
-                header: true,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: maxTitleLines,
-                      overflow: TextOverflow.ellipsis,
-                      style: typography.styles.title.lg.semibold.copyWith(
-                        color: colors.text.neutralTitle,
-                      ),
-                    ),
-                    if (_showDescription) ...[
-                      SizedBox(height: spacing.spacingS),
-                      Text(
-                        description!,
-                        maxLines: maxDescriptionLines,
-                        overflow: TextOverflow.ellipsis,
-                        style: typography.styles.body.md.regular.copyWith(
-                          color: colors.text.neutralBody,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-            if (trailing != null) ...[
-              SizedBox(width: spacing.spacingL),
-              Flexible(child: trailing!),
-            ] else if (_showAction) ...[
-              SizedBox(width: spacing.spacingL),
-              _TitleSectionAction(
-                label: actionLabel!,
-                icon: trailingIcon,
-                onPressed: onActionPressed,
-              ),
-            ],
-          ],
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final textScale = MediaQuery.textScalerOf(context).scale(1);
+            final stackContent = constraints.maxWidth < 360 || textScale > 1.3;
+
+            if (accessory == null) return copy;
+
+            if (stackContent) {
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  copy,
+                  SizedBox(height: spacing.spacingS),
+                  Align(alignment: Alignment.centerRight, child: accessory),
+                ],
+              );
+            }
+
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(child: copy),
+                SizedBox(width: spacing.spacingL),
+                Flexible(child: accessory),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -165,18 +192,12 @@ class _TitleSectionAction extends StatelessWidget {
           }),
           tapTargetSize: MaterialTapTargetSize.padded,
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
+        child: Wrap(
+          alignment: WrapAlignment.center,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: spacing.spacingS,
           children: [
-            Flexible(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: typography.styles.label.lg.semibold,
-              ),
-            ),
-            SizedBox(width: spacing.spacingS),
+            Text(label, style: typography.styles.label.lg.semibold),
             Icon(icon, size: BebeTitleSection._actionIconSize),
           ],
         ),

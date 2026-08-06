@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 /// Controlled visual form for feeding records.
 class FeedingRegisterForm extends StatelessWidget {
   const FeedingRegisterForm({
+    this.subtype = 'breast',
     this.side = 'both',
+    this.amountController,
     this.startTime = '09:30 AM',
     this.duration = '15 min',
     this.endTime = '',
@@ -12,6 +14,7 @@ class FeedingRegisterForm extends StatelessWidget {
     this.notesController,
     this.symptomsController,
     this.onSideChanged,
+    this.onAmountChanged,
     this.onStartTimePressed,
     this.onDurationPressed,
     this.onEndTimePressed,
@@ -21,7 +24,9 @@ class FeedingRegisterForm extends StatelessWidget {
     super.key,
   });
 
+  final String subtype;
   final String side;
+  final TextEditingController? amountController;
   final String startTime;
   final String duration;
   final String endTime;
@@ -29,6 +34,7 @@ class FeedingRegisterForm extends StatelessWidget {
   final TextEditingController? notesController;
   final TextEditingController? symptomsController;
   final ValueChanged<String>? onSideChanged;
+  final ValueChanged<String>? onAmountChanged;
   final VoidCallback? onStartTimePressed;
   final VoidCallback? onDurationPressed;
   final VoidCallback? onEndTimePressed;
@@ -39,36 +45,56 @@ class FeedingRegisterForm extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final spacing = context.theme.spacing;
+    final isBreastfeeding = subtype == 'breast';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        BebeSegmentedFormField<String>(
-          label: 'Lado',
-          items: const [
-            BebeSegmentedItem(value: 'left', label: 'Izquierdo'),
-            BebeSegmentedItem(value: 'right', label: 'Derecho'),
-            BebeSegmentedItem(value: 'both', label: 'Ambos'),
-          ],
-          selectedValue: side,
-          onChanged: onSideChanged,
-        ),
+        if (isBreastfeeding)
+          BebeSegmentedFormField<String>(
+            label: 'Lado',
+            items: const [
+              BebeSegmentedItem(value: 'left', label: 'Izquierdo'),
+              BebeSegmentedItem(value: 'right', label: 'Derecho'),
+              BebeSegmentedItem(value: 'both', label: 'Ambos'),
+            ],
+            selectedValue: side,
+            onChanged: onSideChanged,
+          )
+        else
+          BebeFormField(
+            label: 'Cantidad (mL)',
+            child: BebeTextField(
+              controller: amountController,
+              hintText: 'Ej. 90',
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              trailing: const _MillilitersLabel(),
+              onChanged: onAmountChanged,
+              semanticLabel: 'Cantidad tomada en mililitros',
+            ),
+          ),
         SizedBox(height: spacing.spacingXl),
         BebeResponsiveFormGrid(
+          minimumItemWidth: 96,
           semanticLabel: 'Horario de la alimentación',
           children: [
             BebePickerField(
+              compact: true,
               label: 'Hora de inicio',
               value: startTime,
               kind: BebePickerFieldKind.time,
               onPressed: onStartTimePressed,
             ),
             BebePickerField(
+              compact: true,
               label: 'Duración',
               value: duration,
               kind: BebePickerFieldKind.duration,
               onPressed: onDurationPressed,
             ),
             BebePickerField(
+              compact: true,
               label: 'Hora de término',
               value: endTime,
               placeholder: '--:-- --',
@@ -104,17 +130,40 @@ class FeedingRegisterForm extends StatelessWidget {
         ),
         SizedBox(height: spacing.spacingXl),
         BebeNotesField(
+          compact: true,
           label: 'Notas',
           controller: notesController,
           onChanged: onNotesChanged,
         ),
         SizedBox(height: spacing.spacingXl),
         BebeNotesField(
+          compact: true,
           label: 'Síntomas / observaciones',
           controller: symptomsController,
           onChanged: onSymptomsChanged,
         ),
       ],
+    );
+  }
+}
+
+class _MillilitersLabel extends StatelessWidget {
+  const _MillilitersLabel();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    return Center(
+      widthFactor: 1,
+      child: Padding(
+        padding: EdgeInsets.only(right: theme.spacing.spacingXl),
+        child: Text(
+          'mL',
+          style: theme.typography.styles.title.sm.semibold.copyWith(
+            color: theme.colors.text.neutralTitle,
+          ),
+        ),
+      ),
     );
   }
 }

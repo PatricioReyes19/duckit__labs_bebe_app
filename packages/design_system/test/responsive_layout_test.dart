@@ -102,7 +102,7 @@ void main() {
         ),
       );
 
-      expect(find.byType(ListView), findsOneWidget);
+      expect(find.byType(SingleChildScrollView), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );

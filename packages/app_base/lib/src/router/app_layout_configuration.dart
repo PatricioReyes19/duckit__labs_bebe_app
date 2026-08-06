@@ -50,6 +50,14 @@ const appLayoutVisibilityPolicy = AppLayoutVisibilityPolicy(
       ),
     ),
     AppLayoutVisibilityRule.exact(
+      path: '/home/history',
+      chrome: AppLayoutChromeConfig(
+        title: 'Historial de hoy',
+        showBrandMark: false,
+        showBackButton: true,
+      ),
+    ),
+    AppLayoutVisibilityRule.exact(
       path: '/agenda',
       chrome: AppLayoutChromeConfig(
         title: 'Agenda de salud',
@@ -79,7 +87,7 @@ const appLayoutVisibilityPolicy = AppLayoutVisibilityPolicy(
       ),
     ),
     AppLayoutVisibilityRule.prefix(
-      path: '/settings',
+      path: '/family/settings',
       chrome: AppLayoutChromeConfig(
         showHeader: true,
         showBottomBar: false,

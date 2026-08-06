@@ -9,6 +9,7 @@ class BebeCategoryActionTile extends StatelessWidget {
     required this.icon,
     this.onPressed,
     this.isSelected = false,
+    this.compact = false,
     this.enabled = true,
     this.semanticLabel,
     super.key,
@@ -19,6 +20,7 @@ class BebeCategoryActionTile extends StatelessWidget {
   final Widget icon;
   final VoidCallback? onPressed;
   final bool isSelected;
+  final bool compact;
   final bool enabled;
   final String? semanticLabel;
 
@@ -53,12 +55,14 @@ class BebeCategoryActionTile extends StatelessWidget {
       label: semanticLabel ?? label,
       child: ConstrainedBox(
         constraints: BoxConstraints(
-          minHeight: spacing.spacing8xl + spacing.spacing4xl,
+          minHeight: compact ? 72 : spacing.spacing8xl + spacing.spacing4xl,
         ),
         child: Material(
           color: surface,
           shape: RoundedRectangleBorder(
-            borderRadius: theme.borderRadius.x3l,
+            borderRadius: compact
+                ? theme.borderRadius.l
+                : theme.borderRadius.x3l,
             side: BorderSide(color: border, width: isSelected ? 2 : 1),
           ),
           clipBehavior: Clip.antiAlias,
@@ -79,13 +83,15 @@ class BebeCategoryActionTile extends StatelessWidget {
             child: Padding(
               padding: EdgeInsets.symmetric(
                 horizontal: spacing.spacingS,
-                vertical: spacing.spacingM,
+                vertical: compact
+                    ? spacing.spacingS + spacing.spacingXs
+                    : spacing.spacingM,
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   SizedBox.square(
-                    dimension: BebeIconSize.xl.value,
+                    dimension: compact ? 30 : BebeIconSize.xl.value,
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         color: iconSurface,
@@ -95,7 +101,7 @@ class BebeCategoryActionTile extends StatelessWidget {
                         child: IconTheme(
                           data: IconThemeData(
                             color: content,
-                            size: BebeIconSize.sm.value,
+                            size: compact ? 22 : BebeIconSize.sm.value,
                           ),
                           child: icon,
                         ),
@@ -105,7 +111,6 @@ class BebeCategoryActionTile extends StatelessWidget {
                   SizedBox(height: spacing.spacingS),
                   Text(
                     label,
-                    maxLines: 2,
                     textAlign: TextAlign.center,
                     style: labelStyle.copyWith(color: content),
                   ),
@@ -128,6 +133,7 @@ class CategoryActionTile extends BebeCategoryActionTile {
     required super.icon,
     super.onPressed,
     super.isSelected,
+    super.compact,
     super.enabled,
     super.semanticLabel,
     super.key,
