@@ -28,6 +28,10 @@
             "name": "🏗️ App Layout",
             "path": "packages/app_layout"
         },
+        {
+            "name": "Agenda",
+            "path": "packages/agenda",
+        }
     ],
     "settings": {
         "files.autoSave": "afterDelay",

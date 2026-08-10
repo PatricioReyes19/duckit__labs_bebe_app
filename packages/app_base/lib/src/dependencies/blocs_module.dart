@@ -42,6 +42,22 @@ abstract class BlocsModule {
   }
 
   //============================================================================
+  // Session
+  //============================================================================
+  @lazySingleton
+  SessionBloc sessionBloc(
+    ObserveSession observeSession,
+    RefreshSession refreshSession,
+    SignOutSession signOutSession,
+  ) {
+    return SessionBloc(
+      observeSession: observeSession,
+      refreshSession: refreshSession,
+      signOutSession: signOutSession,
+    );
+  }
+
+  //============================================================================
   // Home
   //============================================================================
 
@@ -53,16 +69,30 @@ abstract class BlocsModule {
   // Agenda
   //============================================================================
 
-  AgendaBloc agendaBloc(GetAgendaOverview getAgendaOverview) {
-    return AgendaBloc(getAgendaOverview: getAgendaOverview);
+  AgendaBloc agendaBloc(
+    GetAgendaOverview getAgendaOverview,
+    GetFamilyOverview getFamilyOverview,
+    AgendaEventSyncService syncService,
+  ) {
+    return AgendaBloc(
+      getAgendaOverview: getAgendaOverview,
+      getFamilyOverview: getFamilyOverview,
+      syncService: syncService,
+    );
   }
 
   //============================================================================
   // Health
   //============================================================================
 
-  HealthBloc healthBloc(GetHealthOverview getHealthOverview) {
-    return HealthBloc(getHealthOverview: getHealthOverview);
+  HealthBloc healthBloc(
+    GetHealthOverview getHealthOverview,
+    GetFamilyOverview getFamilyOverview,
+  ) {
+    return HealthBloc(
+      getHealthOverview: getHealthOverview,
+      getFamilyOverview: getFamilyOverview,
+    );
   }
 
   //============================================================================
@@ -86,10 +116,12 @@ abstract class BlocsModule {
   SettingsBloc settingsBloc(
     GetAppSettings getAppSettings,
     UpdateAppSettings updateAppSettings,
+    GetCurrentSession getCurrentSession,
   ) {
     return SettingsBloc(
       getAppSettings: getAppSettings,
       updateAppSettings: updateAppSettings,
+      getCurrentSession: getCurrentSession,
     );
   }
 }

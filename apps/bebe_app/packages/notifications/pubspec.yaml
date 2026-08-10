@@ -1,0 +1,27 @@
+name: notifications
+description: Integración de Firebase Cloud Messaging para BebéApp.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ">=3.10.0 <4.0.0"
+  flutter: ">=3.38.1"
+
+resolution: workspace
+
+dependencies:
+  cloud_firestore: ^6.7.1
+  firebase_auth: ^6.5.7
+  firebase_messaging: ^16.5.0
+  flutter:
+    sdk: flutter
+  flutter_local_notifications: ^22.3.0
+  shared_preferences: ^2.5.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true

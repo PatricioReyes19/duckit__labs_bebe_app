@@ -9,10 +9,14 @@ class RegisterEventModel {
     required this.type,
     required this.occurredAt,
     required this.createdAt,
+    required this.updatedAt,
     required this.details,
     required this.schemaVersion,
     this.notes,
     this.caregiverId,
+    this.deletedAt,
+    this.syncStatus = RegisterSyncStatus.pending,
+    this.syncError,
   });
 
   final String id;
@@ -20,9 +24,13 @@ class RegisterEventModel {
   final RegisterEventType type;
   final DateTime occurredAt;
   final DateTime createdAt;
+  final DateTime updatedAt;
   final Map<String, Object?> details;
   final String? notes;
   final String? caregiverId;
+  final DateTime? deletedAt;
+  final RegisterSyncStatus syncStatus;
+  final String? syncError;
   final int schemaVersion;
 
   factory RegisterEventModel.fromEntity(RegisteredEvent entity) =>
@@ -32,11 +40,35 @@ class RegisterEventModel {
         type: entity.type,
         occurredAt: entity.occurredAt,
         createdAt: entity.createdAt,
+        updatedAt: entity.updatedAt,
         details: entity.details,
         notes: entity.notes,
         caregiverId: entity.caregiverId,
+        deletedAt: entity.deletedAt,
+        syncStatus: entity.syncStatus,
+        syncError: entity.syncError,
         schemaVersion: entity.schemaVersion,
       );
+
+  factory RegisterEventModel.fromRemoteJson(Map<String, dynamic> json) {
+    final rawDetails = json['details'];
+    return RegisterEventModel(
+      id: json['id']! as String,
+      babyId: json['baby_id']! as String,
+      type: _typeFromStorage(json['event_type']! as String),
+      occurredAt: _remoteDate(json, 'occurred_at'),
+      createdAt: _remoteDate(json, 'created_at'),
+      updatedAt: _remoteDate(json, 'updated_at'),
+      deletedAt: _nullableRemoteDate(json['deleted_at']),
+      caregiverId: json['caregiver_id'] as String?,
+      notes: json['notes'] as String?,
+      details: rawDetails is Map
+          ? Map<String, Object?>.from(rawDetails)
+          : const <String, Object?>{},
+      syncStatus: RegisterSyncStatus.synced,
+      schemaVersion: (json['schema_version'] as num?)?.toInt() ?? 1,
+    );
+  }
 
   factory RegisterEventModel.fromRow(Map<String, Object?> row) {
     final decoded = jsonDecode(row['details_json']! as String);
@@ -55,8 +87,23 @@ class RegisterEventModel {
         row['created_at']! as int,
         isUtc: true,
       ),
+      updatedAt: DateTime.fromMillisecondsSinceEpoch(
+        (row['updated_at'] as int?) ?? row['created_at']! as int,
+        isUtc: true,
+      ),
       caregiverId: row['caregiver_id'] as String?,
       notes: row['notes'] as String?,
+      deletedAt: switch (row['deleted_at']) {
+        final int value => DateTime.fromMillisecondsSinceEpoch(
+          value,
+          isUtc: true,
+        ),
+        _ => null,
+      },
+      syncStatus: _syncStatusFromStorage(
+        (row['sync_status'] as String?) ?? 'pending',
+      ),
+      syncError: row['sync_error'] as String?,
       details: Map<String, Object?>.from(decoded),
       schemaVersion: row['schema_version']! as int,
     );
@@ -68,9 +115,27 @@ class RegisterEventModel {
     'event_type': _typeToStorage(type),
     'occurred_at': occurredAt.toUtc().millisecondsSinceEpoch,
     'created_at': createdAt.toUtc().millisecondsSinceEpoch,
+    'updated_at': updatedAt.toUtc().millisecondsSinceEpoch,
+    'deleted_at': deletedAt?.toUtc().millisecondsSinceEpoch,
+    'sync_status': syncStatus.name,
+    'sync_error': syncError,
     'caregiver_id': caregiverId,
     'notes': notes,
     'details_json': jsonEncode(details),
+    'schema_version': schemaVersion,
+  };
+
+  Map<String, Object?> toRemoteJson() => {
+    'id': id,
+    'baby_id': babyId,
+    'event_type': _typeToStorage(type),
+    'occurred_at': occurredAt.toUtc().toIso8601String(),
+    'created_at': createdAt.toUtc().toIso8601String(),
+    'updated_at': updatedAt.toUtc().toIso8601String(),
+    'deleted_at': deletedAt?.toUtc().toIso8601String(),
+    'caregiver_id': caregiverId,
+    'notes': notes,
+    'details': details,
     'schema_version': schemaVersion,
   };
 
@@ -80,7 +145,11 @@ class RegisterEventModel {
     type: type,
     occurredAt: occurredAt,
     createdAt: createdAt,
+    updatedAt: updatedAt,
     caregiverId: caregiverId,
+    deletedAt: deletedAt,
+    syncStatus: syncStatus,
+    syncError: syncError,
     notes: notes,
     details: details,
     schemaVersion: schemaVersion,
@@ -103,5 +172,24 @@ class RegisterEventModel {
     'medication' => RegisterEventType.medication,
     'measurement' => RegisterEventType.measurement,
     _ => throw FormatException('Unknown register event type: $value'),
+  };
+
+  static RegisterSyncStatus _syncStatusFromStorage(String value) =>
+      RegisterSyncStatus.values.firstWhere(
+        (status) => status.name == value,
+        orElse: () => RegisterSyncStatus.pending,
+      );
+
+  static DateTime _remoteDate(Map<String, dynamic> json, String key) {
+    final value = json[key];
+    if (value is! String) {
+      throw FormatException('Invalid or missing remote date: $key');
+    }
+    return DateTime.parse(value).toUtc();
+  }
+
+  static DateTime? _nullableRemoteDate(Object? value) => switch (value) {
+    final String date when date.isNotEmpty => DateTime.parse(date).toUtc(),
+    _ => null,
   };
 }

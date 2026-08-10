@@ -23,15 +23,17 @@ Widget activeBabyHeaderDefault(BuildContext context) {
       ageLabel: '2 meses',
       avatar: const AssetImage('assets/images/babies/mateo.png'),
       familyContextLabel: '2 bebés en la familia',
-      sibling: showSibling
-          ? const BebeSiblingSummaryData(
-              name: 'Sofía',
-              ageLabel: '8 meses',
-              avatar: AssetImage('assets/images/babies/sofia.png'),
-            )
-          : null,
+      siblings: showSibling
+          ? const [
+              BebeSiblingSummaryData(
+                name: 'Sofía',
+                ageLabel: '8 meses',
+                avatar: AssetImage('assets/images/babies/sofia.png'),
+              ),
+            ]
+          : const [],
       onBabyPressed: () {},
-      onSiblingPressed: () {},
+      onSiblingPressed: (_) {},
     ),
   );
 }

@@ -110,7 +110,12 @@ class _FakeAuthGateway implements AuthGateway {
   }) async {
     lastEmail = email;
     return AuthSession(
-      user: AuthUser(id: '1', email: email, displayName: 'María'),
+      user: AuthUser(
+        id: '1',
+        email: email,
+        displayName: 'María',
+        emailVerification: true,
+      ),
     );
   }
 
@@ -127,7 +132,12 @@ class _FakeAuthGateway implements AuthGateway {
     lastDisplayName = displayName;
     lastEmail = email;
     return AuthSession(
-      user: AuthUser(id: '1', email: email, displayName: displayName),
+      user: AuthUser(
+        id: '1',
+        email: email,
+        displayName: displayName,
+        emailVerification: true,
+      ),
     );
   }
 }

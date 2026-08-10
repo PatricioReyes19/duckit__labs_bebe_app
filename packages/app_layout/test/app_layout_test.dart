@@ -1,22 +1,10 @@
-import 'dart:convert';
-
 import 'package:app_layout/app_layout.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  late ThemeData lightTheme;
-
-  setUpAll(() async {
-    final rawTheme = await rootBundle.loadString(
-      'packages/design_system/assets/json/bebe_theme.json',
-    );
-    lightTheme = BebeTheme.fromJson(
-      jsonDecode(rawTheme) as Map<String, dynamic>,
-    ).lightTheme();
-  });
+  final lightTheme = ThemeData();
 
   testWidgets('AppHeader muestra la marca HD y el título', (tester) async {
     await tester.pumpWidget(
@@ -47,5 +35,25 @@ void main() {
 
     expect(find.byType(BebeBrandMark), findsNothing);
     expect(find.text('Detalle'), findsOneWidget);
+  });
+
+  testWidgets('AppHeader delega la navegación hacia atrás', (tester) async {
+    var backPressed = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: lightTheme,
+        home: Scaffold(
+          appBar: AppHeader(
+            title: 'Detalle',
+            showBackButton: true,
+            onBackPressed: () => backPressed = true,
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byIcon(Icons.arrow_back_ios_new_rounded));
+
+    expect(backPressed, isTrue);
   });
 }

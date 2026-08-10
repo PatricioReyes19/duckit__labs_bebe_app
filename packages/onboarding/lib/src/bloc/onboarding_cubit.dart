@@ -162,6 +162,17 @@ class OnboardingCubit extends Cubit<OnboardingState> {
     );
   }
 
+  void babyPhotoChanged(String? path) {
+    final normalized = path?.trim();
+    emit(
+      state.copyWith(
+        babyPhotoPath: normalized,
+        clearBabyPhoto: normalized == null || normalized.isEmpty,
+        clearMessage: true,
+      ),
+    );
+  }
+
   Future<void> babySubmitted() async {
     final name = state.babyName.trim();
     final birthDate = state.birthDate;
@@ -206,6 +217,7 @@ class OnboardingCubit extends Cubit<OnboardingState> {
           name: name,
           birthDate: birthDate!,
           sexReference: sexReference!,
+          photoPath: state.babyPhotoPath,
         ),
       );
       emit(

@@ -1,19 +1,91 @@
-part of 'settings_bloc.dart';
+import 'package:design_system/design_system.dart';
 
-@freezed
-sealed class SettingsEvent with _$SettingsEvent {
-  const factory SettingsEvent.started() = _Started;
+sealed class SettingsEvent {
+  const SettingsEvent();
+
+  const factory SettingsEvent.started() = SettingsStarted;
   const factory SettingsEvent.themeChanged(BebeThemeModeOption value) =
-      _ThemeChanged;
+      SettingsThemeChanged;
   const factory SettingsEvent.highContrastChanged(bool value) =
-      _HighContrastChanged;
+      SettingsHighContrastChanged;
   const factory SettingsEvent.personalRemindersChanged(bool value) =
-      _PersonalRemindersChanged;
+      SettingsPersonalRemindersChanged;
   const factory SettingsEvent.familyActivityChanged(bool value) =
-      _FamilyActivityChanged;
+      SettingsFamilyActivityChanged;
   const factory SettingsEvent.dailySummaryChanged(bool value) =
-      _DailySummaryChanged;
+      SettingsDailySummaryChanged;
   const factory SettingsEvent.reduceMotionChanged(bool value) =
-      _ReduceMotionChanged;
-  const factory SettingsEvent.wifiOnlyChanged(bool value) = _WifiOnlyChanged;
+      SettingsReduceMotionChanged;
+  const factory SettingsEvent.wifiOnlyChanged(bool value) =
+      SettingsWifiOnlyChanged;
+}
+
+final class SettingsStarted extends SettingsEvent {
+  const SettingsStarted();
+}
+
+final class SettingsThemeChanged extends SettingsEvent {
+  const SettingsThemeChanged(this.value);
+
+  final BebeThemeModeOption value;
+}
+
+final class SettingsHighContrastChanged extends SettingsEvent {
+  const SettingsHighContrastChanged(this.value);
+
+  final bool value;
+}
+
+final class SettingsPersonalRemindersChanged extends SettingsEvent {
+  const SettingsPersonalRemindersChanged(this.value);
+
+  final bool value;
+}
+
+final class SettingsFamilyActivityChanged extends SettingsEvent {
+  const SettingsFamilyActivityChanged(this.value);
+
+  final bool value;
+}
+
+final class SettingsDailySummaryChanged extends SettingsEvent {
+  const SettingsDailySummaryChanged(this.value);
+
+  final bool value;
+}
+
+final class SettingsReduceMotionChanged extends SettingsEvent {
+  const SettingsReduceMotionChanged(this.value);
+
+  final bool value;
+}
+
+final class SettingsWifiOnlyChanged extends SettingsEvent {
+  const SettingsWifiOnlyChanged(this.value);
+
+  final bool value;
+}
+
+final class SettingsAccountNameChanged extends SettingsEvent {
+  const SettingsAccountNameChanged(this.value);
+
+  final String value;
+}
+
+final class SettingsLanguageChanged extends SettingsEvent {
+  const SettingsLanguageChanged(this.value);
+
+  final String value;
+}
+
+final class SettingsTimeFormatChanged extends SettingsEvent {
+  const SettingsTimeFormatChanged(this.value);
+
+  final String value;
+}
+
+final class SettingsTextSizeChanged extends SettingsEvent {
+  const SettingsTextSizeChanged(this.value);
+
+  final String value;
 }

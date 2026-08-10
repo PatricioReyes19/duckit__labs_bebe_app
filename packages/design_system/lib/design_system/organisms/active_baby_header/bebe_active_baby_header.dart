@@ -53,7 +53,6 @@ class BebeActiveBabyHeader extends StatelessWidget {
   static const double _minimumInlineWidth = 312;
   static const double _minimumActiveWidth = 196;
   static const double _compactCardWidth = 112;
-  static const double _compactCardBaseHeight = 105;
   static const double _maximumInlineTextScale = 1.3;
   static const double _maximumRailWidthFactor = 0.40;
 
@@ -89,21 +88,16 @@ class BebeActiveBabyHeader extends StatelessWidget {
             constraints.maxWidth < _minimumInlineWidth ||
             textScale > _maximumInlineTextScale;
 
-        final compactHeight = _compactHeightFor(textScale);
-
         if (useStackedLayout) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               activeSelector,
               SizedBox(height: spacing.spacingM),
-              SizedBox(
-                height: compactHeight,
-                child: _SiblingRail(
-                  siblings: siblings,
-                  itemWidth: _compactCardWidth,
-                  onSiblingPressed: onSiblingPressed,
-                ),
+              _SiblingRail(
+                siblings: siblings,
+                itemWidth: _compactCardWidth,
+                onSiblingPressed: onSiblingPressed,
               ),
             ],
           );
@@ -116,9 +110,8 @@ class BebeActiveBabyHeader extends StatelessWidget {
 
         return SizedBox(
           width: double.infinity,
-          height: math.max(_compactCardBaseHeight, compactHeight),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(child: activeSelector),
               SizedBox(width: spacing.spacingM),
@@ -157,11 +150,6 @@ class BebeActiveBabyHeader extends StatelessWidget {
 
     return preferredWidth.clamp(_compactCardWidth, availableWidth);
   }
-
-  double _compactHeightFor(double textScale) {
-    final normalizedScale = textScale.clamp(1.0, 1.6);
-    return _compactCardBaseHeight + ((normalizedScale - 1) * 24);
-  }
 }
 
 class _SiblingRail extends StatelessWidget {
@@ -183,25 +171,26 @@ class _SiblingRail extends StatelessWidget {
       container: true,
       label: 'Otros bebés de la familia',
       explicitChildNodes: true,
-      child: ListView.separated(
+      child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        primary: false,
-        padding: EdgeInsets.zero,
-        itemCount: siblings.length,
-        separatorBuilder: (_, _) => SizedBox(width: spacing.spacingM),
-        itemBuilder: (context, index) {
-          final sibling = siblings[index];
-
-          return SizedBox(
-            width: itemWidth,
-            child: _BebeCompactSiblingSelector(
-              data: sibling,
-              onPressed: onSiblingPressed == null
-                  ? null
-                  : () => onSiblingPressed!(sibling),
-            ),
-          );
-        },
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (var index = 0; index < siblings.length; index++) ...[
+              SizedBox(
+                width: itemWidth,
+                child: _BebeCompactSiblingSelector(
+                  data: siblings[index],
+                  onPressed: onSiblingPressed == null
+                      ? null
+                      : () => onSiblingPressed!(siblings[index]),
+                ),
+              ),
+              if (index < siblings.length - 1)
+                SizedBox(width: spacing.spacingM),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -265,8 +254,6 @@ class _BebeCompactSiblingSelector extends StatelessWidget {
                   children: [
                     Text(
                       data.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                       style: typography.styles.body.sm.regular.copyWith(
                         fontWeight: FontWeight.w600,
                         color: colors.text.neutralTitle,
@@ -275,8 +262,6 @@ class _BebeCompactSiblingSelector extends StatelessWidget {
                     SizedBox(height: spacing.spacingS),
                     Text(
                       data.ageLabel,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                       style: typography.styles.body.sm.regular.copyWith(
                         color: colors.text.accentDefault,
                       ),

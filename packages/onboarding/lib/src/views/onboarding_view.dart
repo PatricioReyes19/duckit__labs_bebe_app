@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../bloc/onboarding_cubit.dart';
 import '../bloc/onboarding_state.dart';
@@ -624,43 +627,78 @@ class _BabyProfileView extends StatelessWidget {
                 ),
           ),
           const SizedBox(height: 8),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              color: colors.background.accentSurface,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: colors.border.accentAlternative),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    backgroundColor: colors.background.neutralsSurface,
-                    child: Icon(
-                      Icons.add_a_photo_outlined,
-                      color: colors.icons.accentDefault,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Puedes agregarla más tarde',
-                          style: Theme.of(context).textTheme.labelLarge,
-                        ),
-                        Text(
-                          'No pediremos acceso a tus fotos durante el primer ingreso.',
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: colors.text.neutralCaption,
+          Material(
+            color: colors.background.accentSurface,
+            borderRadius: BorderRadius.circular(18),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              key: const Key('baby_photo_picker'),
+              onTap: state.isLoading
+                  ? null
+                  : () => _pickBabyPhoto(context, cubit),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: colors.border.accentAlternative),
+                ),
+                child: Row(
+                  children: [
+                    SizedBox.square(
+                      dimension: 64,
+                      child: ClipOval(
+                        child: state.babyPhotoPath == null
+                            ? ColoredBox(
+                                color: colors.background.neutralsSurface,
+                                child: Icon(
+                                  Icons.add_a_photo_outlined,
+                                  color: colors.icons.accentDefault,
+                                ),
+                              )
+                            : Image.file(
+                                File(state.babyPhotoPath!),
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => ColoredBox(
+                                  color: colors.background.neutralsSurface,
+                                  child: Icon(
+                                    Icons.broken_image_outlined,
+                                    color: colors.icons.errorDefault,
                                   ),
-                        ),
-                      ],
+                                ),
+                              ),
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            state.babyPhotoPath == null
+                                ? 'Agregar foto'
+                                : 'Cambiar foto',
+                            style: Theme.of(context).textTheme.labelLarge,
+                          ),
+                          Text(
+                            state.babyPhotoPath == null
+                                ? 'Elige una imagen de tu galería.'
+                                : 'La foto se guardará de forma privada en este dispositivo.',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: colors.text.neutralCaption),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (state.babyPhotoPath != null)
+                      IconButton(
+                        tooltip: 'Quitar foto',
+                        onPressed: () => cubit.babyPhotoChanged(null),
+                        icon: const Icon(Icons.close_rounded),
+                      )
+                    else
+                      const Icon(Icons.chevron_right_rounded),
+                  ],
+                ),
               ),
             ),
           ),
@@ -719,6 +757,27 @@ class _BabyProfileView extends StatelessWidget {
             onPressed: state.isLoading ? null : cubit.babySubmitted,
           ),
         ],
+      ),
+    );
+  }
+}
+
+Future<void> _pickBabyPhoto(
+  BuildContext context,
+  OnboardingCubit cubit,
+) async {
+  try {
+    final photo = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 88,
+      maxWidth: 1600,
+    );
+    if (photo != null) cubit.babyPhotoChanged(photo.path);
+  } on Object {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('No pudimos abrir la galería. Revisa los permisos.'),
       ),
     );
   }

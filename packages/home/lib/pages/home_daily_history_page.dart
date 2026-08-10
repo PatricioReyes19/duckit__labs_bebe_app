@@ -8,11 +8,19 @@ typedef GetRegisterEventsFactory = GetRegisterEvents Function(
   BuildContext context,
 );
 typedef HomeDailyHistoryAction = void Function(BuildContext context);
+typedef DeleteRegisterEventFactory = DeleteRegisterEvent Function(
+  BuildContext context,
+);
+typedef RegisterEventSyncServiceFactory = RegisterEventSyncService Function(
+  BuildContext context,
+);
 
 class HomeDailyHistoryPage extends GoRoute {
   HomeDailyHistoryPage({
     required GetRegisterEventsFactory getRegisterEvents,
     required HomeDailyHistoryAction onRegisterPressed,
+    this.deleteRegisterEvent,
+    this.syncService,
     this.babyId = 'local-active-baby',
     this.babyName = 'Mateo Reyes',
     super.name,
@@ -27,6 +35,8 @@ class HomeDailyHistoryPage extends GoRoute {
               child: BlocProvider(
                 create: (_) => HomeDailyHistoryCubit(
                   getRegisterEvents: getRegisterEvents(context),
+                  deleteRegisterEvent: deleteRegisterEvent?.call(context),
+                  syncService: syncService?.call(context),
                   babyId: babyId,
                 )..load(),
                 child: HomeDailyHistoryView(
@@ -40,6 +50,8 @@ class HomeDailyHistoryPage extends GoRoute {
 
   final String babyId;
   final String babyName;
+  final DeleteRegisterEventFactory? deleteRegisterEvent;
+  final RegisterEventSyncServiceFactory? syncService;
 
   static const nameRoute = 'HomeDailyHistory';
   static const relativePath = 'history';

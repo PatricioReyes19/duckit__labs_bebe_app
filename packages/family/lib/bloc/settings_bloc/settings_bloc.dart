@@ -1,56 +1,79 @@
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:freezed_annotation/freezed_annotation.dart';
 
-part 'settings_bloc.freezed.dart';
-part 'settings_event.dart';
-part 'settings_state.dart';
+import 'settings_event.dart';
+import 'settings_state.dart';
+
+export 'settings_event.dart';
+export 'settings_state.dart';
 
 class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
   SettingsBloc({
     required GetAppSettings getAppSettings,
     required UpdateAppSettings updateAppSettings,
+    required GetCurrentSession getCurrentSession,
   }) : _getAppSettings = getAppSettings,
        _updateAppSettings = updateAppSettings,
+       _getCurrentSession = getCurrentSession,
        super(const SettingsState()) {
-    on<_Started>(_onStarted);
-    on<_ThemeChanged>(
+    on<SettingsStarted>(_onStarted);
+    on<SettingsThemeChanged>(
       (event, emit) =>
           _persist(AppSettingsPatch(theme: _domainTheme(event.value)), emit),
     );
-    on<_HighContrastChanged>(
+    on<SettingsAccountNameChanged>(
+      (event, emit) => _persist(AppSettingsPatch(name: event.value), emit),
+    );
+    on<SettingsLanguageChanged>(
+      (event, emit) => _persist(AppSettingsPatch(language: event.value), emit),
+    );
+    on<SettingsTimeFormatChanged>(
+      (event, emit) =>
+          _persist(AppSettingsPatch(timeFormat: event.value), emit),
+    );
+    on<SettingsTextSizeChanged>(
+      (event, emit) => _persist(AppSettingsPatch(textSize: event.value), emit),
+    );
+    on<SettingsHighContrastChanged>(
       (event, emit) =>
           _persist(AppSettingsPatch(highContrast: event.value), emit),
     );
-    on<_PersonalRemindersChanged>(
+    on<SettingsPersonalRemindersChanged>(
       (event, emit) =>
           _persist(AppSettingsPatch(personalReminders: event.value), emit),
     );
-    on<_FamilyActivityChanged>(
+    on<SettingsFamilyActivityChanged>(
       (event, emit) =>
           _persist(AppSettingsPatch(familyActivity: event.value), emit),
     );
-    on<_DailySummaryChanged>(
+    on<SettingsDailySummaryChanged>(
       (event, emit) =>
           _persist(AppSettingsPatch(dailySummary: event.value), emit),
     );
-    on<_ReduceMotionChanged>(
+    on<SettingsReduceMotionChanged>(
       (event, emit) =>
           _persist(AppSettingsPatch(reduceMotion: event.value), emit),
     );
-    on<_WifiOnlyChanged>(
+    on<SettingsWifiOnlyChanged>(
       (event, emit) => _persist(AppSettingsPatch(wifiOnly: event.value), emit),
     );
   }
 
   final GetAppSettings _getAppSettings;
   final UpdateAppSettings _updateAppSettings;
+  final GetCurrentSession _getCurrentSession;
+  AuthSession? _session;
 
-  Future<void> _onStarted(_Started event, Emitter<SettingsState> emit) async {
+  Future<void> _onStarted(
+    SettingsStarted event,
+    Emitter<SettingsState> emit,
+  ) async {
     emit(state.copyWith(isLoading: true, errorMessage: null));
     try {
-      emit(_toState(await _getAppSettings()));
+      final settings = await _getAppSettings();
+      _session = await _getCurrentSession();
+      emit(_toState(settings));
     } on Object catch (error) {
       emit(
         state.copyWith(
@@ -88,14 +111,20 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     dailySummary: settings.dailySummary,
     reduceMotion: settings.reduceMotion,
     wifiOnly: settings.wifiOnly,
-    name: settings.name,
-    email: settings.email,
+    name: _displayName(settings),
+    email: _session?.user.email ?? settings.email,
     language: settings.language,
     timeFormat: settings.timeFormat,
     textSize: settings.textSize,
     localStorage: 'Datos locales disponibles',
     appVersion: '1.0.0',
   );
+
+  String _displayName(AppSettingsEntity settings) {
+    final stored = settings.name.trim();
+    if (stored.isNotEmpty && stored != 'Usuario Bypass') return stored;
+    return _session?.user.displayName ?? stored;
+  }
 
   static AppThemePreference _domainTheme(BebeThemeModeOption value) =>
       switch (value) {

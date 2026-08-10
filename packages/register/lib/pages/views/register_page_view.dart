@@ -346,7 +346,7 @@ class _RegisterPageViewState extends State<RegisterPageView> {
             onUnitPressed: () => _pickString(
               title: 'Unidad',
               current: cubit.unit,
-              options: _units,
+              options: RegisterCatalog.medicationUnits,
               onSelected: cubit.unitChanged,
             ),
             onTimePressed: () => _pickTime(
@@ -356,7 +356,7 @@ class _RegisterPageViewState extends State<RegisterPageView> {
             onFrequencyPressed: () => _pickString(
               title: 'Frecuencia',
               current: cubit.frequency,
-              options: _frequencies,
+              options: RegisterCatalog.medicationFrequencies,
               onSelected: cubit.frequencyChanged,
             ),
             onEndDatePressed: () async {
@@ -446,12 +446,6 @@ class _RegisterPageViewState extends State<RegisterPageView> {
       contextTrailing:
           contextTitle == null ? null : const Icon(Icons.info_outline_rounded),
       onNotificationsPressed: widget.onNotificationsPressed,
-      bottomNavigationBar: RegisterBottomNavigation(
-        onHomePressed: widget.onHomePressed,
-        onAgendaPressed: widget.onAgendaPressed,
-        onHealthPressed: widget.onHealthPressed,
-        onFamilyPressed: widget.onFamilyPressed,
-      ),
       form: form,
       onBackPressed: widget.onCancel,
       onSavePressed: state.isSaving ? null : onSave,
@@ -495,7 +489,7 @@ class _RegisterPageViewState extends State<RegisterPageView> {
         child: ListView(
           shrinkWrap: true,
           children: [
-            for (final value in _durations)
+            for (final value in RegisterCatalog.durationMinutes)
               ListTile(
                 title: Text(_duration(value)),
                 selected: value == current,
@@ -575,16 +569,6 @@ class _RegisterPageViewState extends State<RegisterPageView> {
     return remaining == 0 ? '$hours h' : '$hours h $remaining min';
   }
 
-  static const _durations = <int>[5, 10, 15, 20, 30, 45, 60, 90, 120];
-  static const _units = <String>['mL', 'mg', 'g', 'gotas'];
-  static const _frequencies = <String>[
-    'Una vez',
-    'Cada 4 horas',
-    'Cada 6 horas',
-    'Cada 8 horas',
-    'Cada 12 horas',
-    'Una vez al día',
-  ];
   static const _feedingTypes = <BebeSegmentedItem<String>>[
     BebeSegmentedItem(
       value: 'breast',

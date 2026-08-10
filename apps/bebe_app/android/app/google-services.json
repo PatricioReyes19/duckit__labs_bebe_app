@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "316901399175",
+    "project_id": "bebeapp-313a4",
+    "storage_bucket": "bebeapp-313a4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:316901399175:android:9c844ed6eb36e1cdeeb622",
+        "android_client_info": {
+          "package_name": "com.duckitlabs.bebeapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDkNlGJKFySVGou4e4HqRFLTDpXbYOiRQ4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

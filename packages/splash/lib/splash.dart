@@ -3,5 +3,7 @@ export 'src/pages/splash_auth_entry_page.dart';
 export 'src/pages/splash_page.dart';
 export 'src/views/splash_auth_entry.dart';
 export 'src/views/splash_brand_content.dart';
+export 'src/views/splash_brand_intro.dart';
 export 'src/views/splash_error_view.dart';
 export 'src/views/splash_view.dart';
+export 'src/widgets/splash_background_decoration.dart';

@@ -57,6 +57,82 @@ class SqliteFamilyRepository implements FamilyRepository {
   }
 
   @override
+  Future<FamilyOverviewEntity> createInitialFamily(
+    InitialFamilyDraft draft,
+  ) async {
+    final database = await _database.database;
+    final existingRows = await database.query(
+      BebeDatabaseSchema.families,
+      limit: 1,
+    );
+    if (existingRows.isNotEmpty) {
+      return _overview(database, FamilyModel.fromRow(existingRows.single));
+    }
+
+    final familyId = _idGenerator('family');
+    final babyId = _idGenerator('baby');
+    final ownerId = _idGenerator('member');
+    final family = FamilyModel(
+      id: familyId,
+      name: draft.familyName.trim(),
+      activeBabyId: babyId,
+    );
+    final baby = BabyModel(
+      id: babyId,
+      familyId: familyId,
+      name: draft.babyName.trim(),
+      birthDate: draft.birthDate.toUtc(),
+      avatarAssetPath: draft.avatarAssetPath,
+    );
+    final owner = FamilyMemberModel(
+      id: ownerId,
+      familyId: familyId,
+      name: draft.ownerName.trim(),
+      role: 'Administrador/a',
+      accessDescription: 'Acceso completo al círculo de cuidado',
+      status: FamilyMemberStatus.active,
+    );
+
+    await database.transaction((transaction) async {
+      await transaction.insert(
+        BebeDatabaseSchema.families,
+        family.toRow(),
+        conflictAlgorithm: sqlite.ConflictAlgorithm.abort,
+      );
+      await transaction.insert(
+        BebeDatabaseSchema.babies,
+        baby.toRow(),
+        conflictAlgorithm: sqlite.ConflictAlgorithm.abort,
+      );
+      await transaction.insert(
+        BebeDatabaseSchema.familyMembers,
+        owner.toRow(),
+        conflictAlgorithm: sqlite.ConflictAlgorithm.abort,
+      );
+      await transaction.insert(
+        BebeDatabaseSchema.appSettings,
+        {
+          'id': 'local',
+          'theme_mode': 'system',
+          'high_contrast': 0,
+          'personal_reminders': 1,
+          'family_activity': 1,
+          'daily_summary': 0,
+          'reduce_motion': 0,
+          'wifi_only': 0,
+          'account_name': draft.ownerName.trim(),
+          'account_email': draft.ownerEmail.trim().toLowerCase(),
+          'language': 'Español',
+          'time_format': '24 horas',
+          'text_size': 'Predeterminado',
+        },
+        conflictAlgorithm: sqlite.ConflictAlgorithm.ignore,
+      );
+    });
+    return _overview(database, family);
+  }
+
+  @override
   Future<BabyEntity> createBaby(BabyDraft draft) async {
     final model = BabyModel(
       id: _idGenerator('baby'),

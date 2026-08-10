@@ -20,6 +20,8 @@ class GetHomeOverview {
   final HealthRepository _healthRepository;
   final HomeClock _clock;
 
+  Stream<void> get changes => _registerRepository.changes;
+
   Future<HomeOverviewEntity> call() async {
     final family = await _familyRepository.getCurrent();
     final baby = family.activeBaby;

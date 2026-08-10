@@ -25,11 +25,13 @@ class BabyDraft {
     required this.name,
     required this.birthDate,
     required this.sexReference,
+    this.photoPath,
   });
 
   final String name;
   final DateTime birthDate;
   final SexReference sexReference;
+  final String? photoPath;
 }
 
 class BabyProfile {
@@ -38,12 +40,14 @@ class BabyProfile {
     required this.name,
     required this.birthDate,
     required this.sexReference,
+    this.photoPath,
   });
 
   final String id;
   final String name;
   final DateTime birthDate;
   final SexReference sexReference;
+  final String? photoPath;
 }
 
 class CareInvitation {

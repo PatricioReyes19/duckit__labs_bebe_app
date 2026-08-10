@@ -41,6 +41,7 @@ const appLayoutTabs = <AppLayoutTabConfig>[
 ];
 
 const appLayoutVisibilityPolicy = AppLayoutVisibilityPolicy(
+  fallback: AppLayoutChromeConfig.subview(title: 'Detalle'),
   rules: [
     AppLayoutVisibilityRule.exact(
       path: '/home',
@@ -53,6 +54,8 @@ const appLayoutVisibilityPolicy = AppLayoutVisibilityPolicy(
       path: '/home/history',
       chrome: AppLayoutChromeConfig(
         title: 'Historial de hoy',
+        showBottomBar: false,
+        showPrimaryAction: false,
         showBrandMark: false,
         showBackButton: true,
       ),
@@ -65,6 +68,20 @@ const appLayoutVisibilityPolicy = AppLayoutVisibilityPolicy(
       ),
     ),
     AppLayoutVisibilityRule.exact(
+      path: '/agenda/reminders/settings',
+      chrome: AppLayoutChromeConfig.subview(
+        title: 'Configurar recordatorios',
+      ),
+    ),
+    AppLayoutVisibilityRule.exact(
+      path: '/agenda/reminders/new',
+      chrome: AppLayoutChromeConfig.subview(title: 'Nuevo recordatorio'),
+    ),
+    AppLayoutVisibilityRule.prefix(
+      path: '/agenda/events',
+      chrome: AppLayoutChromeConfig.subview(title: 'Detalle del evento'),
+    ),
+    AppLayoutVisibilityRule.exact(
       path: '/health',
       chrome: AppLayoutChromeConfig(
         title: 'Salud',
@@ -72,11 +89,63 @@ const appLayoutVisibilityPolicy = AppLayoutVisibilityPolicy(
       ),
     ),
     AppLayoutVisibilityRule.exact(
+      path: '/health/vaccines',
+      chrome: AppLayoutChromeConfig.subview(title: 'Vacunas'),
+    ),
+    AppLayoutVisibilityRule.exact(
+      path: '/health/controls',
+      chrome: AppLayoutChromeConfig.subview(title: 'Controles'),
+    ),
+    AppLayoutVisibilityRule.exact(
+      path: '/health/growth',
+      chrome: AppLayoutChromeConfig.subview(title: 'Crecimiento'),
+    ),
+    AppLayoutVisibilityRule.exact(
+      path: '/health/consultations',
+      chrome: AppLayoutChromeConfig.subview(title: 'Consultas'),
+    ),
+    AppLayoutVisibilityRule.exact(
+      path: '/health/pediatric-care',
+      chrome: AppLayoutChromeConfig.subview(title: 'Atención pediátrica'),
+    ),
+    AppLayoutVisibilityRule.exact(
+      path: '/health/clinical-history',
+      chrome: AppLayoutChromeConfig.subview(title: 'Historial clínico'),
+    ),
+    AppLayoutVisibilityRule.exact(
       path: '/family',
       chrome: AppLayoutChromeConfig(
         title: 'BebéApp',
         showBrandMark: false,
       ),
+    ),
+    AppLayoutVisibilityRule.exact(
+      path: '/family/babies',
+      chrome: AppLayoutChromeConfig.subview(title: 'Seleccionar bebé'),
+    ),
+    AppLayoutVisibilityRule.exact(
+      path: '/family/babies/new',
+      chrome: AppLayoutChromeConfig.subview(title: 'Agregar bebé'),
+    ),
+    AppLayoutVisibilityRule.prefix(
+      path: '/family/babies/',
+      chrome: AppLayoutChromeConfig.subview(title: 'Perfil del bebé'),
+    ),
+    AppLayoutVisibilityRule.exact(
+      path: '/family/care-circle',
+      chrome: AppLayoutChromeConfig.subview(title: 'Círculo de cuidado'),
+    ),
+    AppLayoutVisibilityRule.exact(
+      path: '/family/care-circle/invite',
+      chrome: AppLayoutChromeConfig.subview(title: 'Invitar cuidador'),
+    ),
+    AppLayoutVisibilityRule.prefix(
+      path: '/family/members',
+      chrome: AppLayoutChromeConfig.subview(title: 'Detalle del cuidador'),
+    ),
+    AppLayoutVisibilityRule.exact(
+      path: '/family/family-configuration',
+      chrome: AppLayoutChromeConfig.subview(title: 'Configuración familiar'),
     ),
     AppLayoutVisibilityRule.prefix(
       path: '/register',
@@ -86,15 +155,29 @@ const appLayoutVisibilityPolicy = AppLayoutVisibilityPolicy(
         showPrimaryAction: false,
       ),
     ),
-    AppLayoutVisibilityRule.prefix(
+    AppLayoutVisibilityRule.exact(
       path: '/family/settings',
-      chrome: AppLayoutChromeConfig(
-        showHeader: true,
-        showBottomBar: false,
-        showPrimaryAction: false,
-        showBackButton: true,
-        title: 'Configuración',
-      ),
+      chrome: AppLayoutChromeConfig.subview(title: 'Cuenta y preferencias'),
+    ),
+    AppLayoutVisibilityRule.exact(
+      path: '/family/settings/account',
+      chrome: AppLayoutChromeConfig.subview(title: 'Mi cuenta'),
+    ),
+    AppLayoutVisibilityRule.exact(
+      path: '/family/settings/appearance',
+      chrome: AppLayoutChromeConfig.subview(title: 'Apariencia'),
+    ),
+    AppLayoutVisibilityRule.exact(
+      path: '/family/settings/security',
+      chrome: AppLayoutChromeConfig.subview(title: 'Seguridad'),
+    ),
+    AppLayoutVisibilityRule.exact(
+      path: '/family/settings/privacy',
+      chrome: AppLayoutChromeConfig.subview(title: 'Privacidad'),
+    ),
+    AppLayoutVisibilityRule.prefix(
+      path: '/family/settings/',
+      chrome: AppLayoutChromeConfig.subview(title: 'Preferencias'),
     ),
     AppLayoutVisibilityRule.prefix(
       path: '/notifications',

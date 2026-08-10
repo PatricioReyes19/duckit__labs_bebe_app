@@ -16,6 +16,7 @@ class AgendaOverviewVm {
     required this.selectedMonthDay,
     required this.selectedCategory,
     required this.events,
+    required this.registerEvents,
     required this.markers,
     required this.remindersEnabled,
     required this.connectionStatus,
@@ -29,6 +30,7 @@ class AgendaOverviewVm {
   final DateTime selectedMonthDay;
   final AgendaFilterCategory selectedCategory;
   final List<AgendaEventVm> events;
+  final List<AgendaRegisterEventVm> registerEvents;
   final List<AgendaMarkerVm> markers;
   final bool remindersEnabled;
   final AgendaConnectionStatus connectionStatus;
@@ -52,6 +54,9 @@ class AgendaOverviewVm {
       selectedCategory: AgendaFilterCategory.all,
       events: entity.events
           .map(AgendaEventVm.fromEntity)
+          .toList(growable: false),
+      registerEvents: entity.registerEvents
+          .map(AgendaRegisterEventVm.fromEntity)
           .toList(growable: false),
       markers: entity.events
           .map(
@@ -86,6 +91,7 @@ class AgendaOverviewVm {
     selectedMonthDay: selectedMonthDay ?? this.selectedMonthDay,
     selectedCategory: selectedCategory ?? this.selectedCategory,
     events: events,
+    registerEvents: registerEvents,
     markers: markers,
     remindersEnabled: remindersEnabled ?? this.remindersEnabled,
     connectionStatus: connectionStatus ?? this.connectionStatus,
@@ -104,8 +110,13 @@ class AgendaOverviewVm {
         .toList(growable: false);
   }
 
+  List<AgendaRegisterEventVm> recordsFor(DateTime day) => registerEvents
+      .where((event) => _sameDate(event.occurredAt, day))
+      .toList(growable: false);
+
   AgendaEventVm? get nextEvent {
-    final sorted = [...events]
+    final now = DateTime.now();
+    final sorted = events.where((event) => event.startsAt.isAfter(now)).toList()
       ..sort((first, second) => first.startsAt.compareTo(second.startsAt));
     return sorted.isEmpty ? null : sorted.first;
   }
@@ -118,6 +129,86 @@ class AgendaOverviewVm {
       first.year == second.year &&
       first.month == second.month &&
       first.day == second.day;
+}
+
+class AgendaRegisterEventVm {
+  const AgendaRegisterEventVm({
+    required this.id,
+    required this.type,
+    required this.title,
+    required this.description,
+    required this.occurredAt,
+    required this.syncStatus,
+  });
+
+  final String id;
+  final RegisterEventType type;
+  final String title;
+  final String description;
+  final DateTime occurredAt;
+  final RegisterSyncStatus syncStatus;
+
+  factory AgendaRegisterEventVm.fromEntity(RegisteredEvent entity) =>
+      AgendaRegisterEventVm(
+        id: entity.id,
+        type: entity.type,
+        title: _title(entity),
+        description: _description(entity),
+        occurredAt: entity.occurredAt.toLocal(),
+        syncStatus: entity.syncStatus,
+      );
+
+  static String _title(RegisteredEvent event) => switch (event.type) {
+    RegisterEventType.feeding => 'Alimentación',
+    RegisterEventType.sleep => 'Sueño',
+    RegisterEventType.diaper => 'Cambio de pañal',
+    RegisterEventType.clinicalObservation => 'Observación clínica',
+    RegisterEventType.medication =>
+      (event.details['name'] as String?)?.trim().isNotEmpty == true
+          ? 'Medicamento: ${event.details['name']}'
+          : 'Medicamento',
+    RegisterEventType.measurement => 'Medición',
+  };
+
+  static String _description(RegisteredEvent event) {
+    final details = event.details;
+    return switch (event.type) {
+      RegisterEventType.feeding => _feedingDescription(details),
+      RegisterEventType.sleep => _durationDescription(details),
+      RegisterEventType.diaper => _diaperDescription(details),
+      RegisterEventType.clinicalObservation =>
+        (details['description'] as String?) ?? event.notes ?? 'Registrada',
+      RegisterEventType.medication => [
+        if (details['dose'] != null)
+          '${details['dose']} ${details['unit'] ?? ''}',
+        if (details['subtype'] != null) '${details['subtype']}',
+      ].join(' · '),
+      RegisterEventType.measurement =>
+        '${details['value'] ?? ''} ${details['unit'] ?? ''}'.trim(),
+    };
+  }
+
+  static String _feedingDescription(Map<String, Object?> details) {
+    final amount = details['amount_ml'];
+    if (amount != null) return '$amount mL';
+    final duration = details['duration_minutes'];
+    return duration == null ? 'Registrada' : '$duration min';
+  }
+
+  static String _durationDescription(Map<String, Object?> details) {
+    final duration = details['duration_minutes'];
+    return duration == null ? 'Registrado' : '$duration min';
+  }
+
+  static String _diaperDescription(Map<String, Object?> details) {
+    final subtype = details['subtype'];
+    return switch (subtype) {
+      'wet' => 'Orina · ${details['urine_amount'] ?? 'normal'}',
+      'dirty' => 'Deposición · ${details['amount'] ?? 'normal'}',
+      'mixed' => 'Orina y deposición',
+      _ => 'Registrado',
+    };
+  }
 }
 
 class AgendaEventVm {

@@ -1,5 +1,6 @@
-import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
+
+import '../tokens/tokens.dart';
 
 class BebeTheme {
   const BebeTheme({

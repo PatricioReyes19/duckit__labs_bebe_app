@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:agenda/models/agenda_overview_vm.dart';
 import 'package:core/core.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -11,11 +13,16 @@ typedef AgendaClock = DateTime Function();
 
 class AgendaBloc extends Bloc<AgendaEvent, AgendaState> {
   AgendaBloc({
-    required GetAgendaOverview getAgendaOverview,
-    this.babyId = 'local-active-baby',
+    required this._getAgendaOverview,
+    GetFamilyOverview? getFamilyOverview,
+    AgendaEventSyncService? syncService,
+    this.babyId,
     AgendaClock? clock,
-  }) : _getAgendaOverview = getAgendaOverview,
-       _clock = clock ?? DateTime.now,
+  }) : _clock = clock ?? DateTime.now,
+       // The public DI parameter intentionally omits the private underscore.
+       // ignore: prefer_initializing_formals
+       _syncService = syncService,
+       _getFamilyOverview = getFamilyOverview,
        super(const AgendaState.initial()) {
     on<_Started>((event, emit) => _load(emit, showLoading: true));
     on<_Retried>((event, emit) => _load(emit, showLoading: true));
@@ -25,11 +32,23 @@ class AgendaBloc extends Bloc<AgendaEvent, AgendaState> {
     on<_MonthDaySelected>(_onMonthDaySelected);
     on<_MonthChanged>(_onMonthChanged);
     on<_CategorySelected>(_onCategorySelected);
+    _changesSubscription = _getAgendaOverview.changes.listen((_) {
+      if (!isClosed) add(const AgendaEvent.refreshed());
+    });
+    _syncSubscription = _syncService?.states.listen((syncState) {
+      _remoteUnavailable = syncState.phase == RegisterSyncPhase.failed;
+      if (!isClosed) add(const AgendaEvent.refreshed());
+    });
   }
 
   final GetAgendaOverview _getAgendaOverview;
-  final String babyId;
+  final GetFamilyOverview? _getFamilyOverview;
+  final AgendaEventSyncService? _syncService;
+  final String? babyId;
   final AgendaClock _clock;
+  late final StreamSubscription<void> _changesSubscription;
+  StreamSubscription<RegisterSyncState>? _syncSubscription;
+  bool _remoteUnavailable = false;
 
   Future<void> _load(
     Emitter<AgendaState> emit, {
@@ -37,12 +56,25 @@ class AgendaBloc extends Bloc<AgendaEvent, AgendaState> {
   }) async {
     final previous = _currentOverview;
     if (showLoading) emit(const AgendaState.loading());
+    if (showLoading && _syncService != null) {
+      unawaited(_syncService.synchronize());
+    }
     try {
-      final entity = await _getAgendaOverview(babyId);
+      final resolvedBabyId = babyId ??
+          (await _getFamilyOverview?.call())?.activeBabyId;
+      if (resolvedBabyId == null || resolvedBabyId.isEmpty) {
+        throw StateError('No active baby is available for Agenda.');
+      }
+      final entity = await _getAgendaOverview(resolvedBabyId);
       var overview = AgendaOverviewVm.fromEntity(
         entity,
         selectedDay: previous?.selectedWeekDay ?? _clock(),
       );
+      if (_remoteUnavailable) {
+        overview = overview.copyWith(
+          connectionStatus: AgendaConnectionStatus.offline,
+        );
+      }
       if (previous != null) {
         overview = overview.copyWith(
           focusedWeekDay: previous.focusedWeekDay,
@@ -52,7 +84,11 @@ class AgendaBloc extends Bloc<AgendaEvent, AgendaState> {
           selectedCategory: previous.selectedCategory,
         );
       }
-      emit(AgendaState.loaded(overview: overview));
+      if (overview.events.isEmpty && overview.registerEvents.isEmpty) {
+        emit(AgendaState.empty(overview: overview));
+      } else {
+        emit(AgendaState.loaded(overview: overview));
+      }
     } on Object catch (error) {
       emit(AgendaState.failure(message: 'No pudimos cargar la agenda: $error'));
     }
@@ -108,5 +144,12 @@ class AgendaBloc extends Bloc<AgendaEvent, AgendaState> {
   ) {
     final current = _currentOverview;
     if (current != null) emit(AgendaState.loaded(overview: update(current)));
+  }
+
+  @override
+  Future<void> close() async {
+    await _changesSubscription.cancel();
+    await _syncSubscription?.cancel();
+    return super.close();
   }
 }

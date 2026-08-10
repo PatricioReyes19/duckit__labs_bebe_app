@@ -10,9 +10,11 @@ environment:
 resolution: workspace
 
 dependencies:
+  firebase_auth: ^6.5.7
   flutter:
     sdk: flutter
   shared_preferences: ^2.5.5
+  core:
 
 dev_dependencies:
   flutter_test:

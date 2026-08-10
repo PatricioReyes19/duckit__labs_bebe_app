@@ -7,6 +7,8 @@ enum RegisterEventType {
   measurement,
 }
 
+enum RegisterSyncStatus { pending, syncing, synced, failed }
+
 /// Input accepted by the register domain.
 ///
 /// Feature Cubits own validation and convert their typed state to this draft.
@@ -40,20 +42,31 @@ class RegisteredEvent {
     required this.occurredAt,
     required this.createdAt,
     required Map<String, Object?> details,
+    DateTime? updatedAt,
     this.notes,
     this.caregiverId,
+    this.deletedAt,
+    this.syncStatus = RegisterSyncStatus.pending,
+    this.syncError,
     this.schemaVersion = 1,
-  }) : details = Map.unmodifiable(details);
+  }) : updatedAt = updatedAt ?? createdAt,
+       details = Map.unmodifiable(details);
 
   final String id;
   final String babyId;
   final RegisterEventType type;
   final DateTime occurredAt;
   final DateTime createdAt;
+  final DateTime updatedAt;
   final Map<String, Object?> details;
   final String? notes;
   final String? caregiverId;
+  final DateTime? deletedAt;
+  final RegisterSyncStatus syncStatus;
+  final String? syncError;
   final int schemaVersion;
+
+  bool get isDeleted => deletedAt != null;
 }
 
 /// Partial changes accepted by the register domain.

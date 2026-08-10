@@ -1,5 +1,5 @@
 import 'package:bloc_test/bloc_test.dart';
-import 'package:core/core.dart';
+import 'package:core/startup.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:splash/splash.dart';
 
@@ -22,7 +22,6 @@ void main() {
     blocTest<SplashBloc, SplashState>(
       'solicita la ruta de $destination cuando el inicio la resuelve',
       build: () => SplashBloc(
-        minimumDisplayDuration: Duration.zero,
         resolveEntryDestination: _FakeResolver(
           EntryResolution(destination: destination),
         ),
@@ -39,7 +38,6 @@ void main() {
   blocTest<SplashBloc, SplashState>(
     'muestra error recuperable y reporta el fallo de inicio',
     build: () => SplashBloc(
-      minimumDisplayDuration: Duration.zero,
       resolveEntryDestination: _ThrowingResolver(),
       errorReporter: (error, _) => reportedError = error,
     ),

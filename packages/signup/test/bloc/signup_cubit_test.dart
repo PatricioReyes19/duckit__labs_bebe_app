@@ -61,7 +61,12 @@ class _FakeAuthGateway implements AuthGateway {
     required String password,
   }) async {
     return AuthSession(
-      user: AuthUser(id: '1', email: email, displayName: displayName),
+      user: AuthUser(
+        id: '1',
+        email: email,
+        displayName: displayName,
+        emailVerification: true,
+      ),
     );
   }
 }

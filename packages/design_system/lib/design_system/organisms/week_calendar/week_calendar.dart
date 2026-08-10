@@ -257,13 +257,11 @@ class BebeWeekCalendarDay extends StatelessWidget {
         isSelected: isSelected,
       ),
       child: ExcludeSemantics(
-        child: Flexible(
-          child: SizedBox(
-            width: 80,
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: spacing.spacingXs),
-              child: content,
-            ),
+        child: SizedBox(
+          width: 80,
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: spacing.spacingXs),
+            child: content,
           ),
         ),
       ),

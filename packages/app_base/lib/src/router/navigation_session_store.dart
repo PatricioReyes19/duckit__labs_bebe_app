@@ -22,8 +22,20 @@ class NavigationSessionStore {
     StartupPaths.home,
     '/home/history',
     '/agenda',
+    '/agenda/reminders/settings',
+    '/agenda/reminders/new',
     '/health',
+    '/health/vaccines',
+    '/health/controls',
+    '/health/growth',
+    '/health/consultations',
+    '/health/pediatric-care',
+    '/health/clinical-history',
     '/family',
+    '/family/babies',
+    '/family/babies/new',
+    '/family/care-circle',
+    '/family/care-circle/invite',
     '/family/settings',
     '/register',
     '/register/sleep',
@@ -36,6 +48,12 @@ class NavigationSessionStore {
     '/settings',
   };
 
+  static const _restorablePrefixes = <String>{
+    '/agenda/events/',
+    '/family/members/',
+    '/family/settings/',
+  };
+
   final SharedPreferences _preferences;
 
   String get initialLocation {
@@ -45,7 +63,7 @@ class NavigationSessionStore {
     }
 
     final uri = Uri.tryParse(location);
-    if (uri == null || !_restorablePaths.contains(uri.path)) {
+    if (uri == null || !_isRestorable(uri.path)) {
       return StartupPaths.splash;
     }
 
@@ -58,8 +76,13 @@ class NavigationSessionStore {
       return;
     }
 
-    if (_restorablePaths.contains(location.path)) {
+    if (_isRestorable(location.path)) {
       await _preferences.setString(_locationKey, location.toString());
     }
+  }
+
+  static bool _isRestorable(String path) {
+    return _restorablePaths.contains(path) ||
+        _restorablePrefixes.any(path.startsWith);
   }
 }

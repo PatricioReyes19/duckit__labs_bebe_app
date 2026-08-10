@@ -1,4 +1,4 @@
-import 'package:core/core.dart';
+import 'package:core/startup.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
@@ -15,7 +15,6 @@ class SplashBloc extends Bloc<SplashEvent, SplashState> {
   SplashBloc({
     required ResolveEntryDestination resolveEntryDestination,
     SplashErrorReporter? errorReporter,
-    this.minimumDisplayDuration = const Duration(milliseconds: 700),
   })  : _resolveEntryDestination = resolveEntryDestination,
         _errorReporter = errorReporter,
         super(const SplashState.resolving()) {
@@ -29,7 +28,6 @@ class SplashBloc extends Bloc<SplashEvent, SplashState> {
 
   final ResolveEntryDestination _resolveEntryDestination;
   final SplashErrorReporter? _errorReporter;
-  final Duration minimumDisplayDuration;
 
   bool _isResolving = false;
 
@@ -43,11 +41,9 @@ class SplashBloc extends Bloc<SplashEvent, SplashState> {
 
     _isResolving = true;
     emit(const SplashState.resolving());
-    final displayStopwatch = Stopwatch()..start();
 
     try {
       final resolution = await _resolveEntryDestination();
-      await _waitForMinimumDisplayDuration(displayStopwatch.elapsed);
       emit(SplashState.routeRequested(destination: resolution.destination));
     } on Object catch (error, stackTrace) {
       _errorReporter?.call(error, stackTrace);
@@ -60,13 +56,6 @@ class SplashBloc extends Bloc<SplashEvent, SplashState> {
       );
     } finally {
       _isResolving = false;
-    }
-  }
-
-  Future<void> _waitForMinimumDisplayDuration(Duration elapsed) async {
-    final remaining = minimumDisplayDuration - elapsed;
-    if (remaining > Duration.zero) {
-      await Future<void>.delayed(remaining);
     }
   }
 

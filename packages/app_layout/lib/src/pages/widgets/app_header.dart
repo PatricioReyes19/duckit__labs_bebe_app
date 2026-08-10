@@ -11,6 +11,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
     this.showDivider = false,
     this.showBackButton = false,
     this.showBrandMark = true,
+    this.onBackPressed,
     this.brandMarkSize = 34,
     this.backgroundColor,
     this.foregroundColor,
@@ -26,6 +27,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
   final bool showDivider;
   final bool showBackButton;
   final bool showBrandMark;
+  final VoidCallback? onBackPressed;
   final double brandMarkSize;
 
   final Color? backgroundColor;
@@ -49,11 +51,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
         leading ??
         (showBackButton
             ? IconButton(
-                onPressed: () {
-                  if (Navigator.of(context).canPop()) {
-                    Navigator.of(context).pop();
-                  }
-                },
+                onPressed: onBackPressed,
                 icon: const Icon(Icons.arrow_back_ios_new_rounded),
               )
             : BebeBrandMark(

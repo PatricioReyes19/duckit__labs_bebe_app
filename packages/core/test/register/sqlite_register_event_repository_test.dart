@@ -133,5 +133,35 @@ void main() {
     expect(updated.notes, isNull);
     expect(updated.caregiverId, isNull);
     expect(updated.createdAt, saved.createdAt);
+    expect(updated.syncStatus, RegisterSyncStatus.pending);
   });
+
+  test(
+    'observes local changes and keeps deletions as sync tombstones',
+    () async {
+      final snapshots = repository.observeByBaby('baby-1').take(3).toList();
+      await Future<void>.delayed(Duration.zero);
+
+      final saved = await repository.save(
+        RegisterEventDraft(
+          babyId: 'baby-1',
+          type: RegisterEventType.diaper,
+          occurredAt: createdAt,
+          details: const {'subtype': 'wet', 'urine_amount': 'normal'},
+        ),
+      );
+      await repository.delete(saved.id);
+
+      final values = await snapshots;
+      expect(values[0], isEmpty);
+      expect(values[1].single.id, saved.id);
+      expect(values[2], isEmpty);
+      expect(await repository.findById(saved.id), isNull);
+      expect(
+        (await repository.findByIdIncludingDeleted(saved.id))?.isDeleted,
+        isTrue,
+      );
+      expect((await repository.listPending()).single.id, saved.id);
+    },
+  );
 }

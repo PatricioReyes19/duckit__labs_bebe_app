@@ -24,6 +24,19 @@ class HealthEventModel {
   final FamilyMemberEntity? caregiver;
   final HealthEventStatus status;
 
+  factory HealthEventModel.fromEntity(HealthEventEntity entity) =>
+      HealthEventModel(
+        id: entity.id,
+        babyId: entity.babyId,
+        type: entity.type,
+        title: entity.title,
+        description: entity.description,
+        startsAt: entity.startsAt,
+        caregiverId: entity.caregiver?.id,
+        caregiver: entity.caregiver,
+        status: entity.status,
+      );
+
   factory HealthEventModel.fromRow(Map<String, Object?> row) {
     final caregiverName = row['caregiver_name'] as String?;
     return HealthEventModel(
@@ -94,6 +107,17 @@ class HealthMeasurementModel {
   final String unit;
   final DateTime recordedAt;
   final String source;
+
+  factory HealthMeasurementModel.fromEntity(HealthMeasurementEntity entity) =>
+      HealthMeasurementModel(
+        id: entity.id,
+        babyId: entity.babyId,
+        type: entity.type,
+        value: entity.value,
+        unit: entity.unit,
+        recordedAt: entity.recordedAt,
+        source: entity.source,
+      );
 
   factory HealthMeasurementModel.fromRow(Map<String, Object?> row) =>
       HealthMeasurementModel(

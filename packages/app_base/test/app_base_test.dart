@@ -1,4 +1,5 @@
 import 'package:app_base/src/dependencies/startup_module.dart';
+import 'package:app_base/src/router/app_layout_configuration.dart';
 import 'package:app_base/src/router/navigation_session_store.dart';
 import 'package:app_base/src/router/startup_route_mapper.dart';
 import 'package:auth/auth.dart';
@@ -113,6 +114,43 @@ void main() {
       await store.remember(Uri.parse('/family/settings'));
 
       expect(store.initialLocation, '/family/settings');
+
+      await store.remember(Uri.parse('/agenda/events/control-42'));
+
+      expect(store.initialLocation, '/agenda/events/control-42');
+
+      await store.remember(Uri.parse('/family/settings/privacy'));
+
+      expect(store.initialLocation, '/family/settings/privacy');
+    });
+  });
+
+  group('AppLayoutVisibilityPolicy', () {
+    test('muestra la navegación inferior sólo en las vistas principales', () {
+      for (final path in const ['/home', '/agenda', '/health', '/family']) {
+        final chrome = appLayoutVisibilityPolicy.resolve(path);
+
+        expect(chrome.showBottomBar, isTrue, reason: path);
+        expect(chrome.showPrimaryAction, isTrue, reason: path);
+        expect(chrome.showBackButton, isFalse, reason: path);
+      }
+    });
+
+    test('las subrutas ocultan la navegación inferior y permiten volver', () {
+      for (final path in const [
+        '/home/history',
+        '/agenda/reminders/new',
+        '/agenda/events/control-42',
+        '/health/vaccines',
+        '/family/babies/new',
+        '/family/settings/privacy',
+      ]) {
+        final chrome = appLayoutVisibilityPolicy.resolve(path);
+
+        expect(chrome.showBottomBar, isFalse, reason: path);
+        expect(chrome.showPrimaryAction, isFalse, reason: path);
+        expect(chrome.showBackButton, isTrue, reason: path);
+      }
     });
   });
 }
@@ -122,6 +160,7 @@ const _session = AuthSession(
     id: 'caregiver-1',
     email: 'caregiver@example.com',
     displayName: 'Cuidador',
+    emailVerification: true,
   ),
 );
 

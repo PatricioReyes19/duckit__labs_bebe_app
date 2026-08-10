@@ -84,10 +84,13 @@ void main() {
 
     await tester.tap(find.text('Todos'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Alimentación').last);
+    await tester.tap(find.textContaining('Lactancia'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Detalle del registro'), findsOneWidget);
+    expect(
+      find.bySemanticsLabel(RegExp('Detalle del registro')),
+      findsOneWidget,
+    );
     expect(find.text('Tomó leche con calma.'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -130,6 +133,9 @@ class _FakeRegisterEventRepository implements RegisterEventRepository {
   final List<RegisteredEvent> events;
 
   @override
+  Stream<void> get changes => const Stream.empty();
+
+  @override
   Future<void> delete(String id) async {}
 
   @override
@@ -147,6 +153,15 @@ class _FakeRegisterEventRepository implements RegisterEventRepository {
     return limit == null || filtered.length <= limit
         ? filtered
         : filtered.take(limit).toList(growable: false);
+  }
+
+  @override
+  Stream<List<RegisteredEvent>> observeByBaby(
+    String babyId, {
+    RegisterEventType? type,
+    int? limit,
+  }) async* {
+    yield await listByBaby(babyId, type: type, limit: limit);
   }
 
   @override

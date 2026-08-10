@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'splash_brand_content.dart';
+import '../widgets/splash_brand_content.dart';
 
 class SplashAuthEntry extends StatelessWidget {
   const SplashAuthEntry({

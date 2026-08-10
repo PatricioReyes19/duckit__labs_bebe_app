@@ -4,14 +4,17 @@ import 'package:injectable/injectable.dart';
 @module
 abstract class CoreDataModule {
   @lazySingleton
-  BebeDatabase bebeDatabase() => BebeDatabase();
+  BebeDatabase bebeDatabase(GetCurrentSession getCurrentSession) =>
+      BebeDatabase(
+        scopeProvider: () async => (await getCurrentSession())?.user.id,
+      );
 
   @lazySingleton
   FamilyRepository familyRepository(BebeDatabase database) =>
       SqliteFamilyRepository(database);
 
   @lazySingleton
-  AgendaRepository agendaRepository(BebeDatabase database) =>
+  SqliteAgendaRepository localAgendaRepository(BebeDatabase database) =>
       SqliteAgendaRepository(database);
 
   @lazySingleton
@@ -31,8 +34,11 @@ abstract class CoreDataModule {
       SetActiveFamilyBaby(repository);
 
   @lazySingleton
-  GetAgendaOverview getAgendaOverview(AgendaRepository repository) =>
-      GetAgendaOverview(repository);
+  GetAgendaOverview getAgendaOverview(
+    AgendaRepository repository,
+    RegisterEventRepository registerRepository,
+  ) =>
+      GetAgendaOverview(repository, registerRepository);
 
   @lazySingleton
   GetHealthOverview getHealthOverview(HealthRepository repository) =>

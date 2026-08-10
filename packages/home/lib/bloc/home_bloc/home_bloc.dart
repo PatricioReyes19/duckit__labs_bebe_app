@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:core/core.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
@@ -19,10 +21,14 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     on<_Started>((event, emit) => _load(emit, showLoading: true));
     on<_Refreshed>((event, emit) => _load(emit, showLoading: false));
     on<_Retried>((event, emit) => _load(emit, showLoading: true));
+    _registerEventsSubscription = _getHomeOverview.changes.listen((_) {
+      if (!isClosed) add(const HomeEvent.refreshed());
+    });
   }
 
   final GetHomeOverview _getHomeOverview;
   final HomePresentationClock _clock;
+  late final StreamSubscription<void> _registerEventsSubscription;
 
   Future<void> _load(
     Emitter<HomeState> emit, {
@@ -51,5 +57,11 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         ),
       );
     }
+  }
+
+  @override
+  Future<void> close() async {
+    await _registerEventsSubscription.cancel();
+    return super.close();
   }
 }

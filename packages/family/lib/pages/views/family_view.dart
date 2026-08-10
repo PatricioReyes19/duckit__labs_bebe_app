@@ -11,6 +11,8 @@ class FamilyView extends StatelessWidget {
     this.onManageCareCirclePressed,
     this.onInviteCaregiverPressed,
     this.onFamilySettingsPressed,
+    this.onPersonalSettingsPressed,
+    this.onBabyPressed,
     this.onMemberPressed,
     super.key,
   });
@@ -20,6 +22,8 @@ class FamilyView extends StatelessWidget {
   final VoidCallback? onManageCareCirclePressed;
   final VoidCallback? onInviteCaregiverPressed;
   final VoidCallback? onFamilySettingsPressed;
+  final VoidCallback? onPersonalSettingsPressed;
+  final ValueChanged<String>? onBabyPressed;
   final ValueChanged<String>? onMemberPressed;
 
   @override
@@ -40,6 +44,8 @@ class FamilyView extends StatelessWidget {
             onManageCareCirclePressed: onManageCareCirclePressed,
             onInviteCaregiverPressed: onInviteCaregiverPressed,
             onFamilySettingsPressed: onFamilySettingsPressed,
+            onPersonalSettingsPressed: onPersonalSettingsPressed,
+            onBabyPressed: onBabyPressed,
             onMemberPressed: onMemberPressed,
           ),
         };
@@ -56,6 +62,8 @@ class _FamilyContent extends StatelessWidget {
     this.onManageCareCirclePressed,
     this.onInviteCaregiverPressed,
     this.onFamilySettingsPressed,
+    this.onPersonalSettingsPressed,
+    this.onBabyPressed,
     this.onMemberPressed,
   });
 
@@ -65,6 +73,8 @@ class _FamilyContent extends StatelessWidget {
   final VoidCallback? onManageCareCirclePressed;
   final VoidCallback? onInviteCaregiverPressed;
   final VoidCallback? onFamilySettingsPressed;
+  final VoidCallback? onPersonalSettingsPressed;
+  final ValueChanged<String>? onBabyPressed;
   final ValueChanged<String>? onMemberPressed;
 
   @override
@@ -130,7 +140,7 @@ class _FamilyContent extends StatelessWidget {
                 variant: baby.avatarVariant,
               ),
               isActive: baby.id == overview.activeBabyId,
-              onPressed: () => bloc.add(FamilyEvent.babySelected(baby.id)),
+              onPressed: () => onBabyPressed?.call(baby.id),
             ),
         ],
       ),
@@ -161,6 +171,7 @@ class _FamilyContent extends StatelessWidget {
       familyActions: _FamilyActions(
         onInviteCaregiverPressed: onInviteCaregiverPressed,
         onFamilySettingsPressed: onFamilySettingsPressed,
+        onPersonalSettingsPressed: onPersonalSettingsPressed,
       ),
     );
   }
@@ -218,10 +229,12 @@ class _FamilyActions extends StatelessWidget {
   const _FamilyActions({
     this.onInviteCaregiverPressed,
     this.onFamilySettingsPressed,
+    this.onPersonalSettingsPressed,
   });
 
   final VoidCallback? onInviteCaregiverPressed;
   final VoidCallback? onFamilySettingsPressed;
+  final VoidCallback? onPersonalSettingsPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -239,11 +252,19 @@ class _FamilyActions extends StatelessWidget {
         ),
         SizedBox(height: spacing.spacingM),
         BebeDetailActionCard(
-          title: 'Configuración del núcleo',
-          description: 'Miembros, permisos e invitaciones',
+          title: 'Configuración familiar',
+          description: 'Reglas, permisos e invitaciones del núcleo',
           icon: const Icon(Icons.settings_outlined),
           variant: BebeDetailActionCardVariant.neutral,
           onPressed: onFamilySettingsPressed ?? _emptyCallback,
+        ),
+        SizedBox(height: spacing.spacingM),
+        BebeDetailActionCard(
+          title: 'Mi cuenta y preferencias',
+          description: 'Perfil personal, tema, privacidad y sesión',
+          icon: const Icon(Icons.manage_accounts_outlined),
+          variant: BebeDetailActionCardVariant.accent,
+          onPressed: onPersonalSettingsPressed ?? _emptyCallback,
         ),
       ],
     );

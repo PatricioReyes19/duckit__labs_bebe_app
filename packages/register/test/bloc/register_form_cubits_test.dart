@@ -175,6 +175,9 @@ class _MemoryRegisterEventRepository implements RegisterEventRepository {
   final drafts = <RegisterEventDraft>[];
 
   @override
+  Stream<void> get changes => const Stream.empty();
+
+  @override
   Future<RegisteredEvent> save(RegisterEventDraft draft) async {
     drafts.add(draft);
     return RegisteredEvent(
@@ -210,4 +213,13 @@ class _MemoryRegisterEventRepository implements RegisterEventRepository {
     int? limit,
   }) async =>
       const [];
+
+  @override
+  Stream<List<RegisteredEvent>> observeByBaby(
+    String babyId, {
+    RegisterEventType? type,
+    int? limit,
+  }) async* {
+    yield await listByBaby(babyId, type: type, limit: limit);
+  }
 }

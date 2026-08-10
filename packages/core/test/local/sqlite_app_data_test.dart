@@ -16,6 +16,7 @@ void main() {
     database = BebeDatabase(
       databaseFactory: databaseFactoryFfi,
       databasePath: inMemoryDatabasePath,
+      seedDemoData: true,
     );
     families = SqliteFamilyRepository(database);
     agenda = SqliteAgendaRepository(database, idGenerator: () => 'agenda-new');

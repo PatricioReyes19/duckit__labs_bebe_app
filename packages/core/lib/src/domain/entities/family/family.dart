@@ -78,3 +78,21 @@ class BabyPatch {
   final DateTime? birthDate;
   final String? avatarAssetPath;
 }
+
+class InitialFamilyDraft {
+  const InitialFamilyDraft({
+    required this.familyName,
+    required this.babyName,
+    required this.birthDate,
+    required this.ownerName,
+    required this.ownerEmail,
+    this.avatarAssetPath,
+  });
+
+  final String familyName;
+  final String babyName;
+  final DateTime birthDate;
+  final String ownerName;
+  final String ownerEmail;
+  final String? avatarAssetPath;
+}

@@ -11,11 +11,10 @@ typedef FamilyClock = DateTime Function();
 
 class FamilyBloc extends Bloc<FamilyEvent, FamilyState> {
   FamilyBloc({
-    required GetFamilyOverview getFamilyOverview,
+    required this._getFamilyOverview,
     required SetActiveFamilyBaby setActiveBaby,
     FamilyClock? clock,
-  }) : _getFamilyOverview = getFamilyOverview,
-       _setActiveBaby = setActiveBaby,
+  }) : _setActiveBaby = setActiveBaby,
        _clock = clock ?? DateTime.now,
        super(const FamilyState.initial()) {
     on<_Started>(_onStarted);

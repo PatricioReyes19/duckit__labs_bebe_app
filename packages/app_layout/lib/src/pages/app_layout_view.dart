@@ -88,6 +88,9 @@ class _AppLayoutViewState extends State<AppLayoutView> {
                       : routeChrome.actions,
                   showBackButton: routeChrome.showBackButton,
                   showBrandMark: routeChrome.showBrandMark,
+                  onBackPressed: routeChrome.showBackButton
+                      ? _onBackPressed
+                      : null,
                 )
               : null,
           body: widget.child,
@@ -102,4 +105,39 @@ class _AppLayoutViewState extends State<AppLayoutView> {
       },
     );
   }
+
+  void _onBackPressed() {
+    if (context.canPop()) {
+      context.pop();
+      return;
+    }
+
+    context.go(_parentLocation(widget.state.uri.path));
+  }
+
+  String _parentLocation(String path) {
+    final segments = Uri.parse(path).pathSegments;
+    if (segments.length < 2) {
+      return '/home';
+    }
+
+    final branchRoot = '/${segments.first}';
+    if (_branchRoots.contains(branchRoot)) {
+      if (branchRoot == '/family' &&
+          segments.length > 2 &&
+          _familySectionParents.contains(segments[1])) {
+        return '$branchRoot/${segments[1]}';
+      }
+      return branchRoot;
+    }
+
+    return '/${segments.take(segments.length - 1).join('/')}';
+  }
+
+  static const _branchRoots = {'/home', '/agenda', '/health', '/family'};
+  static const _familySectionParents = {
+    'babies',
+    'care-circle',
+    'settings',
+  };
 }

@@ -1,5 +1,6 @@
 import 'package:agenda/agenda.dart';
 import 'package:agenda/models/agenda_overview_vm.dart';
+import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -10,6 +11,8 @@ class AgendaView extends StatelessWidget {
     this.onConfigureRemindersPressed,
     this.onHealthPressed,
     this.onCreateReminderPressed,
+    this.onRegisterPressed,
+    this.onRegisterHistoryPressed,
     this.onEventPressed,
     super.key,
   });
@@ -18,6 +21,8 @@ class AgendaView extends StatelessWidget {
   final VoidCallback? onConfigureRemindersPressed;
   final VoidCallback? onHealthPressed;
   final VoidCallback? onCreateReminderPressed;
+  final VoidCallback? onRegisterPressed;
+  final VoidCallback? onRegisterHistoryPressed;
   final ValueChanged<String>? onEventPressed;
 
   @override
@@ -46,6 +51,8 @@ class AgendaView extends StatelessWidget {
             onConfigureRemindersPressed: onConfigureRemindersPressed,
             onHealthPressed: onHealthPressed,
             onCreateReminderPressed: onCreateReminderPressed,
+            onRegisterPressed: onRegisterPressed,
+            onRegisterHistoryPressed: onRegisterHistoryPressed,
             onEventPressed: onEventPressed,
           ),
           AgendaLoaded(:final overview) => _AgendaContent(
@@ -58,6 +65,8 @@ class AgendaView extends StatelessWidget {
             onConfigureRemindersPressed: onConfigureRemindersPressed,
             onHealthPressed: onHealthPressed,
             onCreateReminderPressed: onCreateReminderPressed,
+            onRegisterPressed: onRegisterPressed,
+            onRegisterHistoryPressed: onRegisterHistoryPressed,
             onEventPressed: onEventPressed,
           ),
         };
@@ -107,6 +116,8 @@ class _AgendaContent extends StatelessWidget {
     this.onConfigureRemindersPressed,
     this.onHealthPressed,
     this.onCreateReminderPressed,
+    this.onRegisterPressed,
+    this.onRegisterHistoryPressed,
     this.onEventPressed,
   });
 
@@ -116,6 +127,8 @@ class _AgendaContent extends StatelessWidget {
   final VoidCallback? onConfigureRemindersPressed;
   final VoidCallback? onHealthPressed;
   final VoidCallback? onCreateReminderPressed;
+  final VoidCallback? onRegisterPressed;
+  final VoidCallback? onRegisterHistoryPressed;
   final ValueChanged<String>? onEventPressed;
 
   @override
@@ -123,6 +136,7 @@ class _AgendaContent extends StatelessWidget {
     final bloc = context.read<AgendaBloc>();
     final spacing = context.theme.spacing;
     final todayEvents = overview.eventsFor(overview.selectedWeekDay);
+    final dayRecords = overview.recordsFor(overview.selectedWeekDay);
     final upcomingEvents = overview.upcomingAfter(overview.selectedWeekDay);
 
     return BebeAgendaTemplate(
@@ -197,11 +211,23 @@ class _AgendaContent extends StatelessWidget {
           ),
         ],
       ),
-      todaySection: _AgendaEventGroup(
-        title: 'Hoy',
-        emptyMessage: 'No hay eventos de esta categoría programados para hoy.',
-        events: todayEvents,
-        onEventPressed: onEventPressed,
+      todaySection: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _AgendaEventGroup(
+            title: 'Programado',
+            emptyMessage:
+                'No hay eventos de esta categoría programados para este día.',
+            events: todayEvents,
+            onEventPressed: onEventPressed,
+          ),
+          SizedBox(height: spacing.spacing2xl),
+          _RegisteredActivityGroup(
+            events: dayRecords,
+            onRegisterPressed: onRegisterPressed,
+            onHistoryPressed: onRegisterHistoryPressed,
+          ),
+        ],
       ),
       upcomingSection: _AgendaEventGroup(
         title: 'Próximos días',
@@ -387,13 +413,145 @@ class _AgendaEventCard extends StatelessWidget {
                   ? BebeCaregiverBadgeVariant.brand
                   : BebeCaregiverBadgeVariant.accent,
             ),
-      syncIndicator: event.syncStatus == AgendaSyncStatus.pending
-          ? const _SyncBadge(label: 'Pendiente')
-          : null,
+      syncIndicator: event.syncStatus == AgendaSyncStatus.synced
+          ? null
+          : _SyncBadge(label: _agendaSyncLabel(event.syncStatus)),
       onPressed: onPressed,
     );
   }
 }
+
+class _RegisteredActivityGroup extends StatelessWidget {
+  const _RegisteredActivityGroup({
+    required this.events,
+    this.onRegisterPressed,
+    this.onHistoryPressed,
+  });
+
+  final List<AgendaRegisterEventVm> events;
+  final VoidCallback? onRegisterPressed;
+  final VoidCallback? onHistoryPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Registros del día',
+                style: theme.typography.styles.title.sm.semibold.copyWith(
+                  color: theme.colors.text.neutralTitle,
+                ),
+              ),
+            ),
+            if (onHistoryPressed != null)
+              TextButton(
+                onPressed: onHistoryPressed,
+                child: const Text('Ver historial'),
+              ),
+          ],
+        ),
+        SizedBox(height: theme.spacing.spacingM),
+        if (events.isEmpty)
+          _AgendaSectionEmptyState(
+            message: 'Aún no hay actividad registrada para este día.',
+          )
+        else
+          for (var index = 0; index < events.length; index++) ...[
+            _RegisteredActivityCard(event: events[index]),
+            if (index != events.length - 1)
+              SizedBox(height: theme.spacing.spacingS),
+          ],
+        SizedBox(height: theme.spacing.spacingM),
+        OutlinedButton.icon(
+          onPressed: onRegisterPressed,
+          icon: const Icon(Icons.add_rounded),
+          label: const Text('Registrar evento ahora'),
+        ),
+      ],
+    );
+  }
+}
+
+class _RegisteredActivityCard extends StatelessWidget {
+  const _RegisteredActivityCard({required this.event});
+
+  final AgendaRegisterEventVm event;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    final isPending = event.syncStatus != RegisterSyncStatus.synced;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: theme.colors.background.neutralsSurface,
+        borderRadius: BorderRadius.circular(theme.borderRadius.radius3xl),
+        border: Border.all(color: theme.colors.border.neutralDefault),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(theme.spacing.spacingL),
+        child: Row(
+          children: [
+            Icon(
+              _registerIcon(event.type),
+              color: theme.colors.icons.brandDefault,
+            ),
+            SizedBox(width: theme.spacing.spacingM),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    event.title,
+                    style: theme.typography.styles.body.md.semibold.copyWith(
+                      color: theme.colors.text.neutralTitle,
+                    ),
+                  ),
+                  SizedBox(height: theme.spacing.spacingXs),
+                  Text(
+                    '${_time(event.occurredAt)} · ${event.description}',
+                    style: theme.typography.styles.body.sm.regular.copyWith(
+                      color: theme.colors.text.neutralBody,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (isPending)
+              _SyncBadge(label: _registerSyncLabel(event.syncStatus)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+IconData _registerIcon(RegisterEventType type) => switch (type) {
+  RegisterEventType.feeding => Icons.local_drink_outlined,
+  RegisterEventType.sleep => Icons.bedtime_outlined,
+  RegisterEventType.diaper => Icons.baby_changing_station_outlined,
+  RegisterEventType.clinicalObservation => Icons.edit_note_outlined,
+  RegisterEventType.medication => Icons.medication_outlined,
+  RegisterEventType.measurement => Icons.straighten_outlined,
+};
+
+String _agendaSyncLabel(AgendaSyncStatus status) => switch (status) {
+  AgendaSyncStatus.synced => 'Sincronizado',
+  AgendaSyncStatus.pending => 'Local',
+  AgendaSyncStatus.syncing => 'Sincronizando',
+  AgendaSyncStatus.failed => 'Reintentar',
+};
+
+String _registerSyncLabel(RegisterSyncStatus status) => switch (status) {
+  RegisterSyncStatus.synced => 'Sincronizado',
+  RegisterSyncStatus.pending => 'Local',
+  RegisterSyncStatus.syncing => 'Sincronizando',
+  RegisterSyncStatus.failed => 'Reintentar',
+};
 
 List<BebeCalendarMarkerData> _markersForDay(
   BuildContext context,

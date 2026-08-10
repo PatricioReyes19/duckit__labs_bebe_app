@@ -38,6 +38,9 @@ analysis_benchmark.json
 .flutter-plugins-dependencies
 **/generated_plugin_registrant.dart
 .packages
+**/config/supabase.local.json
+supabase/.temp/
+supabase/functions/.env
 .pub-preload-cache/
 .pub/
 build/

@@ -1,13 +1,15 @@
 import 'dart:async';
 
+import 'package:core/core.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../domain/auth_gateway.dart';
 import '../domain/auth_failure.dart';
-import '../domain/entities/auth_session.dart';
-import '../domain/entities/auth_user.dart';
 
-/// Adaptador local para desarrollo. No persiste ni compara contraseñas.
+/// Adaptador local para desarrollo con una cuenta predeterminada.
+///
+/// Valida las credenciales en memoria y persiste solamente los datos de sesión;
+/// la contraseña nunca se almacena en preferencias.
 ///
 /// Debe reemplazarse por `FirebaseAuthGateway` en la composición productiva.
 class LocalAuthGateway implements AuthGateway {
@@ -43,6 +45,7 @@ class LocalAuthGateway implements AuthGateway {
         email: email,
         displayName:
             await _preferences.getString(displayNameKey) ?? _nameFor(email),
+        emailVerification: true,
       ),
     );
   }
@@ -70,6 +73,7 @@ class LocalAuthGateway implements AuthGateway {
         id: 'local-bypass',
         email: 'bypass@local.bebeapp',
         displayName: 'Usuario Bypass',
+        emailVerification: true,
       ),
     );
     await _preferences.setBool(onboardingCompletedKey, true);
@@ -88,6 +92,7 @@ class LocalAuthGateway implements AuthGateway {
         id: _idFor(email),
         email: email,
         displayName: displayName,
+        emailVerification: true,
       ),
     );
     await _preferences.setBool(onboardingCompletedKey, false);

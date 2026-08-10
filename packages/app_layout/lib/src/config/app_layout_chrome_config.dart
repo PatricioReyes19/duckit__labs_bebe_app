@@ -13,6 +13,16 @@ class AppLayoutChromeConfig {
     this.actions = const <Widget>[],
   });
 
+  const AppLayoutChromeConfig.subview({
+    this.title,
+    this.leading,
+    this.actions = const <Widget>[],
+    this.showHeader = true,
+    this.showBrandMark = false,
+  }) : showBottomBar = false,
+       showPrimaryAction = false,
+       showBackButton = true;
+
   final bool showHeader;
   final bool showBottomBar;
   final bool showPrimaryAction;

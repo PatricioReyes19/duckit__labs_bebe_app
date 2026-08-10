@@ -25,6 +25,7 @@ class SqliteAppSettingsRepository implements AppSettingsRepository {
   @override
   Future<AppSettingsEntity> update(AppSettingsPatch patch) async {
     final changes = <String, Object?>{
+      if (patch.name != null) 'account_name': patch.name!.trim(),
       if (patch.theme != null) 'theme_mode': patch.theme!.name,
       if (patch.highContrast != null)
         'high_contrast': patch.highContrast! ? 1 : 0,

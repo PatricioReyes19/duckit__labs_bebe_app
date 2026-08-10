@@ -6,6 +6,7 @@ enum FamilyAvatarVariant { brand, accent, information, warning }
 
 class FamilyOverviewVm {
   const FamilyOverviewVm({
+    required this.familyId,
     required this.familyName,
     required this.activeBabyId,
     required this.babies,
@@ -13,6 +14,7 @@ class FamilyOverviewVm {
     required this.pendingInvitations,
   });
 
+  final String familyId;
   final String familyName;
   final String activeBabyId;
   final List<FamilyBabyVm> babies;
@@ -26,6 +28,7 @@ class FamilyOverviewVm {
     FamilyOverviewEntity entity, {
     required DateTime referenceDate,
   }) => FamilyOverviewVm(
+    familyId: entity.id,
     familyName: entity.name,
     activeBabyId: entity.activeBabyId,
     pendingInvitations: entity.pendingInvitations,
@@ -58,6 +61,7 @@ class FamilyOverviewVm {
   );
 
   FamilyOverviewVm copyWith({String? activeBabyId}) => FamilyOverviewVm(
+    familyId: familyId,
     familyName: familyName,
     activeBabyId: activeBabyId ?? this.activeBabyId,
     babies: babies,

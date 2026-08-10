@@ -2,13 +2,11 @@ flutter_launcher_icons:
   android: true
   ios: true
 
-  image_path: assets/branding/launcher/bebeapp_launcher_light_1024.png
+  image_path: assets/branding/launcher/bebeapp_launcher_dark_clouds_1024.png
   remove_alpha_ios: true
+  background_color_ios: "#0F2A2D"
 
-  adaptive_icon_background: "#FAFAFC"
+  adaptive_icon_background: assets/branding/launcher/bebeapp_launcher_dark_clouds_background_1024.png
   adaptive_icon_foreground: assets/branding/launcher/ic_launcher_foreground.png
   adaptive_icon_monochrome: assets/branding/launcher/ic_launcher_monochrome.png
-  adaptive_icon_foreground_inset: 20
-
-  web:
-    generate: false
+  adaptive_icon_foreground_inset: 10

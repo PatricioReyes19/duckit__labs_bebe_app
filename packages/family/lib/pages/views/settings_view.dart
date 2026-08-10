@@ -17,6 +17,7 @@ class SettingsView extends StatelessWidget {
     this.onHelpCenterPressed,
     this.onReportProblemPressed,
     this.onSignOutPressed,
+    this.onThemeChanged,
     super.key,
   });
 
@@ -32,6 +33,7 @@ class SettingsView extends StatelessWidget {
   final VoidCallback? onHelpCenterPressed;
   final VoidCallback? onReportProblemPressed;
   final VoidCallback? onSignOutPressed;
+  final ValueChanged<BebeThemeModeOption>? onThemeChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -59,6 +61,7 @@ class SettingsView extends StatelessWidget {
           onHelpCenterPressed: onHelpCenterPressed,
           onReportProblemPressed: onReportProblemPressed,
           onSignOutPressed: onSignOutPressed,
+          onThemeChanged: onThemeChanged,
         );
       },
     );
@@ -80,6 +83,7 @@ class _SettingsContent extends StatelessWidget {
     this.onHelpCenterPressed,
     this.onReportProblemPressed,
     this.onSignOutPressed,
+    this.onThemeChanged,
   });
 
   final SettingsState state;
@@ -95,6 +99,7 @@ class _SettingsContent extends StatelessWidget {
   final VoidCallback? onHelpCenterPressed;
   final VoidCallback? onReportProblemPressed;
   final VoidCallback? onSignOutPressed;
+  final ValueChanged<BebeThemeModeOption>? onThemeChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -110,8 +115,8 @@ class _SettingsContent extends StatelessWidget {
           BebeAccountSummary(
             name: state.name,
             email: state.email,
-            avatar: const _SettingsAvatar(initials: 'PR'),
-            status: const _VerifiedStatus(label: 'Correo verificado'),
+            avatar: _SettingsAvatar(initials: _initialsFor(state.name)),
+            status: const _VerifiedStatus(label: 'Cuenta protegida'),
             onPressed: onAccountPressed ?? _emptyCallback,
           ),
         ],
@@ -125,13 +130,17 @@ class _SettingsContent extends StatelessWidget {
             icon: const Icon(Icons.palette_outlined),
             onPressed: onAppearancePressed ?? _emptyCallback,
           ),
-          BebeThemeModeSelector(
-            value: state.themeMode,
-            onChanged: (value) => bloc.add(SettingsEvent.themeChanged(value)),
-            systemLabel: 'Usar configuración del sistema',
-            lightLabel: 'Claro',
-            darkLabel: 'Oscuro',
-            semanticLabel: 'Selector de tema',
+          BabyDayNightThemeSwitch(
+            isDark:
+                state.themeMode == BebeThemeModeOption.dark ||
+                (state.themeMode == BebeThemeModeOption.system &&
+                    Theme.of(context).brightness == Brightness.dark),
+            followsSystem: state.themeMode == BebeThemeModeOption.system,
+            onChanged: (isDark) => _changeTheme(
+              bloc,
+              isDark ? BebeThemeModeOption.dark : BebeThemeModeOption.light,
+            ),
+            onUseSystem: () => _changeTheme(bloc, BebeThemeModeOption.system),
           ),
           BebeSettingsSwitchTile(
             title: 'Contraste aumentado',
@@ -252,9 +261,41 @@ class _SettingsContent extends StatelessWidget {
         description: 'Finaliza la sesión en este dispositivo',
         icon: const Icon(Icons.logout_rounded),
         variant: BebeDetailActionCardVariant.warning,
-        onPressed: onSignOutPressed ?? _emptyCallback,
+        onPressed: () => _confirmSignOut(context),
       ),
     );
+  }
+
+  void _changeTheme(SettingsBloc bloc, BebeThemeModeOption value) {
+    bloc.add(SettingsEvent.themeChanged(value));
+    onThemeChanged?.call(value);
+  }
+
+  Future<void> _confirmSignOut(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        icon: const Icon(Icons.logout_rounded),
+        title: const Text('¿Cerrar sesión?'),
+        content: const Text(
+          'Tus registros guardados permanecerán sincronizados. '
+          'Necesitarás volver a ingresar para ver la información familiar.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Cerrar sesión'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed ?? false) {
+      (onSignOutPressed ?? _emptyCallback)();
+    }
   }
 }
 
@@ -413,3 +454,16 @@ class _SettingsSkeleton extends StatelessWidget {
 }
 
 void _emptyCallback() {}
+
+String _initialsFor(String name) {
+  final parts = name
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((part) => part.isNotEmpty)
+      .take(2)
+      .toList(growable: false);
+  if (parts.isEmpty) {
+    return 'CU';
+  }
+  return parts.map((part) => part[0].toUpperCase()).join();
+}

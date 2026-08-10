@@ -169,3 +169,15 @@ Una pantalla debe contar con ruta accesible, datos no simulados, estados de
 carga/vacío/error/offline cuando correspondan, acciones conectadas, semántica,
 soporte de texto al 200 %, verificación en los viewports definidos y pruebas de
 regresión visual aprobadas.
+
+## Revalidación del 10 de agosto de 2026
+
+- `design_system`, `home`, `app_base` y Widgetbook pasan análisis estático sin
+  incidencias.
+- Familia compila sin errores; conserva cuatro sugerencias de estilo sobre
+  initializing formals en sus blocs de datos, fuera de la capa visual auditada.
+- Pasan 7 pruebas de responsividad/Atomic Design y 2 pruebas del historial
+  diario: ancho de 320 px, texto al 200 %, altura natural, filtros, detalle,
+  semántica y estado vacío.
+- Widgetbook fue regenerado con 36 salidas y vuelve a contener su archivo
+  `main.directories.g.dart` canónico.

@@ -14,7 +14,7 @@ class MedicationRegisterCubit extends RegisterFormCubit {
             'dose': '',
             'unit': 'mL',
             'occurredAt': initialDateTime ?? DateTime.now(),
-            'frequency': 'Cada 8 horas',
+            'frequency': RegisterCatalog.medicationFrequencies[3],
             'endDate': null,
             'scheduleNextDoses': true,
             'notes': '',

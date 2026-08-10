@@ -1,6 +1,7 @@
 import 'package:auth/auth.dart';
 import 'package:core/core.dart';
 import 'package:injectable/injectable.dart';
+import 'package:notifications/notifications.dart';
 import 'package:onboarding/onboarding.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -11,19 +12,68 @@ abstract class StartupModule {
   SharedPreferencesAsync get startupPreferences => SharedPreferencesAsync();
 
   @lazySingleton
-  AuthGateway authGateway(
-    @Named('startupPreferences') SharedPreferencesAsync preferences,
-  ) =>
-      LocalAuthGateway(preferences);
+  FirebaseAuthGateway firebaseAuthGateway() => FirebaseAuthGateway();
 
   @lazySingleton
-  AuthService authService(AuthGateway gateway) => AuthService(gateway);
+  AuthGateway authGateway(FirebaseAuthGateway gateway) => gateway;
+
+  @lazySingleton
+  SessionRepository sessionRepository(FirebaseAuthGateway gateway) => gateway;
+
+  @lazySingleton
+  NotificationService notificationService(
+    PushDeviceRepository pushDeviceRepository,
+  ) =>
+      FirebaseNotificationService(
+        registerRemoteDevice: ({
+          required String token,
+          required String platform,
+        }) =>
+            pushDeviceRepository.register(
+          PushDeviceEntity(token: token, platform: platform),
+        ),
+        unregisterRemoteDevice: pushDeviceRepository.unregister,
+      );
+
+  @lazySingleton
+  AuthService authService(
+    AuthGateway gateway,
+    NotificationService notificationService,
+  ) =>
+      AuthService(
+        gateway,
+        beforeSignOut: notificationService.unregisterCurrentDevice,
+      );
+
+  @lazySingleton
+  ObserveSession observeSession(SessionRepository repository) =>
+      ObserveSession(repository);
+
+  @lazySingleton
+  GetCurrentSession getCurrentSession(SessionRepository repository) =>
+      GetCurrentSession(repository);
+
+  @lazySingleton
+  RefreshSession refreshSession(SessionRepository repository) =>
+      RefreshSession(repository);
+
+  @lazySingleton
+  SignOutSession signOutSession(SessionRepository repository) =>
+      SignOutSession(repository);
 
   @lazySingleton
   OnboardingRepository onboardingRepository(
     @Named('startupPreferences') SharedPreferencesAsync preferences,
+    AuthGateway authGateway,
+    FamilyRepository familyRepository,
   ) =>
-      LocalOnboardingRepository(preferences);
+      LocalOnboardingRepository(
+        preferences,
+        currentUserId: () async =>
+            (await authGateway.currentSession())?.user.id,
+        currentUser: () async => (await authGateway.currentSession())?.user,
+        familyRepository: familyRepository,
+      );
 
   @lazySingleton
   ResolveEntryDestination resolveEntryDestination(

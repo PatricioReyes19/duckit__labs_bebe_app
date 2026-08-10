@@ -5,6 +5,8 @@ abstract interface class FamilyRepository {
 
   Future<FamilyOverviewEntity> setActiveBaby(String babyId);
 
+  Future<FamilyOverviewEntity> createInitialFamily(InitialFamilyDraft draft);
+
   Future<BabyEntity> createBaby(BabyDraft draft);
 
   Future<BabyEntity?> updateBaby(String id, BabyPatch patch);

@@ -4,13 +4,16 @@ import 'package:agenda/agenda.dart';
 import 'package:app_layout/app_layout.dart';
 import 'package:auth/auth.dart';
 import 'package:core/core.dart';
+import 'package:design_system/design_system.dart';
 import 'package:family/family.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:health/health.dart';
 import 'package:home/home.dart';
 import 'package:login/login.dart';
-import 'package:onboarding/onboarding.dart';
+import 'package:notifications/notifications.dart';
+import 'package:onboarding/onboarding.dart' hide BabyDraft;
 import 'package:register/register.dart';
 import 'package:splash/splash.dart';
 import 'package:signup/signup.dart';
@@ -33,7 +36,9 @@ GoRouter createAppRouter({
 
   return GoRouter(
     navigatorKey: rootNavigatorKey,
-    initialLocation: navigationSessionStore.initialLocation,
+    // Cada arranque pasa por ResolveEntry. La ubicación recordada sólo se
+    // conserva como estado de navegación, nunca como bypass del startup.
+    initialLocation: StartupPaths.splash,
     redirect: (_, state) {
       unawaited(navigationSessionStore.remember(state.uri));
       return null;
@@ -92,6 +97,9 @@ GoRouter createAppRouter({
                     routes: [
                       HomeDailyHistoryPage(
                         getRegisterEvents: (_) => getIt<GetRegisterEvents>(),
+                        deleteRegisterEvent: (_) =>
+                            getIt<DeleteRegisterEvent>(),
+                        syncService: (_) => getIt<RegisterEventSyncService>(),
                         onRegisterPressed: RegisterPage.open,
                       ),
                     ],
@@ -101,13 +109,79 @@ GoRouter createAppRouter({
               StatefulShellBranch(
                 navigatorKey: agendaNavigatorKey,
                 routes: [
-                  AgendaPage(agendaBloc: (_) => getIt<AgendaBloc>()),
+                  AgendaPage(
+                    agendaBloc: (_) => getIt<AgendaBloc>(),
+                    openNotifications: (context) =>
+                        context.push('/notifications'),
+                    openReminderSettings: (context) =>
+                        context.push(AgendaSubpage.reminderSettingsPath),
+                    openHealth: (context) => context.go(HealthPage.fullPath),
+                    createReminder: (context) =>
+                        context.push(AgendaSubpage.createReminderPath),
+                    registerEvent: RegisterPage.open,
+                    openRegisterHistory: (context) =>
+                        context.push(HomeDailyHistoryPage.fullPath),
+                    openEvent: (context, eventId) =>
+                        context.push(AgendaSubpage.eventDetailPath(eventId)),
+                    routes: [
+                      AgendaSubpage(
+                        kind: AgendaSubpageKind.reminderSettings,
+                        createAgendaEvent: getIt<CreateAgendaEvent>(),
+                        agendaRepository: getIt<AgendaRepository>(),
+                      ),
+                      AgendaSubpage(
+                        kind: AgendaSubpageKind.createReminder,
+                        createAgendaEvent: getIt<CreateAgendaEvent>(),
+                        agendaRepository: getIt<AgendaRepository>(),
+                      ),
+                      AgendaSubpage(
+                        kind: AgendaSubpageKind.eventDetail,
+                        createAgendaEvent: getIt<CreateAgendaEvent>(),
+                        agendaRepository: getIt<AgendaRepository>(),
+                      ),
+                    ],
+                  ),
                 ],
               ),
               StatefulShellBranch(
                 navigatorKey: healthNavigatorKey,
                 routes: [
-                  HealthPage(healthBloc: (_) => getIt<HealthBloc>()),
+                  HealthPage(
+                    healthBloc: (_) => getIt<HealthBloc>(),
+                    openVaccines: (context) => context.push(
+                      HealthSectionPage.locationFor(
+                        HealthSectionKind.vaccines,
+                      ),
+                    ),
+                    openControls: (context) => context.push(
+                      HealthSectionPage.locationFor(
+                        HealthSectionKind.controls,
+                      ),
+                    ),
+                    openGrowth: (context) => context.push(
+                      HealthSectionPage.locationFor(HealthSectionKind.growth),
+                    ),
+                    openConsultations: (context) => context.push(
+                      HealthSectionPage.locationFor(
+                        HealthSectionKind.consultations,
+                      ),
+                    ),
+                    openPediatricCare: (context) => context.push(
+                      HealthSectionPage.locationFor(
+                        HealthSectionKind.pediatricCare,
+                      ),
+                    ),
+                    openAgenda: (context) => context.go(AgendaPage.fullPath),
+                    openClinicalHistory: (context) => context.push(
+                      HealthSectionPage.locationFor(
+                        HealthSectionKind.clinicalHistory,
+                      ),
+                    ),
+                    routes: [
+                      for (final kind in HealthSectionKind.values)
+                        HealthSectionPage(kind: kind),
+                    ],
+                  ),
                 ],
               ),
               StatefulShellBranch(
@@ -115,10 +189,99 @@ GoRouter createAppRouter({
                 routes: [
                   FamilyPage(
                     familyBloc: (_) => getIt<FamilyBloc>(),
-                    openSettings: SettingsPage.open,
+                    openPersonalSettings: SettingsPage.open,
+                    openFamilySettings: (context) => context.push(
+                      FamilySubpage.familyConfigurationPath,
+                    ),
+                    openBabySelector: (context) =>
+                        unawaited(_selectFamilyBaby(context)),
+                    addBaby: (context) => unawaited(_addFamilyBaby(context)),
+                    manageCareCircle: (context) =>
+                        context.push(FamilySubpage.careCirclePath),
+                    inviteCaregiver: (context) =>
+                        context.push(FamilySubpage.inviteCaregiverPath),
+                    openMember: (context, memberId) => context.push(
+                      FamilySubpage.memberDetailPath(memberId),
+                    ),
+                    openBaby: (context, babyId) => context.push(
+                      FamilySubpage.babyDetailPath(babyId),
+                    ),
                     routes: [
                       SettingsPage(
                         settingsBloc: (_) => getIt<SettingsBloc>(),
+                        openAccount: (context) => context.push(
+                          SettingsDetailPage.locationFor(
+                            SettingsSectionKind.account,
+                          ),
+                        ),
+                        openAppearance: (context) => context.push(
+                          SettingsDetailPage.locationFor(
+                            SettingsSectionKind.appearance,
+                          ),
+                        ),
+                        openLanguage: (context) => context.push(
+                          SettingsDetailPage.locationFor(
+                            SettingsSectionKind.language,
+                          ),
+                        ),
+                        openTimeFormat: (context) => context.push(
+                          SettingsDetailPage.locationFor(
+                            SettingsSectionKind.timeFormat,
+                          ),
+                        ),
+                        openTextSize: (context) => context.push(
+                          SettingsDetailPage.locationFor(
+                            SettingsSectionKind.textSize,
+                          ),
+                        ),
+                        openSecurity: (context) => context.push(
+                          SettingsDetailPage.locationFor(
+                            SettingsSectionKind.security,
+                          ),
+                        ),
+                        openPrivacy: (context) => context.push(
+                          SettingsDetailPage.locationFor(
+                            SettingsSectionKind.privacy,
+                          ),
+                        ),
+                        downloadData: (context) => context.push(
+                          SettingsDetailPage.locationFor(
+                            SettingsSectionKind.downloadData,
+                          ),
+                        ),
+                        openStorage: (context) => context.push(
+                          SettingsDetailPage.locationFor(
+                            SettingsSectionKind.storage,
+                          ),
+                        ),
+                        openHelpCenter: (context) => context.push(
+                          SettingsDetailPage.locationFor(
+                            SettingsSectionKind.helpCenter,
+                          ),
+                        ),
+                        reportProblem: (context) => context.push(
+                          SettingsDetailPage.locationFor(
+                            SettingsSectionKind.reportProblem,
+                          ),
+                        ),
+                        signOut: (context) =>
+                            unawaited(_signOutAndOpenLogin(context)),
+                        changeTheme: (_, value) => _changeAppTheme(value),
+                        routes: [
+                          SettingsDetailPage(
+                            settingsBloc: (_) => getIt<SettingsBloc>(),
+                            changeTheme: (_, value) => _changeAppTheme(value),
+                          ),
+                        ],
+                      ),
+                      FamilySubpage(kind: FamilySubpageKind.babySelector),
+                      FamilySubpage(kind: FamilySubpageKind.addBaby),
+                      FamilySubpage(kind: FamilySubpageKind.babyDetail),
+                      FamilySubpage(kind: FamilySubpageKind.careCircle),
+                      FamilySubpage(kind: FamilySubpageKind.inviteCaregiver),
+                      FamilySubpage(kind: FamilySubpageKind.memberDetail),
+                      FamilySubpage(
+                        kind: FamilySubpageKind.familyConfiguration,
                       ),
                     ],
                   ),
@@ -152,6 +315,8 @@ GoRouter createAppRouter({
             invitationPending: invitationPending,
             onBackPressed: () => _backToAuthEntry(context),
             onAuthenticated: () {
+              unawaited(getIt<RegisterEventSyncService>().synchronize());
+              unawaited(getIt<AgendaEventSyncService>().synchronize());
               if (invitationPending) {
                 context.go(StartupPaths.invitation);
                 return;
@@ -176,6 +341,8 @@ GoRouter createAppRouter({
             invitationPending: invitationPending,
             onBackPressed: () => _backToAuthEntry(context),
             onAccountCreated: () {
+              unawaited(getIt<RegisterEventSyncService>().synchronize());
+              unawaited(getIt<AgendaEventSyncService>().synchronize());
               context.go(
                 invitationPending
                     ? StartupPaths.invitation
@@ -263,7 +430,10 @@ GoRouter createAppRouter({
         onSaved: (context, event) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-                content: Text('Registro guardado en este dispositivo.')),
+              content: Text(
+                'Registro guardado localmente. Se sincronizará en segundo plano.',
+              ),
+            ),
           );
           if (context.canPop()) {
             context.pop();
@@ -282,9 +452,10 @@ GoRouter createAppRouter({
       GoRoute(
         path: '/notifications',
         parentNavigatorKey: rootNavigatorKey,
-        builder: (_, __) => const _PendingPage(
-          title: 'Notificaciones',
-          description: 'Centro de notificaciones pendiente.',
+        redirect: (_, __) => _requireSession(),
+        builder: (context, __) => NotificationsPage(
+          notificationService: getIt<NotificationService>(),
+          onBackPressed: () => _backOrHome(context),
         ),
       ),
     ],
@@ -297,6 +468,59 @@ void _backToAuthEntry(BuildContext context) {
     return;
   }
   context.go(StartupPaths.authEntry);
+}
+
+Future<void> _selectFamilyBaby(BuildContext context) async {
+  final babyId = await context.push<String>(FamilySubpage.babySelectorPath);
+  if (!context.mounted || babyId == null) return;
+  context.read<FamilyBloc>().add(FamilyEvent.babySelected(babyId));
+}
+
+Future<void> _addFamilyBaby(BuildContext context) async {
+  final draft = await context.push<FamilyBabyDraftResult>(
+    FamilySubpage.addBabyPath,
+  );
+  if (!context.mounted || draft == null) return;
+
+  final familyState = context.read<FamilyBloc>().state;
+  if (familyState is! FamilyLoaded) return;
+
+  try {
+    await CreateFamilyBaby(getIt<FamilyRepository>())(
+      BabyDraft(
+        familyId: familyState.overview.familyId,
+        name: draft.name,
+        birthDate: draft.birthDate,
+      ),
+    );
+    if (!context.mounted) return;
+    context.read<FamilyBloc>().add(const FamilyEvent.retried());
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Perfil de ${draft.name} creado.')),
+    );
+  } on Object catch (error) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('No pudimos crear el perfil: $error')),
+    );
+  }
+}
+
+void _changeAppTheme(BebeThemeModeOption value) {
+  final mode = switch (value) {
+    BebeThemeModeOption.system => ThemeMode.system,
+    BebeThemeModeOption.light => ThemeMode.light,
+    BebeThemeModeOption.dark => ThemeMode.dark,
+  };
+  getIt<AppThemeBloc>().add(AppThemeEvent.updateThemeMode(themeMode: mode));
+}
+
+void _backOrHome(BuildContext context) {
+  if (context.canPop()) {
+    context.pop();
+    return;
+  }
+  context.go(StartupPaths.home);
 }
 
 Future<void> _openResolvedDestination(BuildContext context) async {

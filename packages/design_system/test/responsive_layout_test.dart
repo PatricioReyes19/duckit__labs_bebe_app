@@ -95,14 +95,24 @@ void main() {
         _TestApp(
           theme: bebeTheme.lightTheme(),
           textScaler: const TextScaler.linear(2),
-          child: const SizedBox(
-            width: 342,
-            child: BebeTodaySummary(title: 'Resumen de hoy', items: _metrics),
+          child: const SingleChildScrollView(
+            child: SizedBox(
+              width: 342,
+              child: BebeTodaySummary(title: 'Resumen de hoy', items: _metrics),
+            ),
           ),
         ),
       );
 
-      expect(find.byType(SingleChildScrollView), findsOneWidget);
+      final scrollViews = tester.widgetList<SingleChildScrollView>(
+        find.byType(SingleChildScrollView),
+      );
+      expect(
+        scrollViews.any(
+          (scrollView) => scrollView.scrollDirection == Axis.horizontal,
+        ),
+        isTrue,
+      );
       expect(tester.takeException(), isNull);
     },
   );

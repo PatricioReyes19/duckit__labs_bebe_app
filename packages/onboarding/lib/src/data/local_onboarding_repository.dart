@@ -1,3 +1,7 @@
+import 'dart:io';
+
+import 'package:core/core.dart' as core;
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../domain/onboarding_repository.dart';
@@ -7,9 +11,23 @@ import '../models/models.dart';
 ///
 /// Códigos útiles: MATEO2026, VENCIDA, REVOCADA, CUENTA y YAESTOY.
 class LocalOnboardingRepository implements OnboardingRepository {
-  LocalOnboardingRepository(this._preferences);
+  LocalOnboardingRepository(
+    this._preferences, {
+    Future<String?> Function()? currentUserId,
+    Future<core.AuthUser?> Function()? currentUser,
+    core.FamilyRepository? familyRepository,
+    Future<Directory> Function()? storageDirectory,
+  }) : _currentUserId = currentUserId,
+       _currentUser = currentUser,
+       _familyRepository = familyRepository,
+       _storageDirectory =
+           storageDirectory ?? getApplicationSupportDirectory;
 
   final SharedPreferencesAsync _preferences;
+  final Future<String?> Function()? _currentUserId;
+  final Future<core.AuthUser?> Function()? _currentUser;
+  final core.FamilyRepository? _familyRepository;
+  final Future<Directory> Function() _storageDirectory;
 
   static const completedKey = 'bebeapp.onboarding.completed';
   static const babyNameKey = 'bebeapp.active_baby.name';
@@ -18,7 +36,7 @@ class LocalOnboardingRepository implements OnboardingRepository {
 
   @override
   Future<bool> isCompleted() async {
-    return await _preferences.getBool(completedKey) ?? false;
+    return await _preferences.getBool(await _scopedKey(completedKey)) ?? false;
   }
 
   @override
@@ -57,7 +75,10 @@ class LocalOnboardingRepository implements OnboardingRepository {
 
   @override
   Future<void> acceptInvitation(CareInvitation invitation) async {
-    await _preferences.setString(babyNameKey, invitation.babyName);
+    await _preferences.setString(
+      await _scopedKey(babyNameKey),
+      invitation.babyName,
+    );
     await complete();
   }
 
@@ -66,14 +87,32 @@ class LocalOnboardingRepository implements OnboardingRepository {
 
   @override
   Future<BabyProfile> createBaby(BabyDraft draft) async {
-    final id = 'local-baby-${DateTime.now().microsecondsSinceEpoch}';
-    await _preferences.setString(babyNameKey, draft.name);
+    final user = await _currentUser?.call();
+    final scopeId = user?.id ?? await _currentUserId?.call() ?? 'local';
+    final storedPhotoPath = await _persistPhoto(draft.photoPath, scopeId);
+    var id = 'local-baby-${DateTime.now().microsecondsSinceEpoch}';
+
+    final familyRepository = _familyRepository;
+    if (familyRepository != null) {
+      final family = await familyRepository.createInitialFamily(
+        core.InitialFamilyDraft(
+          familyName: 'Círculo de ${draft.name.trim()}',
+          babyName: draft.name,
+          birthDate: draft.birthDate,
+          ownerName: user?.displayName ?? 'Cuidador principal',
+          ownerEmail: user?.email ?? '',
+          avatarAssetPath: storedPhotoPath,
+        ),
+      );
+      id = family.activeBaby.id;
+    }
+    await _preferences.setString(await _scopedKey(babyNameKey), draft.name);
     await _preferences.setString(
-      babyBirthDateKey,
+      await _scopedKey(babyBirthDateKey),
       draft.birthDate.toIso8601String(),
     );
     await _preferences.setString(
-      babySexReferenceKey,
+      await _scopedKey(babySexReferenceKey),
       draft.sexReference.name,
     );
     await complete();
@@ -82,9 +121,50 @@ class LocalOnboardingRepository implements OnboardingRepository {
       name: draft.name,
       birthDate: draft.birthDate,
       sexReference: draft.sexReference,
+      photoPath: storedPhotoPath,
     );
   }
 
   @override
-  Future<void> complete() => _preferences.setBool(completedKey, true);
+  Future<void> complete() async {
+    await _preferences.setBool(await _scopedKey(completedKey), true);
+  }
+
+  Future<String> _scopedKey(String key) async {
+    final userId = await _currentUserId?.call();
+    return userId == null || userId.isEmpty ? key : '$key.$userId';
+  }
+
+  Future<String?> _persistPhoto(String? sourcePath, String scopeId) async {
+    final normalized = sourcePath?.trim();
+    if (normalized == null || normalized.isEmpty) return null;
+
+    final source = File(normalized);
+    if (!await source.exists()) {
+      throw StateError('La fotografía seleccionada ya no está disponible.');
+    }
+    final root = await _storageDirectory();
+    final safeScope = scopeId.replaceAll(RegExp('[^a-zA-Z0-9_-]'), '_');
+    final directory = Directory(
+      '${root.path}${Platform.pathSeparator}baby_profiles'
+      '${Platform.pathSeparator}$safeScope',
+    );
+    await directory.create(recursive: true);
+    final extension = _extensionOf(normalized);
+    final destination = File(
+      '${directory.path}${Platform.pathSeparator}'
+      'avatar_${DateTime.now().microsecondsSinceEpoch}$extension',
+    );
+    await source.copy(destination.path);
+    return destination.path;
+  }
+
+  static String _extensionOf(String path) {
+    final separator = path.lastIndexOf('.');
+    if (separator < 0) return '.jpg';
+    final extension = path.substring(separator).toLowerCase();
+    return const {'.jpg', '.jpeg', '.png', '.webp', '.heic'}.contains(extension)
+        ? extension
+        : '.jpg';
+  }
 }

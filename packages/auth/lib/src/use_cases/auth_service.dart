@@ -1,17 +1,25 @@
+import 'package:core/core.dart';
+
 import '../domain/auth_failure.dart';
 import '../domain/auth_gateway.dart';
 import '../domain/auth_validation.dart';
-import '../domain/entities/auth_session.dart';
 
-/// Casos de uso de autenticación compartidos por login y registro.
 class AuthService {
-  const AuthService(this._gateway);
+  const AuthService(
+    this._gateway, {
+    this.beforeSignOut,
+  });
 
   final AuthGateway _gateway;
+  final Future<void> Function()? beforeSignOut;
 
-  Future<AuthSession?> currentSession() => _gateway.currentSession();
+  Future<AuthSession?> currentSession() {
+    return _gateway.currentSession();
+  }
 
-  Stream<AuthSession?> sessionChanges() => _gateway.sessionChanges();
+  Stream<AuthSession?> sessionChanges() {
+    return _gateway.sessionChanges();
+  }
 
   Future<AuthSession> signIn({
     required String email,
@@ -23,6 +31,7 @@ class AuthService {
       if (AuthValidation.signInPassword(password) case final error?)
         'password': error,
     };
+
     if (errors.isNotEmpty) {
       throw AuthValidationFailure(errors);
     }
@@ -48,6 +57,7 @@ class AuthService {
       if (!acceptedTerms)
         'terms': 'Debes aceptar los términos y la política de privacidad.',
     };
+
     if (errors.isNotEmpty) {
       throw AuthValidationFailure(errors);
     }
@@ -59,13 +69,24 @@ class AuthService {
     );
   }
 
-  Future<void> signOut() => _gateway.signOut();
+  Future<void> signOut() async {
+    await beforeSignOut?.call();
+    await _gateway.signOut();
+  }
 
-  Future<void> sendPasswordResetEmail(String email) async {
+  Future<void> sendPasswordResetEmail(
+    String email,
+  ) async {
     final error = AuthValidation.email(email);
+
     if (error != null) {
-      throw AuthValidationFailure({'email': error});
+      throw AuthValidationFailure(
+        {'email': error},
+      );
     }
-    await _gateway.sendPasswordResetEmail(email.trim().toLowerCase());
+
+    await _gateway.sendPasswordResetEmail(
+      email.trim().toLowerCase(),
+    );
   }
 }

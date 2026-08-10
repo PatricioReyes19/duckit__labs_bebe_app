@@ -20,6 +20,7 @@ import 'package:go_router/go_router.dart' as _i583;
 import 'package:health/health.dart' as _i237;
 import 'package:home/home.dart' as _i1024;
 import 'package:injectable/injectable.dart' as _i526;
+import 'package:notifications/notifications.dart' as _i1050;
 import 'package:onboarding/onboarding.dart' as _i706;
 import 'package:shared_preferences/shared_preferences.dart' as _i460;
 
@@ -55,6 +56,10 @@ extension GetItInjectableX on _i174.GetIt {
       preResolve: true,
     );
     gh.lazySingleton<_i494.BebeDatabase>(() => coreDataModule.bebeDatabase());
+    gh.lazySingleton<_i494.SupabaseConfiguration>(
+        () => registerModule.supabaseConfiguration());
+    gh.lazySingleton<_i494.SqliteRegisterEventRepository>(() =>
+        registerModule.localRegisterEventRepository(gh<_i494.BebeDatabase>()));
     gh.lazySingleton<_i460.SharedPreferencesAsync>(
       () => startupModule.startupPreferences,
       instanceName: 'startupPreferences',
@@ -65,23 +70,92 @@ extension GetItInjectableX on _i174.GetIt {
         () => routerModule.router(gh<_i460.SharedPreferences>()));
     gh.lazySingleton<_i494.FamilyRepository>(
         () => coreDataModule.familyRepository(gh<_i494.BebeDatabase>()));
-    gh.lazySingleton<_i494.AgendaRepository>(
-        () => coreDataModule.agendaRepository(gh<_i494.BebeDatabase>()));
+    gh.lazySingleton<_i494.SqliteAgendaRepository>(
+        () => coreDataModule.localAgendaRepository(gh<_i494.BebeDatabase>()));
     gh.lazySingleton<_i494.HealthRepository>(
         () => coreDataModule.healthRepository(gh<_i494.BebeDatabase>()));
     gh.lazySingleton<_i494.AppSettingsRepository>(
         () => coreDataModule.appSettingsRepository(gh<_i494.BebeDatabase>()));
+    gh.lazySingleton<_i662.FirebaseAuthGateway>(
+        () => startupModule.firebaseAuthGateway());
+    gh.lazySingleton<_i662.AuthGateway>(
+        () => startupModule.authGateway(gh<_i662.FirebaseAuthGateway>()));
+    gh.lazySingleton<_i494.SessionRepository>(
+        () => startupModule.sessionRepository(gh<_i662.FirebaseAuthGateway>()));
+    gh.lazySingleton<_i494.AccessTokenProvider>(() =>
+        registerModule.accessTokenProvider(gh<_i494.SessionRepository>()));
+    gh.lazySingleton<_i494.SupabaseRestClient>(
+        () => registerModule.supabaseRestClient(
+              gh<_i494.SupabaseConfiguration>(),
+              gh<_i494.AccessTokenProvider>(),
+            ));
+    gh.lazySingleton<_i494.PushDeviceRepository>(() =>
+        registerModule.pushDeviceRepository(gh<_i494.SupabaseRestClient>()));
+    gh.lazySingleton<_i1050.NotificationService>(() =>
+        startupModule.notificationService(gh<_i494.PushDeviceRepository>()));
+    gh.lazySingleton<_i494.RegisterEventRemoteDataSource>(
+        () => registerModule.registerEventRemoteDataSource(
+              gh<_i494.SupabaseRestClient>(),
+            ));
+    gh.lazySingleton<_i494.AgendaEventRemoteDataSource>(
+        () => registerModule.agendaEventRemoteDataSource(
+              gh<_i494.SupabaseRestClient>(),
+            ));
+    gh.lazySingleton<_i494.RegisterEventSyncService>(
+        () => registerModule.registerEventSyncService(
+              gh<_i494.SqliteRegisterEventRepository>(),
+              gh<_i494.RegisterEventRemoteDataSource>(),
+            ));
+    gh.lazySingleton<_i494.AgendaEventSyncService>(
+        () => registerModule.agendaEventSyncService(
+              gh<_i494.SqliteAgendaRepository>(),
+              gh<_i494.AgendaEventRemoteDataSource>(),
+            ));
+    gh.lazySingleton<_i494.SupabaseRealtimeSyncCoordinator>(
+        () => registerModule.realtimeSyncCoordinator(
+              gh<_i494.SupabaseConfiguration>(),
+              gh<_i494.SessionRepository>(),
+              gh<_i494.RegisterEventSyncService>(),
+              gh<_i494.AgendaEventSyncService>(),
+            ));
+    gh.lazySingleton<_i494.AgendaRepository>(
+        () => registerModule.agendaRepository(
+              gh<_i494.SqliteAgendaRepository>(),
+              gh<_i494.AgendaEventSyncService>(),
+            ));
     gh.lazySingleton<_i494.RegisterEventRepository>(
-        () => registerModule.registerEventRepository(gh<_i494.BebeDatabase>()));
-    gh.lazySingleton<_i662.AuthGateway>(() => startupModule.authGateway(
-        gh<_i460.SharedPreferencesAsync>(instanceName: 'startupPreferences')));
+        () => registerModule.registerEventRepository(
+              gh<_i494.SqliteRegisterEventRepository>(),
+              gh<_i494.RegisterEventSyncService>(),
+            ));
+    gh.lazySingleton<_i494.RegisterAgendaCoordinator>(
+        () => registerModule.registerAgendaCoordinator(
+              gh<_i494.SqliteRegisterEventRepository>(),
+              gh<_i494.SqliteAgendaRepository>(),
+              gh<_i494.AgendaEventSyncService>(),
+            ));
     gh.lazySingleton<_i706.OnboardingRepository>(() =>
-        startupModule.onboardingRepository(gh<_i460.SharedPreferencesAsync>(
-            instanceName: 'startupPreferences')));
+        startupModule.onboardingRepository(
+            gh<_i460.SharedPreferencesAsync>(
+                instanceName: 'startupPreferences'),
+            gh<_i662.AuthGateway>()));
     gh.lazySingleton<_i494.GetAgendaOverview>(
-        () => coreDataModule.getAgendaOverview(gh<_i494.AgendaRepository>()));
-    gh.lazySingleton<_i662.AuthService>(
-        () => startupModule.authService(gh<_i662.AuthGateway>()));
+        () => coreDataModule.getAgendaOverview(
+              gh<_i494.AgendaRepository>(),
+              gh<_i494.RegisterEventRepository>(),
+            ));
+    gh.lazySingleton<_i494.ObserveSession>(
+        () => startupModule.observeSession(gh<_i494.SessionRepository>()));
+    gh.lazySingleton<_i494.GetCurrentSession>(
+        () => startupModule.getCurrentSession(gh<_i494.SessionRepository>()));
+    gh.lazySingleton<_i494.RefreshSession>(
+        () => startupModule.refreshSession(gh<_i494.SessionRepository>()));
+    gh.lazySingleton<_i494.SignOutSession>(
+        () => startupModule.signOutSession(gh<_i494.SessionRepository>()));
+    gh.lazySingleton<_i662.AuthService>(() => startupModule.authService(
+          gh<_i662.AuthGateway>(),
+          gh<_i1050.NotificationService>(),
+        ));
     await gh.factoryAsync<bool>(
       () => configModule.initialIsDark(gh<_i494.ThemeStorage>()),
       instanceName: 'initialIsDark',
@@ -102,6 +176,15 @@ extension GetItInjectableX on _i174.GetIt {
         .deleteRegisterEvent(gh<_i494.RegisterEventRepository>()));
     gh.lazySingleton<_i494.UpdateRegisterEvent>(() => registerModule
         .updateRegisterEvent(gh<_i494.RegisterEventRepository>()));
+    gh.lazySingleton<_i494.CreateAgendaEvent>(
+        () => registerModule.createAgendaEvent(gh<_i494.AgendaRepository>()));
+    gh.lazySingleton<_i494.UpdateAgendaEvent>(
+        () => registerModule.updateAgendaEvent(gh<_i494.AgendaRepository>()));
+    gh.lazySingleton<_i494.SessionBloc>(() => blocsModule.sessionBloc(
+          gh<_i494.ObserveSession>(),
+          gh<_i494.RefreshSession>(),
+          gh<_i494.SignOutSession>(),
+        ));
     gh.lazySingleton<_i1063.AppThemeBloc>(() => blocsModule.appThemeBloc(
           gh<_i1063.BebeTheme>(),
           gh<_i494.ThemeStorage>(),
@@ -122,6 +205,7 @@ extension GetItInjectableX on _i174.GetIt {
     gh.factory<_i1027.SettingsBloc>(() => blocsModule.settingsBloc(
           gh<_i494.GetAppSettings>(),
           gh<_i494.UpdateAppSettings>(),
+          gh<_i494.GetCurrentSession>(),
         ));
     gh.lazySingleton<_i494.GetFamilyOverview>(
         () => coreDataModule.getFamilyOverview(gh<_i494.FamilyRepository>()));
@@ -131,8 +215,10 @@ extension GetItInjectableX on _i174.GetIt {
           gh<_i494.GetFamilyOverview>(),
           gh<_i494.SetActiveFamilyBaby>(),
         ));
-    gh.factory<_i914.AgendaBloc>(
-        () => blocsModule.agendaBloc(gh<_i494.GetAgendaOverview>()));
+    gh.factory<_i914.AgendaBloc>(() => blocsModule.agendaBloc(
+          gh<_i494.GetAgendaOverview>(),
+          gh<_i494.AgendaEventSyncService>(),
+        ));
     gh.factory<_i237.HealthBloc>(
         () => blocsModule.healthBloc(gh<_i494.GetHealthOverview>()));
     return this;

@@ -1,0 +1,26 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "bebeapp-313a4",
+          "appId": "1:316901399175:android:9c844ed6eb36e1cdeeb622",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "bebeapp-313a4",
+          "configurations": {
+            "android": "1:316901399175:android:9c844ed6eb36e1cdeeb622",
+            "ios": "1:316901399175:ios:d6ee470a43fe8969eeb622"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  }
+}

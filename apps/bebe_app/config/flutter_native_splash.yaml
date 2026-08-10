@@ -1,19 +1,20 @@
 flutter_native_splash:
-  background_image: assets/branding/native_splash/splash_composition_light.png
-  background_image_dark: assets/branding/native_splash/splash_composition_dark.png
+  color: "#FAFAFC"
+  image: assets/branding/native_splash/splash_symbol_light.png
+
+  color_dark: "#0F2A2D"
+  image_dark: assets/branding/native_splash/splash_symbol_dark.png
 
   android: true
   ios: true
   web: false
   fullscreen: false
 
-  # Android 12 restringe el branding a un área fija. Las nubes adaptativas
-  # se renderizan en el primer frame Flutter para evitar una versión reducida.
   android_12:
     color: "#FAFAFC"
     image: assets/branding/native_splash/splash_symbol_light.png
     icon_background_color: "#FAFAFC"
 
-    color_dark: "#07575B"
+    color_dark: "#0F2A2D"
     image_dark: assets/branding/native_splash/splash_symbol_dark.png
-    icon_background_color_dark: "#07575B"
+    icon_background_color_dark: "#0F2A2D"

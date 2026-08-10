@@ -32,6 +32,7 @@ class AppSettingsEntity {
 
 class AppSettingsPatch {
   const AppSettingsPatch({
+    this.name,
     this.theme,
     this.highContrast,
     this.personalReminders,
@@ -44,6 +45,7 @@ class AppSettingsPatch {
     this.textSize,
   });
 
+  final String? name;
   final AppThemePreference? theme;
   final bool? highContrast;
   final bool? personalReminders;

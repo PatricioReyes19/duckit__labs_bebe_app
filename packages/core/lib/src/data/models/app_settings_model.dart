@@ -29,6 +29,38 @@ class AppSettingsModel {
   final String timeFormat;
   final String textSize;
 
+  factory AppSettingsModel.fromEntity(AppSettingsEntity entity) =>
+      AppSettingsModel(
+        theme: entity.theme,
+        highContrast: entity.highContrast,
+        personalReminders: entity.personalReminders,
+        familyActivity: entity.familyActivity,
+        dailySummary: entity.dailySummary,
+        reduceMotion: entity.reduceMotion,
+        wifiOnly: entity.wifiOnly,
+        name: entity.name,
+        email: entity.email,
+        language: entity.language,
+        timeFormat: entity.timeFormat,
+        textSize: entity.textSize,
+      );
+
+  Map<String, Object?> toRow() => {
+    'id': 'local',
+    'theme_mode': theme.name,
+    'high_contrast': highContrast ? 1 : 0,
+    'personal_reminders': personalReminders ? 1 : 0,
+    'family_activity': familyActivity ? 1 : 0,
+    'daily_summary': dailySummary ? 1 : 0,
+    'reduce_motion': reduceMotion ? 1 : 0,
+    'wifi_only': wifiOnly ? 1 : 0,
+    'account_name': name,
+    'account_email': email,
+    'language': language,
+    'time_format': timeFormat,
+    'text_size': textSize,
+  };
+
   factory AppSettingsModel.fromRow(Map<String, Object?> row) =>
       AppSettingsModel(
         theme: AppThemePreference.values.firstWhere(

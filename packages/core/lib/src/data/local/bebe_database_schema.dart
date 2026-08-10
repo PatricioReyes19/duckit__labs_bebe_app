@@ -1,7 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 
 abstract final class BebeDatabaseSchema {
-  static const version = 2;
+  static const version = 4;
 
   static const registerEvents = 'register_events';
   static const families = 'families';
@@ -11,6 +11,7 @@ abstract final class BebeDatabaseSchema {
   static const healthEvents = 'health_events';
   static const healthMeasurements = 'health_measurements';
   static const appSettings = 'app_settings';
+  static const syncMetadata = 'sync_metadata';
 
   static Future<void> create(Database database) async {
     await createRegisterEvents(database);
@@ -25,9 +26,13 @@ CREATE TABLE IF NOT EXISTS $registerEvents (
   event_type TEXT NOT NULL,
   occurred_at INTEGER NOT NULL,
   created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  deleted_at INTEGER,
   caregiver_id TEXT,
   notes TEXT,
   details_json TEXT NOT NULL,
+  sync_status TEXT NOT NULL DEFAULT 'pending',
+  sync_error TEXT,
   schema_version INTEGER NOT NULL DEFAULT 1
 )
 ''');
@@ -38,6 +43,104 @@ ON $registerEvents (baby_id, occurred_at DESC)
     await database.execute('''
 CREATE INDEX IF NOT EXISTS idx_register_events_type
 ON $registerEvents (event_type)
+''');
+    await database.execute('''
+CREATE INDEX IF NOT EXISTS idx_register_events_sync
+ON $registerEvents (sync_status, updated_at)
+''');
+    await database.execute('''
+CREATE TABLE IF NOT EXISTS $syncMetadata (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+)
+''');
+  }
+
+  static Future<void> upgradeRegisterEventsForSync(Database database) async {
+    final columns = (await database.rawQuery(
+      'PRAGMA table_info($registerEvents)',
+    )).map((row) => row['name']).whereType<String>().toSet();
+    if (!columns.contains('updated_at')) {
+      await database.execute(
+        'ALTER TABLE $registerEvents '
+        'ADD COLUMN updated_at INTEGER NOT NULL DEFAULT 0',
+      );
+      await database.execute(
+        'UPDATE $registerEvents SET updated_at = created_at '
+        'WHERE updated_at = 0',
+      );
+    }
+    if (!columns.contains('deleted_at')) {
+      await database.execute(
+        'ALTER TABLE $registerEvents ADD COLUMN deleted_at INTEGER',
+      );
+    }
+    if (!columns.contains('sync_status')) {
+      await database.execute(
+        "ALTER TABLE $registerEvents ADD COLUMN sync_status TEXT NOT NULL DEFAULT 'pending'",
+      );
+    }
+    if (!columns.contains('sync_error')) {
+      await database.execute(
+        'ALTER TABLE $registerEvents ADD COLUMN sync_error TEXT',
+      );
+    }
+    await database.execute('''
+CREATE INDEX IF NOT EXISTS idx_register_events_sync
+ON $registerEvents (sync_status, updated_at)
+''');
+    await database.execute('''
+CREATE TABLE IF NOT EXISTS $syncMetadata (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+)
+''');
+  }
+
+  static Future<void> upgradeAgendaEventsForSync(Database database) async {
+    final columns = (await database.rawQuery(
+      'PRAGMA table_info($agendaEvents)',
+    )).map((row) => row['name']).whereType<String>().toSet();
+    if (!columns.contains('created_at')) {
+      await database.execute(
+        'ALTER TABLE $agendaEvents '
+        'ADD COLUMN created_at INTEGER NOT NULL DEFAULT 0',
+      );
+      await database.execute(
+        'UPDATE $agendaEvents SET created_at = starts_at WHERE created_at = 0',
+      );
+    }
+    if (!columns.contains('updated_at')) {
+      await database.execute(
+        'ALTER TABLE $agendaEvents '
+        'ADD COLUMN updated_at INTEGER NOT NULL DEFAULT 0',
+      );
+      await database.execute(
+        'UPDATE $agendaEvents SET updated_at = starts_at WHERE updated_at = 0',
+      );
+    }
+    if (!columns.contains('deleted_at')) {
+      await database.execute(
+        'ALTER TABLE $agendaEvents ADD COLUMN deleted_at INTEGER',
+      );
+    }
+    if (!columns.contains('sync_error')) {
+      await database.execute(
+        'ALTER TABLE $agendaEvents ADD COLUMN sync_error TEXT',
+      );
+    }
+    if (!columns.contains('source_register_event_id')) {
+      await database.execute(
+        'ALTER TABLE $agendaEvents ADD COLUMN source_register_event_id TEXT',
+      );
+    }
+    await database.execute('''
+CREATE INDEX IF NOT EXISTS idx_agenda_sync
+ON $agendaEvents (sync_status, updated_at)
+''');
+    await database.execute('''
+CREATE INDEX IF NOT EXISTS idx_agenda_source_register
+ON $agendaEvents (source_register_event_id)
 ''');
   }
 
@@ -85,8 +188,13 @@ CREATE TABLE IF NOT EXISTS $agendaEvents (
   title TEXT NOT NULL,
   description TEXT NOT NULL,
   starts_at INTEGER NOT NULL,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  deleted_at INTEGER,
   caregiver_id TEXT,
-  sync_status TEXT NOT NULL,
+  source_register_event_id TEXT,
+  sync_status TEXT NOT NULL DEFAULT 'pending',
+  sync_error TEXT,
   FOREIGN KEY (baby_id) REFERENCES $babies(id) ON DELETE CASCADE,
   FOREIGN KEY (caregiver_id) REFERENCES $familyMembers(id) ON DELETE SET NULL
 )
@@ -94,6 +202,14 @@ CREATE TABLE IF NOT EXISTS $agendaEvents (
     await database.execute('''
 CREATE INDEX IF NOT EXISTS idx_agenda_baby_starts
 ON $agendaEvents (baby_id, starts_at)
+''');
+    await database.execute('''
+CREATE INDEX IF NOT EXISTS idx_agenda_sync
+ON $agendaEvents (sync_status, updated_at)
+''');
+    await database.execute('''
+CREATE INDEX IF NOT EXISTS idx_agenda_source_register
+ON $agendaEvents (source_register_event_id)
 ''');
     await database.execute('''
 CREATE TABLE IF NOT EXISTS $healthEvents (

@@ -1,4 +1,4 @@
-import 'entities/auth_session.dart';
+import 'package:core/core.dart';
 
 /// Puerto implementable con Firebase Auth, Supabase o un fake.
 ///

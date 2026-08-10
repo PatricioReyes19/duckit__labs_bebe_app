@@ -12,6 +12,7 @@ class OnboardingState {
     this.babyName = '',
     this.birthDate,
     this.sexReference,
+    this.babyPhotoPath,
     this.createdBaby,
     this.babyNameError,
     this.birthDateError,
@@ -38,6 +39,7 @@ class OnboardingState {
   final String babyName;
   final DateTime? birthDate;
   final SexReference? sexReference;
+  final String? babyPhotoPath;
   final BabyProfile? createdBaby;
   final String? babyNameError;
   final String? birthDateError;
@@ -56,6 +58,7 @@ class OnboardingState {
     String? babyName,
     DateTime? birthDate,
     SexReference? sexReference,
+    String? babyPhotoPath,
     BabyProfile? createdBaby,
     String? babyNameError,
     String? birthDateError,
@@ -67,6 +70,7 @@ class OnboardingState {
     bool clearBabyNameError = false,
     bool clearBirthDateError = false,
     bool clearSexReferenceError = false,
+    bool clearBabyPhoto = false,
     bool clearInvitationCodeError = false,
     bool clearMessage = false,
   }) {
@@ -81,6 +85,8 @@ class OnboardingState {
       babyName: babyName ?? this.babyName,
       birthDate: birthDate ?? this.birthDate,
       sexReference: sexReference ?? this.sexReference,
+      babyPhotoPath:
+          clearBabyPhoto ? null : babyPhotoPath ?? this.babyPhotoPath,
       createdBaby: createdBaby ?? this.createdBaby,
       babyNameError:
           clearBabyNameError ? null : babyNameError ?? this.babyNameError,

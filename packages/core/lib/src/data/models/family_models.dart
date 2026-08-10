@@ -11,6 +11,12 @@ class FamilyModel {
   final String name;
   final String activeBabyId;
 
+  factory FamilyModel.fromEntity(FamilyOverviewEntity entity) => FamilyModel(
+    id: entity.id,
+    name: entity.name,
+    activeBabyId: entity.activeBabyId,
+  );
+
   factory FamilyModel.fromRow(Map<String, Object?> row) => FamilyModel(
     id: row['id']! as String,
     name: row['name']! as String,
@@ -38,6 +44,14 @@ class BabyModel {
   final String name;
   final DateTime birthDate;
   final String? avatarAssetPath;
+
+  factory BabyModel.fromEntity(BabyEntity entity) => BabyModel(
+    id: entity.id,
+    familyId: entity.familyId,
+    name: entity.name,
+    birthDate: entity.birthDate,
+    avatarAssetPath: entity.avatarAssetPath,
+  );
 
   factory BabyModel.fromRow(Map<String, Object?> row) => BabyModel(
     id: row['id']! as String,
@@ -83,6 +97,16 @@ class FamilyMemberModel {
   final String role;
   final String accessDescription;
   final FamilyMemberStatus status;
+
+  factory FamilyMemberModel.fromEntity(FamilyMemberEntity entity) =>
+      FamilyMemberModel(
+        id: entity.id,
+        familyId: entity.familyId,
+        name: entity.name,
+        role: entity.role,
+        accessDescription: entity.accessDescription,
+        status: entity.status,
+      );
 
   factory FamilyMemberModel.fromRow(Map<String, Object?> row) =>
       FamilyMemberModel(

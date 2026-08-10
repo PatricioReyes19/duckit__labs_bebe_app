@@ -43,10 +43,6 @@ class BebeBrandMark extends StatelessWidget {
       return ExcludeSemantics(child: image);
     }
 
-    return Semantics(
-      image: true,
-      label: semanticLabel,
-      child: image,
-    );
+    return Semantics(image: true, label: semanticLabel, child: image);
   }
 }

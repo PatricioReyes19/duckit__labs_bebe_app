@@ -9,11 +9,13 @@ environment:
 
 dependencies:
   bloc: ^9.2.1
+  dio: ^5.9.0
   flutter:
     sdk: flutter
   meta: ^1.18.0
   shared_preferences: ^2.5.5
   sqflite: ^2.4.3
+  supabase_flutter: ^2.17.1
 
 dev_dependencies:
   flutter_test:
