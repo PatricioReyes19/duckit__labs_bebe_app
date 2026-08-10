@@ -1,7 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-/// Controlled visual form for medication records.
 class MedicationRegisterForm extends StatelessWidget {
   const MedicationRegisterForm({
     this.subtype = 'medication',

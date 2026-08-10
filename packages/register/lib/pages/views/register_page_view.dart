@@ -7,7 +7,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:register/register.dart';
 
-/// Connects the six registration forms to their independent Cubits.
 class RegisterPageView extends StatefulWidget {
   const RegisterPageView({
     required this.initialKind,

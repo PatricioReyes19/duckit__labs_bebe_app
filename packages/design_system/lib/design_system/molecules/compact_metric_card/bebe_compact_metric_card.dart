@@ -1,7 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-/// Compact statistic used by report, consultation and family summaries.
 class BebeCompactMetricCard extends StatelessWidget {
   const BebeCompactMetricCard({
     required this.label,

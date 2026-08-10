@@ -2,10 +2,6 @@ import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:register/models/register_event_kind.dart';
 
-/// Stateless composition shared by the six register event forms.
-///
-/// Values and callbacks are controlled by the caller so each form can later be
-/// connected to its own Cubit without coupling UI to feature state.
 class RegisterEventView extends StatelessWidget {
   const RegisterEventView({
     required this.title,

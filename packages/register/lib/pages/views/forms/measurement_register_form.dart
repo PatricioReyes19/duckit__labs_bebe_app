@@ -1,7 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-/// Controlled visual form for growth and measurement records.
 class MeasurementRegisterForm extends StatelessWidget {
   const MeasurementRegisterForm({
     this.measurementType = 'weight',

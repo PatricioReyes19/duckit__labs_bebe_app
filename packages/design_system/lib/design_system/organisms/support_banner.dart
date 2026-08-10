@@ -23,9 +23,6 @@ class BebeAgendaSupportBanner extends StatelessWidget {
   final VoidCallback? onActionPressed;
   final BebeAgendaSupportBannerVariant variant;
 
-  /// Icono opcional ubicado después del texto de acción.
-  ///
-  /// Su tamaño será controlado por el banner.
   final Widget? actionIcon;
 
   final String? semanticLabel;

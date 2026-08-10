@@ -1,10 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-/// Estructura visual de Home.
-///
-/// La shell y el fondo global pertenecen a `app_layout`. Este template solo
-/// administra el contenido vertical de Home y su desplazamiento.
 class BebeHomeTemplate extends StatelessWidget {
   const BebeHomeTemplate({
     required this.activeBabyHeader,

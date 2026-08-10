@@ -1,7 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-/// Responsive organism for the compact summary cards shown in reports.
 class BebeMetricsOverview extends StatelessWidget {
   const BebeMetricsOverview({
     required this.children,

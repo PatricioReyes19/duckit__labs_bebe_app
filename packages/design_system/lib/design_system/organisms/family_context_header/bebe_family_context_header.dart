@@ -1,16 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-/// Encabezado del contexto familiar activo.
-///
-/// Representa visualmente:
-/// - el núcleo familiar seleccionado;
-/// - el bebé activo;
-/// - información contextual opcional;
-/// - una acción para cambiar de contexto;
-/// - una acción de configuración opcional.
-///
-/// No contiene navegación, menús desplegables ni lógica de dominio.
 class BebeFamilyContextHeader extends StatelessWidget {
   const BebeFamilyContextHeader({
     required this.familyName,
@@ -26,46 +16,24 @@ class BebeFamilyContextHeader extends StatelessWidget {
     super.key,
   });
 
-  /// Nombre del núcleo familiar activo.
-  ///
-  /// Ejemplo: `Familia Reyes González`.
   final String familyName;
 
-  /// Nombre del bebé activo.
   final String babyName;
 
-  /// Avatar visual del bebé activo.
   final Widget avatar;
 
-  /// Edad o información temporal breve.
-  ///
-  /// Ejemplo: `2 meses`.
   final String? babyAge;
 
-  /// Información contextual adicional.
-  ///
-  /// Ejemplo: `2 bebés en este núcleo`.
   final String? supportingText;
 
-  /// Acción para cambiar de núcleo o bebé activo.
-  ///
-  /// Si es nula, el bloque se presenta como contenido informativo.
   final VoidCallback? onContextPressed;
 
-  /// Optional selector or profile shown beside/below the active baby.
   final Widget? secondaryContext;
 
-  /// Acción opcional situada en la esquina superior derecha.
-  ///
-  /// Puede contener un botón de configuración o preferencias.
   final Widget? settingsAction;
 
-  /// Whether the family name is visible above the active baby's name.
   final bool showFamilyName;
 
-  /// Etiqueta accesible completa.
-  ///
-  /// Cuando no se proporciona, se genera a partir de los textos visibles.
   final String? semanticLabel;
 
   static const double _avatarSize = 46;

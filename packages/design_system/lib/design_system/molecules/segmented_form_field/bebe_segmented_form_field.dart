@@ -1,7 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-/// A labeled, controlled segmented selector for forms.
 class BebeSegmentedFormField<T> extends StatelessWidget {
   const BebeSegmentedFormField({
     required this.label,

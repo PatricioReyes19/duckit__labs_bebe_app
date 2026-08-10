@@ -1,10 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-/// Prominent segmented selector used below the register category row.
-///
-/// Unlike a compact form field, this selector gives the domain icon and label
-/// equal visual weight and keeps every option visible on common phone widths.
 class BebeRegisterSubcategorySelector<T> extends StatelessWidget {
   const BebeRegisterSubcategorySelector({
     required this.items,

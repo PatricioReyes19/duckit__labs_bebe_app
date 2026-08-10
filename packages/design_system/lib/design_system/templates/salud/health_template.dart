@@ -15,29 +15,18 @@ class BebeHealthOverviewTemplate extends StatelessWidget {
     super.key,
   });
 
-  /// Grilla de accesos principales.
   final Widget primaryActions;
 
   final Future<void> Function()? onRefresh;
 
-  /// Encabezado de la sección de eventos próximos.
-  ///
-  /// Habitualmente contiene un [BebeTitleSection].
   final Widget upcomingHeader;
 
-  /// Carrusel horizontal de eventos.
-  ///
-  /// Se renderiza sin padding horizontal para permitir una composición
-  /// edge-to-edge dentro de la superficie disponible.
   final Widget upcomingCarousel;
 
   final Widget? supportAction;
   final Widget? quickSummary;
   final Widget? historyAction;
 
-  /// Padding horizontal aplicado a las secciones alineadas.
-  ///
-  /// Si es nulo, utiliza el token `spacingL`.
   final double? horizontalPadding;
   final double maximumContentWidth;
 

@@ -19,7 +19,6 @@ class BebeRecentInformationData {
   final String description;
   final Widget icon;
 
-  /// Estado semántico del organismo.
   final BebeRecentInformationStatus status;
 
   final String statusLabel;

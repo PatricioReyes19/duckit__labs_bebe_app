@@ -11,7 +11,6 @@ part of 'agenda_bloc.dart';
 
 // dart format off
 T _$identity<T>(T value) => value;
-/// @nodoc
 mixin _$AgendaEvent {
 
 
@@ -35,25 +34,12 @@ String toString() {
 
 }
 
-/// @nodoc
 class $AgendaEventCopyWith<$Res>  {
 $AgendaEventCopyWith(AgendaEvent _, $Res Function(AgendaEvent) __);
 }
 
 
-/// Adds pattern-matching-related methods to [AgendaEvent].
 extension AgendaEventPatterns on AgendaEvent {
-/// A variant of `map` that fallback to returning `orElse`.
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case final Subclass value:
-///     return ...;
-///   case _:
-///     return orElse();
-/// }
-/// ```
 
 @optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( _Started value)?  started,TResult Function( _Retried value)?  retried,TResult Function( _Refreshed value)?  refreshed,TResult Function( _DaySelected value)?  daySelected,TResult Function( _WeekChanged value)?  weekChanged,TResult Function( _MonthDaySelected value)?  monthDaySelected,TResult Function( _MonthChanged value)?  monthChanged,TResult Function( _CategorySelected value)?  categorySelected,required TResult orElse(),}){
 final _that = this;
@@ -71,18 +57,6 @@ return categorySelected(_that);case _:
 
 }
 }
-/// A `switch`-like method, using callbacks.
-///
-/// Callbacks receives the raw object, upcasted.
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case final Subclass value:
-///     return ...;
-///   case final Subclass2 value:
-///     return ...;
-/// }
-/// ```
 
 @optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( _Started value)  started,required TResult Function( _Retried value)  retried,required TResult Function( _Refreshed value)  refreshed,required TResult Function( _DaySelected value)  daySelected,required TResult Function( _WeekChanged value)  weekChanged,required TResult Function( _MonthDaySelected value)  monthDaySelected,required TResult Function( _MonthChanged value)  monthChanged,required TResult Function( _CategorySelected value)  categorySelected,}){
 final _that = this;
@@ -97,17 +71,6 @@ return monthDaySelected(_that);case _MonthChanged():
 return monthChanged(_that);case _CategorySelected():
 return categorySelected(_that);}
 }
-/// A variant of `map` that fallback to returning `null`.
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case final Subclass value:
-///     return ...;
-///   case _:
-///     return null;
-/// }
-/// ```
 
 @optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( _Started value)?  started,TResult? Function( _Retried value)?  retried,TResult? Function( _Refreshed value)?  refreshed,TResult? Function( _DaySelected value)?  daySelected,TResult? Function( _WeekChanged value)?  weekChanged,TResult? Function( _MonthDaySelected value)?  monthDaySelected,TResult? Function( _MonthChanged value)?  monthChanged,TResult? Function( _CategorySelected value)?  categorySelected,}){
 final _that = this;
@@ -125,17 +88,6 @@ return categorySelected(_that);case _:
 
 }
 }
-/// A variant of `when` that fallback to an `orElse` callback.
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case Subclass(:final field):
-///     return ...;
-///   case _:
-///     return orElse();
-/// }
-/// ```
 
 @optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  started,TResult Function()?  retried,TResult Function()?  refreshed,TResult Function( DateTime selectedDay,  DateTime focusedDay)?  daySelected,TResult Function( DateTime focusedDay)?  weekChanged,TResult Function( DateTime selectedDay,  DateTime focusedDay)?  monthDaySelected,TResult Function( DateTime focusedDay)?  monthChanged,TResult Function( AgendaFilterCategory category)?  categorySelected,required TResult orElse(),}) {final _that = this;
 switch (_that) {
@@ -152,18 +104,6 @@ return categorySelected(_that.category);case _:
 
 }
 }
-/// A `switch`-like method, using callbacks.
-///
-/// As opposed to `map`, this offers destructuring.
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case Subclass(:final field):
-///     return ...;
-///   case Subclass2(:final field2):
-///     return ...;
-/// }
-/// ```
 
 @optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  started,required TResult Function()  retried,required TResult Function()  refreshed,required TResult Function( DateTime selectedDay,  DateTime focusedDay)  daySelected,required TResult Function( DateTime focusedDay)  weekChanged,required TResult Function( DateTime selectedDay,  DateTime focusedDay)  monthDaySelected,required TResult Function( DateTime focusedDay)  monthChanged,required TResult Function( AgendaFilterCategory category)  categorySelected,}) {final _that = this;
 switch (_that) {
@@ -177,17 +117,6 @@ return monthDaySelected(_that.selectedDay,_that.focusedDay);case _MonthChanged()
 return monthChanged(_that.focusedDay);case _CategorySelected():
 return categorySelected(_that.category);}
 }
-/// A variant of `when` that fallback to returning `null`
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case Subclass(:final field):
-///     return ...;
-///   case _:
-///     return null;
-/// }
-/// ```
 
 @optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  started,TResult? Function()?  retried,TResult? Function()?  refreshed,TResult? Function( DateTime selectedDay,  DateTime focusedDay)?  daySelected,TResult? Function( DateTime focusedDay)?  weekChanged,TResult? Function( DateTime selectedDay,  DateTime focusedDay)?  monthDaySelected,TResult? Function( DateTime focusedDay)?  monthChanged,TResult? Function( AgendaFilterCategory category)?  categorySelected,}) {final _that = this;
 switch (_that) {
@@ -207,7 +136,6 @@ return categorySelected(_that.category);case _:
 
 }
 
-/// @nodoc
 
 
 class _Started implements AgendaEvent {
@@ -239,7 +167,6 @@ String toString() {
 
 
 
-/// @nodoc
 
 
 class _Retried implements AgendaEvent {
@@ -271,7 +198,6 @@ String toString() {
 
 
 
-/// @nodoc
 
 
 class _Refreshed implements AgendaEvent {
@@ -303,7 +229,6 @@ String toString() {
 
 
 
-/// @nodoc
 
 
 class _DaySelected implements AgendaEvent {
@@ -313,8 +238,6 @@ class _DaySelected implements AgendaEvent {
  final  DateTime selectedDay;
  final  DateTime focusedDay;
 
-/// Create a copy of AgendaEvent
-/// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
 _$DaySelectedCopyWith<_DaySelected> get copyWith => __$DaySelectedCopyWithImpl<_DaySelected>(this, _$identity);
@@ -338,7 +261,6 @@ String toString() {
 
 }
 
-/// @nodoc
 abstract mixin class _$DaySelectedCopyWith<$Res> implements $AgendaEventCopyWith<$Res> {
   factory _$DaySelectedCopyWith(_DaySelected value, $Res Function(_DaySelected) _then) = __$DaySelectedCopyWithImpl;
 @useResult
@@ -350,7 +272,6 @@ $Res call({
 
 
 }
-/// @nodoc
 class __$DaySelectedCopyWithImpl<$Res>
     implements _$DaySelectedCopyWith<$Res> {
   __$DaySelectedCopyWithImpl(this._self, this._then);
@@ -358,8 +279,6 @@ class __$DaySelectedCopyWithImpl<$Res>
   final _DaySelected _self;
   final $Res Function(_DaySelected) _then;
 
-/// Create a copy of AgendaEvent
-/// with the given fields replaced by the non-null parameter values.
 @pragma('vm:prefer-inline') $Res call({Object? selectedDay = null,Object? focusedDay = null,}) {
   return _then(_DaySelected(
 selectedDay: null == selectedDay ? _self.selectedDay : selectedDay // ignore: cast_nullable_to_non_nullable
@@ -371,7 +290,6 @@ as DateTime,
 
 }
 
-/// @nodoc
 
 
 class _WeekChanged implements AgendaEvent {
@@ -380,8 +298,6 @@ class _WeekChanged implements AgendaEvent {
 
  final  DateTime focusedDay;
 
-/// Create a copy of AgendaEvent
-/// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
 _$WeekChangedCopyWith<_WeekChanged> get copyWith => __$WeekChangedCopyWithImpl<_WeekChanged>(this, _$identity);
@@ -405,7 +321,6 @@ String toString() {
 
 }
 
-/// @nodoc
 abstract mixin class _$WeekChangedCopyWith<$Res> implements $AgendaEventCopyWith<$Res> {
   factory _$WeekChangedCopyWith(_WeekChanged value, $Res Function(_WeekChanged) _then) = __$WeekChangedCopyWithImpl;
 @useResult
@@ -417,7 +332,6 @@ $Res call({
 
 
 }
-/// @nodoc
 class __$WeekChangedCopyWithImpl<$Res>
     implements _$WeekChangedCopyWith<$Res> {
   __$WeekChangedCopyWithImpl(this._self, this._then);
@@ -425,8 +339,6 @@ class __$WeekChangedCopyWithImpl<$Res>
   final _WeekChanged _self;
   final $Res Function(_WeekChanged) _then;
 
-/// Create a copy of AgendaEvent
-/// with the given fields replaced by the non-null parameter values.
 @pragma('vm:prefer-inline') $Res call({Object? focusedDay = null,}) {
   return _then(_WeekChanged(
 null == focusedDay ? _self.focusedDay : focusedDay // ignore: cast_nullable_to_non_nullable
@@ -437,7 +349,6 @@ as DateTime,
 
 }
 
-/// @nodoc
 
 
 class _MonthDaySelected implements AgendaEvent {
@@ -447,8 +358,6 @@ class _MonthDaySelected implements AgendaEvent {
  final  DateTime selectedDay;
  final  DateTime focusedDay;
 
-/// Create a copy of AgendaEvent
-/// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
 _$MonthDaySelectedCopyWith<_MonthDaySelected> get copyWith => __$MonthDaySelectedCopyWithImpl<_MonthDaySelected>(this, _$identity);
@@ -472,7 +381,6 @@ String toString() {
 
 }
 
-/// @nodoc
 abstract mixin class _$MonthDaySelectedCopyWith<$Res> implements $AgendaEventCopyWith<$Res> {
   factory _$MonthDaySelectedCopyWith(_MonthDaySelected value, $Res Function(_MonthDaySelected) _then) = __$MonthDaySelectedCopyWithImpl;
 @useResult
@@ -484,7 +392,6 @@ $Res call({
 
 
 }
-/// @nodoc
 class __$MonthDaySelectedCopyWithImpl<$Res>
     implements _$MonthDaySelectedCopyWith<$Res> {
   __$MonthDaySelectedCopyWithImpl(this._self, this._then);
@@ -492,8 +399,6 @@ class __$MonthDaySelectedCopyWithImpl<$Res>
   final _MonthDaySelected _self;
   final $Res Function(_MonthDaySelected) _then;
 
-/// Create a copy of AgendaEvent
-/// with the given fields replaced by the non-null parameter values.
 @pragma('vm:prefer-inline') $Res call({Object? selectedDay = null,Object? focusedDay = null,}) {
   return _then(_MonthDaySelected(
 selectedDay: null == selectedDay ? _self.selectedDay : selectedDay // ignore: cast_nullable_to_non_nullable
@@ -505,7 +410,6 @@ as DateTime,
 
 }
 
-/// @nodoc
 
 
 class _MonthChanged implements AgendaEvent {
@@ -514,8 +418,6 @@ class _MonthChanged implements AgendaEvent {
 
  final  DateTime focusedDay;
 
-/// Create a copy of AgendaEvent
-/// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
 _$MonthChangedCopyWith<_MonthChanged> get copyWith => __$MonthChangedCopyWithImpl<_MonthChanged>(this, _$identity);
@@ -539,7 +441,6 @@ String toString() {
 
 }
 
-/// @nodoc
 abstract mixin class _$MonthChangedCopyWith<$Res> implements $AgendaEventCopyWith<$Res> {
   factory _$MonthChangedCopyWith(_MonthChanged value, $Res Function(_MonthChanged) _then) = __$MonthChangedCopyWithImpl;
 @useResult
@@ -551,7 +452,6 @@ $Res call({
 
 
 }
-/// @nodoc
 class __$MonthChangedCopyWithImpl<$Res>
     implements _$MonthChangedCopyWith<$Res> {
   __$MonthChangedCopyWithImpl(this._self, this._then);
@@ -559,8 +459,6 @@ class __$MonthChangedCopyWithImpl<$Res>
   final _MonthChanged _self;
   final $Res Function(_MonthChanged) _then;
 
-/// Create a copy of AgendaEvent
-/// with the given fields replaced by the non-null parameter values.
 @pragma('vm:prefer-inline') $Res call({Object? focusedDay = null,}) {
   return _then(_MonthChanged(
 null == focusedDay ? _self.focusedDay : focusedDay // ignore: cast_nullable_to_non_nullable
@@ -571,7 +469,6 @@ as DateTime,
 
 }
 
-/// @nodoc
 
 
 class _CategorySelected implements AgendaEvent {
@@ -580,8 +477,6 @@ class _CategorySelected implements AgendaEvent {
 
  final  AgendaFilterCategory category;
 
-/// Create a copy of AgendaEvent
-/// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
 _$CategorySelectedCopyWith<_CategorySelected> get copyWith => __$CategorySelectedCopyWithImpl<_CategorySelected>(this, _$identity);
@@ -605,7 +500,6 @@ String toString() {
 
 }
 
-/// @nodoc
 abstract mixin class _$CategorySelectedCopyWith<$Res> implements $AgendaEventCopyWith<$Res> {
   factory _$CategorySelectedCopyWith(_CategorySelected value, $Res Function(_CategorySelected) _then) = __$CategorySelectedCopyWithImpl;
 @useResult
@@ -617,7 +511,6 @@ $Res call({
 
 
 }
-/// @nodoc
 class __$CategorySelectedCopyWithImpl<$Res>
     implements _$CategorySelectedCopyWith<$Res> {
   __$CategorySelectedCopyWithImpl(this._self, this._then);
@@ -625,8 +518,6 @@ class __$CategorySelectedCopyWithImpl<$Res>
   final _CategorySelected _self;
   final $Res Function(_CategorySelected) _then;
 
-/// Create a copy of AgendaEvent
-/// with the given fields replaced by the non-null parameter values.
 @pragma('vm:prefer-inline') $Res call({Object? category = null,}) {
   return _then(_CategorySelected(
 null == category ? _self.category : category // ignore: cast_nullable_to_non_nullable
@@ -637,7 +528,6 @@ as AgendaFilterCategory,
 
 }
 
-/// @nodoc
 mixin _$AgendaState {
 
 
@@ -661,25 +551,12 @@ String toString() {
 
 }
 
-/// @nodoc
 class $AgendaStateCopyWith<$Res>  {
 $AgendaStateCopyWith(AgendaState _, $Res Function(AgendaState) __);
 }
 
 
-/// Adds pattern-matching-related methods to [AgendaState].
 extension AgendaStatePatterns on AgendaState {
-/// A variant of `map` that fallback to returning `orElse`.
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case final Subclass value:
-///     return ...;
-///   case _:
-///     return orElse();
-/// }
-/// ```
 
 @optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( AgendaInitial value)?  initial,TResult Function( AgendaLoading value)?  loading,TResult Function( AgendaLoaded value)?  loaded,TResult Function( AgendaEmpty value)?  empty,TResult Function( AgendaFailure value)?  failure,required TResult orElse(),}){
 final _that = this;
@@ -694,18 +571,6 @@ return failure(_that);case _:
 
 }
 }
-/// A `switch`-like method, using callbacks.
-///
-/// Callbacks receives the raw object, upcasted.
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case final Subclass value:
-///     return ...;
-///   case final Subclass2 value:
-///     return ...;
-/// }
-/// ```
 
 @optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( AgendaInitial value)  initial,required TResult Function( AgendaLoading value)  loading,required TResult Function( AgendaLoaded value)  loaded,required TResult Function( AgendaEmpty value)  empty,required TResult Function( AgendaFailure value)  failure,}){
 final _that = this;
@@ -717,17 +582,6 @@ return loaded(_that);case AgendaEmpty():
 return empty(_that);case AgendaFailure():
 return failure(_that);}
 }
-/// A variant of `map` that fallback to returning `null`.
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case final Subclass value:
-///     return ...;
-///   case _:
-///     return null;
-/// }
-/// ```
 
 @optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( AgendaInitial value)?  initial,TResult? Function( AgendaLoading value)?  loading,TResult? Function( AgendaLoaded value)?  loaded,TResult? Function( AgendaEmpty value)?  empty,TResult? Function( AgendaFailure value)?  failure,}){
 final _that = this;
@@ -742,17 +596,6 @@ return failure(_that);case _:
 
 }
 }
-/// A variant of `when` that fallback to an `orElse` callback.
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case Subclass(:final field):
-///     return ...;
-///   case _:
-///     return orElse();
-/// }
-/// ```
 
 @optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  initial,TResult Function()?  loading,TResult Function( AgendaOverviewVm overview)?  loaded,TResult Function( AgendaOverviewVm overview)?  empty,TResult Function( String message)?  failure,required TResult orElse(),}) {final _that = this;
 switch (_that) {
@@ -766,18 +609,6 @@ return failure(_that.message);case _:
 
 }
 }
-/// A `switch`-like method, using callbacks.
-///
-/// As opposed to `map`, this offers destructuring.
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case Subclass(:final field):
-///     return ...;
-///   case Subclass2(:final field2):
-///     return ...;
-/// }
-/// ```
 
 @optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  initial,required TResult Function()  loading,required TResult Function( AgendaOverviewVm overview)  loaded,required TResult Function( AgendaOverviewVm overview)  empty,required TResult Function( String message)  failure,}) {final _that = this;
 switch (_that) {
@@ -788,17 +619,6 @@ return loaded(_that.overview);case AgendaEmpty():
 return empty(_that.overview);case AgendaFailure():
 return failure(_that.message);}
 }
-/// A variant of `when` that fallback to returning `null`
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case Subclass(:final field):
-///     return ...;
-///   case _:
-///     return null;
-/// }
-/// ```
 
 @optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  initial,TResult? Function()?  loading,TResult? Function( AgendaOverviewVm overview)?  loaded,TResult? Function( AgendaOverviewVm overview)?  empty,TResult? Function( String message)?  failure,}) {final _that = this;
 switch (_that) {
@@ -815,7 +635,6 @@ return failure(_that.message);case _:
 
 }
 
-/// @nodoc
 
 
 class AgendaInitial implements AgendaState {
@@ -847,7 +666,6 @@ String toString() {
 
 
 
-/// @nodoc
 
 
 class AgendaLoading implements AgendaState {
@@ -879,7 +697,6 @@ String toString() {
 
 
 
-/// @nodoc
 
 
 class AgendaLoaded implements AgendaState {
@@ -888,8 +705,6 @@ class AgendaLoaded implements AgendaState {
 
  final  AgendaOverviewVm overview;
 
-/// Create a copy of AgendaState
-/// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
 $AgendaLoadedCopyWith<AgendaLoaded> get copyWith => _$AgendaLoadedCopyWithImpl<AgendaLoaded>(this, _$identity);
@@ -913,7 +728,6 @@ String toString() {
 
 }
 
-/// @nodoc
 abstract mixin class $AgendaLoadedCopyWith<$Res> implements $AgendaStateCopyWith<$Res> {
   factory $AgendaLoadedCopyWith(AgendaLoaded value, $Res Function(AgendaLoaded) _then) = _$AgendaLoadedCopyWithImpl;
 @useResult
@@ -925,7 +739,6 @@ $Res call({
 
 
 }
-/// @nodoc
 class _$AgendaLoadedCopyWithImpl<$Res>
     implements $AgendaLoadedCopyWith<$Res> {
   _$AgendaLoadedCopyWithImpl(this._self, this._then);
@@ -933,8 +746,6 @@ class _$AgendaLoadedCopyWithImpl<$Res>
   final AgendaLoaded _self;
   final $Res Function(AgendaLoaded) _then;
 
-/// Create a copy of AgendaState
-/// with the given fields replaced by the non-null parameter values.
 @pragma('vm:prefer-inline') $Res call({Object? overview = null,}) {
   return _then(AgendaLoaded(
 overview: null == overview ? _self.overview : overview // ignore: cast_nullable_to_non_nullable
@@ -945,7 +756,6 @@ as AgendaOverviewVm,
 
 }
 
-/// @nodoc
 
 
 class AgendaEmpty implements AgendaState {
@@ -954,8 +764,6 @@ class AgendaEmpty implements AgendaState {
 
  final  AgendaOverviewVm overview;
 
-/// Create a copy of AgendaState
-/// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
 $AgendaEmptyCopyWith<AgendaEmpty> get copyWith => _$AgendaEmptyCopyWithImpl<AgendaEmpty>(this, _$identity);
@@ -979,7 +787,6 @@ String toString() {
 
 }
 
-/// @nodoc
 abstract mixin class $AgendaEmptyCopyWith<$Res> implements $AgendaStateCopyWith<$Res> {
   factory $AgendaEmptyCopyWith(AgendaEmpty value, $Res Function(AgendaEmpty) _then) = _$AgendaEmptyCopyWithImpl;
 @useResult
@@ -991,7 +798,6 @@ $Res call({
 
 
 }
-/// @nodoc
 class _$AgendaEmptyCopyWithImpl<$Res>
     implements $AgendaEmptyCopyWith<$Res> {
   _$AgendaEmptyCopyWithImpl(this._self, this._then);
@@ -999,8 +805,6 @@ class _$AgendaEmptyCopyWithImpl<$Res>
   final AgendaEmpty _self;
   final $Res Function(AgendaEmpty) _then;
 
-/// Create a copy of AgendaState
-/// with the given fields replaced by the non-null parameter values.
 @pragma('vm:prefer-inline') $Res call({Object? overview = null,}) {
   return _then(AgendaEmpty(
 overview: null == overview ? _self.overview : overview // ignore: cast_nullable_to_non_nullable
@@ -1011,7 +815,6 @@ as AgendaOverviewVm,
 
 }
 
-/// @nodoc
 
 
 class AgendaFailure implements AgendaState {
@@ -1020,8 +823,6 @@ class AgendaFailure implements AgendaState {
 
  final  String message;
 
-/// Create a copy of AgendaState
-/// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
 $AgendaFailureCopyWith<AgendaFailure> get copyWith => _$AgendaFailureCopyWithImpl<AgendaFailure>(this, _$identity);
@@ -1045,7 +846,6 @@ String toString() {
 
 }
 
-/// @nodoc
 abstract mixin class $AgendaFailureCopyWith<$Res> implements $AgendaStateCopyWith<$Res> {
   factory $AgendaFailureCopyWith(AgendaFailure value, $Res Function(AgendaFailure) _then) = _$AgendaFailureCopyWithImpl;
 @useResult
@@ -1057,7 +857,6 @@ $Res call({
 
 
 }
-/// @nodoc
 class _$AgendaFailureCopyWithImpl<$Res>
     implements $AgendaFailureCopyWith<$Res> {
   _$AgendaFailureCopyWithImpl(this._self, this._then);
@@ -1065,8 +864,6 @@ class _$AgendaFailureCopyWithImpl<$Res>
   final AgendaFailure _self;
   final $Res Function(AgendaFailure) _then;
 
-/// Create a copy of AgendaState
-/// with the given fields replaced by the non-null parameter values.
 @pragma('vm:prefer-inline') $Res call({Object? message = null,}) {
   return _then(AgendaFailure(
 message: null == message ? _self.message : message // ignore: cast_nullable_to_non_nullable

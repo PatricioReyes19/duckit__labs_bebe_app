@@ -1,7 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-/// Centers page content and prevents unbounded growth on large viewports.
 class BebeResponsiveContent extends StatelessWidget {
   const BebeResponsiveContent({
     required this.child,

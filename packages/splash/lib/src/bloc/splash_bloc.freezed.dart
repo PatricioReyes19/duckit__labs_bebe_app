@@ -12,7 +12,6 @@ part of 'splash_bloc.dart';
 // dart format off
 T _$identity<T>(T value) => value;
 
-/// @nodoc
 mixin _$SplashEvent {
   @override
   bool operator ==(Object other) {
@@ -29,24 +28,11 @@ mixin _$SplashEvent {
   }
 }
 
-/// @nodoc
 class $SplashEventCopyWith<$Res> {
   $SplashEventCopyWith(SplashEvent _, $Res Function(SplashEvent) __);
 }
 
-/// Adds pattern-matching-related methods to [SplashEvent].
 extension SplashEventPatterns on SplashEvent {
-  /// A variant of `map` that fallback to returning `orElse`.
-  ///
-  /// It is equivalent to doing:
-  /// ```dart
-  /// switch (sealedClass) {
-  ///   case final Subclass value:
-  ///     return ...;
-  ///   case _:
-  ///     return orElse();
-  /// }
-  /// ```
 
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
@@ -71,18 +57,6 @@ extension SplashEventPatterns on SplashEvent {
     }
   }
 
-  /// A `switch`-like method, using callbacks.
-  ///
-  /// Callbacks receives the raw object, upcasted.
-  /// It is equivalent to doing:
-  /// ```dart
-  /// switch (sealedClass) {
-  ///   case final Subclass value:
-  ///     return ...;
-  ///   case final Subclass2 value:
-  ///     return ...;
-  /// }
-  /// ```
 
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
@@ -104,17 +78,6 @@ extension SplashEventPatterns on SplashEvent {
     }
   }
 
-  /// A variant of `map` that fallback to returning `null`.
-  ///
-  /// It is equivalent to doing:
-  /// ```dart
-  /// switch (sealedClass) {
-  ///   case final Subclass value:
-  ///     return ...;
-  ///   case _:
-  ///     return null;
-  /// }
-  /// ```
 
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
@@ -138,17 +101,6 @@ extension SplashEventPatterns on SplashEvent {
     }
   }
 
-  /// A variant of `when` that fallback to an `orElse` callback.
-  ///
-  /// It is equivalent to doing:
-  /// ```dart
-  /// switch (sealedClass) {
-  ///   case Subclass(:final field):
-  ///     return ...;
-  ///   case _:
-  ///     return orElse();
-  /// }
-  /// ```
 
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
@@ -173,18 +125,6 @@ extension SplashEventPatterns on SplashEvent {
     }
   }
 
-  /// A `switch`-like method, using callbacks.
-  ///
-  /// As opposed to `map`, this offers destructuring.
-  /// It is equivalent to doing:
-  /// ```dart
-  /// switch (sealedClass) {
-  ///   case Subclass(:final field):
-  ///     return ...;
-  ///   case Subclass2(:final field2):
-  ///     return ...;
-  /// }
-  /// ```
 
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
@@ -206,17 +146,6 @@ extension SplashEventPatterns on SplashEvent {
     }
   }
 
-  /// A variant of `when` that fallback to returning `null`
-  ///
-  /// It is equivalent to doing:
-  /// ```dart
-  /// switch (sealedClass) {
-  ///   case Subclass(:final field):
-  ///     return ...;
-  ///   case _:
-  ///     return null;
-  /// }
-  /// ```
 
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
@@ -241,7 +170,6 @@ extension SplashEventPatterns on SplashEvent {
   }
 }
 
-/// @nodoc
 
 class _Started implements SplashEvent {
   const _Started();
@@ -261,7 +189,6 @@ class _Started implements SplashEvent {
   }
 }
 
-/// @nodoc
 
 class _Retried implements SplashEvent {
   const _Retried();
@@ -281,7 +208,6 @@ class _Retried implements SplashEvent {
   }
 }
 
-/// @nodoc
 
 class _LoginRequested implements SplashEvent {
   const _LoginRequested();
@@ -301,7 +227,6 @@ class _LoginRequested implements SplashEvent {
   }
 }
 
-/// @nodoc
 
 class _SignUpRequested implements SplashEvent {
   const _SignUpRequested();
@@ -321,7 +246,6 @@ class _SignUpRequested implements SplashEvent {
   }
 }
 
-/// @nodoc
 mixin _$SplashState {
   @override
   bool operator ==(Object other) {
@@ -338,24 +262,11 @@ mixin _$SplashState {
   }
 }
 
-/// @nodoc
 class $SplashStateCopyWith<$Res> {
   $SplashStateCopyWith(SplashState _, $Res Function(SplashState) __);
 }
 
-/// Adds pattern-matching-related methods to [SplashState].
 extension SplashStatePatterns on SplashState {
-  /// A variant of `map` that fallback to returning `orElse`.
-  ///
-  /// It is equivalent to doing:
-  /// ```dart
-  /// switch (sealedClass) {
-  ///   case final Subclass value:
-  ///     return ...;
-  ///   case _:
-  ///     return orElse();
-  /// }
-  /// ```
 
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
@@ -380,18 +291,6 @@ extension SplashStatePatterns on SplashState {
     }
   }
 
-  /// A `switch`-like method, using callbacks.
-  ///
-  /// Callbacks receives the raw object, upcasted.
-  /// It is equivalent to doing:
-  /// ```dart
-  /// switch (sealedClass) {
-  ///   case final Subclass value:
-  ///     return ...;
-  ///   case final Subclass2 value:
-  ///     return ...;
-  /// }
-  /// ```
 
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
@@ -413,17 +312,6 @@ extension SplashStatePatterns on SplashState {
     }
   }
 
-  /// A variant of `map` that fallback to returning `null`.
-  ///
-  /// It is equivalent to doing:
-  /// ```dart
-  /// switch (sealedClass) {
-  ///   case final Subclass value:
-  ///     return ...;
-  ///   case _:
-  ///     return null;
-  /// }
-  /// ```
 
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
@@ -447,17 +335,6 @@ extension SplashStatePatterns on SplashState {
     }
   }
 
-  /// A variant of `when` that fallback to an `orElse` callback.
-  ///
-  /// It is equivalent to doing:
-  /// ```dart
-  /// switch (sealedClass) {
-  ///   case Subclass(:final field):
-  ///     return ...;
-  ///   case _:
-  ///     return orElse();
-  /// }
-  /// ```
 
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
@@ -482,18 +359,6 @@ extension SplashStatePatterns on SplashState {
     }
   }
 
-  /// A `switch`-like method, using callbacks.
-  ///
-  /// As opposed to `map`, this offers destructuring.
-  /// It is equivalent to doing:
-  /// ```dart
-  /// switch (sealedClass) {
-  ///   case Subclass(:final field):
-  ///     return ...;
-  ///   case Subclass2(:final field2):
-  ///     return ...;
-  /// }
-  /// ```
 
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
@@ -515,17 +380,6 @@ extension SplashStatePatterns on SplashState {
     }
   }
 
-  /// A variant of `when` that fallback to returning `null`
-  ///
-  /// It is equivalent to doing:
-  /// ```dart
-  /// switch (sealedClass) {
-  ///   case Subclass(:final field):
-  ///     return ...;
-  ///   case _:
-  ///     return null;
-  /// }
-  /// ```
 
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
@@ -550,7 +404,6 @@ extension SplashStatePatterns on SplashState {
   }
 }
 
-/// @nodoc
 
 class SplashResolving implements SplashState {
   const SplashResolving();
@@ -570,7 +423,6 @@ class SplashResolving implements SplashState {
   }
 }
 
-/// @nodoc
 
 class SplashAuthEntryState implements SplashState {
   const SplashAuthEntryState();
@@ -590,15 +442,12 @@ class SplashAuthEntryState implements SplashState {
   }
 }
 
-/// @nodoc
 
 class SplashRouteRequested implements SplashState {
   const SplashRouteRequested({required this.destination});
 
   final EntryDestination destination;
 
-  /// Create a copy of SplashState
-  /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
   $SplashRouteRequestedCopyWith<SplashRouteRequested> get copyWith =>
@@ -623,7 +472,6 @@ class SplashRouteRequested implements SplashState {
   }
 }
 
-/// @nodoc
 abstract mixin class $SplashRouteRequestedCopyWith<$Res>
     implements $SplashStateCopyWith<$Res> {
   factory $SplashRouteRequestedCopyWith(SplashRouteRequested value,
@@ -633,7 +481,6 @@ abstract mixin class $SplashRouteRequestedCopyWith<$Res>
   $Res call({EntryDestination destination});
 }
 
-/// @nodoc
 class _$SplashRouteRequestedCopyWithImpl<$Res>
     implements $SplashRouteRequestedCopyWith<$Res> {
   _$SplashRouteRequestedCopyWithImpl(this._self, this._then);
@@ -641,8 +488,6 @@ class _$SplashRouteRequestedCopyWithImpl<$Res>
   final SplashRouteRequested _self;
   final $Res Function(SplashRouteRequested) _then;
 
-  /// Create a copy of SplashState
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   $Res call({
     Object? destination = null,
@@ -656,7 +501,6 @@ class _$SplashRouteRequestedCopyWithImpl<$Res>
   }
 }
 
-/// @nodoc
 
 class SplashFailure implements SplashState {
   const SplashFailure({required this.message, required this.canRetry});
@@ -664,8 +508,6 @@ class SplashFailure implements SplashState {
   final String message;
   final bool canRetry;
 
-  /// Create a copy of SplashState
-  /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
   $SplashFailureCopyWith<SplashFailure> get copyWith =>
@@ -690,7 +532,6 @@ class SplashFailure implements SplashState {
   }
 }
 
-/// @nodoc
 abstract mixin class $SplashFailureCopyWith<$Res>
     implements $SplashStateCopyWith<$Res> {
   factory $SplashFailureCopyWith(
@@ -700,7 +541,6 @@ abstract mixin class $SplashFailureCopyWith<$Res>
   $Res call({String message, bool canRetry});
 }
 
-/// @nodoc
 class _$SplashFailureCopyWithImpl<$Res>
     implements $SplashFailureCopyWith<$Res> {
   _$SplashFailureCopyWithImpl(this._self, this._then);
@@ -708,8 +548,6 @@ class _$SplashFailureCopyWithImpl<$Res>
   final SplashFailure _self;
   final $Res Function(SplashFailure) _then;
 
-  /// Create a copy of SplashState
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   $Res call({
     Object? message = null,

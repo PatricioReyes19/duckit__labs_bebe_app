@@ -23,10 +23,8 @@ class BebeRecentInformationCard extends StatelessWidget {
   final String description;
   final Widget icon;
 
-  /// Variante visual propia de esta molécula.
   final BebeRecentInformationCardVariant variant;
 
-  /// Slot abierto. Normalmente recibe BebeStatusBadge.
   final Widget? status;
 
   final VoidCallback? onPressed;

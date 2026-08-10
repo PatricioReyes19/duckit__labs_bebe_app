@@ -1,7 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-/// Visual data for one item in [BebeRegisterCategorySelector].
 class BebeRegisterCategoryItem<T> {
   const BebeRegisterCategoryItem({
     required this.value,
@@ -20,7 +19,6 @@ class BebeRegisterCategoryItem<T> {
   final bool enabled;
 }
 
-/// Horizontal, controlled selector for register event categories.
 class BebeRegisterCategorySelector<T> extends StatelessWidget {
   const BebeRegisterCategorySelector({
     required this.items,

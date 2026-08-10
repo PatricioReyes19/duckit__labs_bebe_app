@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-/// Fluid wrapping grid used by cards, summaries and short form fields.
 class BebeAdaptiveGrid extends StatelessWidget {
   const BebeAdaptiveGrid({
     required this.children,

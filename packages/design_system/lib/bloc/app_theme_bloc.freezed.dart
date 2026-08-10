@@ -11,7 +11,6 @@ part of 'app_theme_bloc.dart';
 
 // dart format off
 T _$identity<T>(T value) => value;
-/// @nodoc
 mixin _$AppThemeEvent {
 
 
@@ -35,25 +34,12 @@ String toString() {
 
 }
 
-/// @nodoc
 class $AppThemeEventCopyWith<$Res>  {
 $AppThemeEventCopyWith(AppThemeEvent _, $Res Function(AppThemeEvent) __);
 }
 
 
-/// Adds pattern-matching-related methods to [AppThemeEvent].
 extension AppThemeEventPatterns on AppThemeEvent {
-/// A variant of `map` that fallback to returning `orElse`.
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case final Subclass value:
-///     return ...;
-///   case _:
-///     return orElse();
-/// }
-/// ```
 
 @optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( _UpdateAppThemeEvent value)?  updateTheme,TResult Function( _UpdateThemeModeEvent value)?  updateThemeMode,required TResult orElse(),}){
 final _that = this;
@@ -65,18 +51,6 @@ return updateThemeMode(_that);case _:
 
 }
 }
-/// A `switch`-like method, using callbacks.
-///
-/// Callbacks receives the raw object, upcasted.
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case final Subclass value:
-///     return ...;
-///   case final Subclass2 value:
-///     return ...;
-/// }
-/// ```
 
 @optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( _UpdateAppThemeEvent value)  updateTheme,required TResult Function( _UpdateThemeModeEvent value)  updateThemeMode,}){
 final _that = this;
@@ -85,17 +59,6 @@ case _UpdateAppThemeEvent():
 return updateTheme(_that);case _UpdateThemeModeEvent():
 return updateThemeMode(_that);}
 }
-/// A variant of `map` that fallback to returning `null`.
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case final Subclass value:
-///     return ...;
-///   case _:
-///     return null;
-/// }
-/// ```
 
 @optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( _UpdateAppThemeEvent value)?  updateTheme,TResult? Function( _UpdateThemeModeEvent value)?  updateThemeMode,}){
 final _that = this;
@@ -107,17 +70,6 @@ return updateThemeMode(_that);case _:
 
 }
 }
-/// A variant of `when` that fallback to an `orElse` callback.
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case Subclass(:final field):
-///     return ...;
-///   case _:
-///     return orElse();
-/// }
-/// ```
 
 @optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( BebeTheme theme)?  updateTheme,TResult Function( ThemeMode themeMode)?  updateThemeMode,required TResult orElse(),}) {final _that = this;
 switch (_that) {
@@ -128,18 +80,6 @@ return updateThemeMode(_that.themeMode);case _:
 
 }
 }
-/// A `switch`-like method, using callbacks.
-///
-/// As opposed to `map`, this offers destructuring.
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case Subclass(:final field):
-///     return ...;
-///   case Subclass2(:final field2):
-///     return ...;
-/// }
-/// ```
 
 @optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( BebeTheme theme)  updateTheme,required TResult Function( ThemeMode themeMode)  updateThemeMode,}) {final _that = this;
 switch (_that) {
@@ -147,17 +87,6 @@ case _UpdateAppThemeEvent():
 return updateTheme(_that.theme);case _UpdateThemeModeEvent():
 return updateThemeMode(_that.themeMode);}
 }
-/// A variant of `when` that fallback to returning `null`
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case Subclass(:final field):
-///     return ...;
-///   case _:
-///     return null;
-/// }
-/// ```
 
 @optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( BebeTheme theme)?  updateTheme,TResult? Function( ThemeMode themeMode)?  updateThemeMode,}) {final _that = this;
 switch (_that) {
@@ -171,7 +100,6 @@ return updateThemeMode(_that.themeMode);case _:
 
 }
 
-/// @nodoc
 
 
 class _UpdateAppThemeEvent implements AppThemeEvent {
@@ -180,8 +108,6 @@ class _UpdateAppThemeEvent implements AppThemeEvent {
 
  final  BebeTheme theme;
 
-/// Create a copy of AppThemeEvent
-/// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
 _$UpdateAppThemeEventCopyWith<_UpdateAppThemeEvent> get copyWith => __$UpdateAppThemeEventCopyWithImpl<_UpdateAppThemeEvent>(this, _$identity);
@@ -205,7 +131,6 @@ String toString() {
 
 }
 
-/// @nodoc
 abstract mixin class _$UpdateAppThemeEventCopyWith<$Res> implements $AppThemeEventCopyWith<$Res> {
   factory _$UpdateAppThemeEventCopyWith(_UpdateAppThemeEvent value, $Res Function(_UpdateAppThemeEvent) _then) = __$UpdateAppThemeEventCopyWithImpl;
 @useResult
@@ -217,7 +142,6 @@ $Res call({
 
 
 }
-/// @nodoc
 class __$UpdateAppThemeEventCopyWithImpl<$Res>
     implements _$UpdateAppThemeEventCopyWith<$Res> {
   __$UpdateAppThemeEventCopyWithImpl(this._self, this._then);
@@ -225,8 +149,6 @@ class __$UpdateAppThemeEventCopyWithImpl<$Res>
   final _UpdateAppThemeEvent _self;
   final $Res Function(_UpdateAppThemeEvent) _then;
 
-/// Create a copy of AppThemeEvent
-/// with the given fields replaced by the non-null parameter values.
 @pragma('vm:prefer-inline') $Res call({Object? theme = null,}) {
   return _then(_UpdateAppThemeEvent(
 theme: null == theme ? _self.theme : theme // ignore: cast_nullable_to_non_nullable
@@ -237,7 +159,6 @@ as BebeTheme,
 
 }
 
-/// @nodoc
 
 
 class _UpdateThemeModeEvent implements AppThemeEvent {
@@ -246,8 +167,6 @@ class _UpdateThemeModeEvent implements AppThemeEvent {
 
  final  ThemeMode themeMode;
 
-/// Create a copy of AppThemeEvent
-/// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
 _$UpdateThemeModeEventCopyWith<_UpdateThemeModeEvent> get copyWith => __$UpdateThemeModeEventCopyWithImpl<_UpdateThemeModeEvent>(this, _$identity);
@@ -271,7 +190,6 @@ String toString() {
 
 }
 
-/// @nodoc
 abstract mixin class _$UpdateThemeModeEventCopyWith<$Res> implements $AppThemeEventCopyWith<$Res> {
   factory _$UpdateThemeModeEventCopyWith(_UpdateThemeModeEvent value, $Res Function(_UpdateThemeModeEvent) _then) = __$UpdateThemeModeEventCopyWithImpl;
 @useResult
@@ -283,7 +201,6 @@ $Res call({
 
 
 }
-/// @nodoc
 class __$UpdateThemeModeEventCopyWithImpl<$Res>
     implements _$UpdateThemeModeEventCopyWith<$Res> {
   __$UpdateThemeModeEventCopyWithImpl(this._self, this._then);
@@ -291,8 +208,6 @@ class __$UpdateThemeModeEventCopyWithImpl<$Res>
   final _UpdateThemeModeEvent _self;
   final $Res Function(_UpdateThemeModeEvent) _then;
 
-/// Create a copy of AppThemeEvent
-/// with the given fields replaced by the non-null parameter values.
 @pragma('vm:prefer-inline') $Res call({Object? themeMode = null,}) {
   return _then(_UpdateThemeModeEvent(
 themeMode: null == themeMode ? _self.themeMode : themeMode // ignore: cast_nullable_to_non_nullable
@@ -303,12 +218,9 @@ as ThemeMode,
 
 }
 
-/// @nodoc
 mixin _$AppThemeState {
 
  BebeTheme get theme; ThemeMode get themeMode;
-/// Create a copy of AppThemeState
-/// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
 $AppThemeStateCopyWith<AppThemeState> get copyWith => _$AppThemeStateCopyWithImpl<AppThemeState>(this as AppThemeState, _$identity);
@@ -332,7 +244,6 @@ String toString() {
 
 }
 
-/// @nodoc
 abstract mixin class $AppThemeStateCopyWith<$Res>  {
   factory $AppThemeStateCopyWith(AppThemeState value, $Res Function(AppThemeState) _then) = _$AppThemeStateCopyWithImpl;
 @useResult
@@ -344,7 +255,6 @@ $Res call({
 
 
 }
-/// @nodoc
 class _$AppThemeStateCopyWithImpl<$Res>
     implements $AppThemeStateCopyWith<$Res> {
   _$AppThemeStateCopyWithImpl(this._self, this._then);
@@ -352,8 +262,6 @@ class _$AppThemeStateCopyWithImpl<$Res>
   final AppThemeState _self;
   final $Res Function(AppThemeState) _then;
 
-/// Create a copy of AppThemeState
-/// with the given fields replaced by the non-null parameter values.
 @pragma('vm:prefer-inline') @override $Res call({Object? theme = null,Object? themeMode = null,}) {
   return _then(_self.copyWith(
 theme: null == theme ? _self.theme : theme // ignore: cast_nullable_to_non_nullable
@@ -365,19 +273,7 @@ as ThemeMode,
 }
 
 
-/// Adds pattern-matching-related methods to [AppThemeState].
 extension AppThemeStatePatterns on AppThemeState {
-/// A variant of `map` that fallback to returning `orElse`.
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case final Subclass value:
-///     return ...;
-///   case _:
-///     return orElse();
-/// }
-/// ```
 
 @optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _AppThemeState value)?  $default,{required TResult orElse(),}){
 final _that = this;
@@ -388,18 +284,6 @@ return $default(_that);case _:
 
 }
 }
-/// A `switch`-like method, using callbacks.
-///
-/// Callbacks receives the raw object, upcasted.
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case final Subclass value:
-///     return ...;
-///   case final Subclass2 value:
-///     return ...;
-/// }
-/// ```
 
 @optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _AppThemeState value)  $default,){
 final _that = this;
@@ -410,17 +294,6 @@ return $default(_that);case _:
 
 }
 }
-/// A variant of `map` that fallback to returning `null`.
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case final Subclass value:
-///     return ...;
-///   case _:
-///     return null;
-/// }
-/// ```
 
 @optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _AppThemeState value)?  $default,){
 final _that = this;
@@ -431,17 +304,6 @@ return $default(_that);case _:
 
 }
 }
-/// A variant of `when` that fallback to an `orElse` callback.
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case Subclass(:final field):
-///     return ...;
-///   case _:
-///     return orElse();
-/// }
-/// ```
 
 @optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( BebeTheme theme,  ThemeMode themeMode)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
@@ -451,18 +313,6 @@ return $default(_that.theme,_that.themeMode);case _:
 
 }
 }
-/// A `switch`-like method, using callbacks.
-///
-/// As opposed to `map`, this offers destructuring.
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case Subclass(:final field):
-///     return ...;
-///   case Subclass2(:final field2):
-///     return ...;
-/// }
-/// ```
 
 @optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( BebeTheme theme,  ThemeMode themeMode)  $default,) {final _that = this;
 switch (_that) {
@@ -472,17 +322,6 @@ return $default(_that.theme,_that.themeMode);case _:
 
 }
 }
-/// A variant of `when` that fallback to returning `null`
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case Subclass(:final field):
-///     return ...;
-///   case _:
-///     return null;
-/// }
-/// ```
 
 @optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( BebeTheme theme,  ThemeMode themeMode)?  $default,) {final _that = this;
 switch (_that) {
@@ -495,7 +334,6 @@ return $default(_that.theme,_that.themeMode);case _:
 
 }
 
-/// @nodoc
 
 
 class _AppThemeState implements AppThemeState {
@@ -505,8 +343,6 @@ class _AppThemeState implements AppThemeState {
 @override final  BebeTheme theme;
 @override final  ThemeMode themeMode;
 
-/// Create a copy of AppThemeState
-/// with the given fields replaced by the non-null parameter values.
 @override @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
 _$AppThemeStateCopyWith<_AppThemeState> get copyWith => __$AppThemeStateCopyWithImpl<_AppThemeState>(this, _$identity);
@@ -530,7 +366,6 @@ String toString() {
 
 }
 
-/// @nodoc
 abstract mixin class _$AppThemeStateCopyWith<$Res> implements $AppThemeStateCopyWith<$Res> {
   factory _$AppThemeStateCopyWith(_AppThemeState value, $Res Function(_AppThemeState) _then) = __$AppThemeStateCopyWithImpl;
 @override @useResult
@@ -542,7 +377,6 @@ $Res call({
 
 
 }
-/// @nodoc
 class __$AppThemeStateCopyWithImpl<$Res>
     implements _$AppThemeStateCopyWith<$Res> {
   __$AppThemeStateCopyWithImpl(this._self, this._then);
@@ -550,8 +384,6 @@ class __$AppThemeStateCopyWithImpl<$Res>
   final _AppThemeState _self;
   final $Res Function(_AppThemeState) _then;
 
-/// Create a copy of AppThemeState
-/// with the given fields replaced by the non-null parameter values.
 @override @pragma('vm:prefer-inline') $Res call({Object? theme = null,Object? themeMode = null,}) {
   return _then(_AppThemeState(
 theme: null == theme ? _self.theme : theme // ignore: cast_nullable_to_non_nullable

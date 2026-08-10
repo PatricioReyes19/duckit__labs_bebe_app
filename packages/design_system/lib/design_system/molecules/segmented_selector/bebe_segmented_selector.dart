@@ -1,7 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-/// A visual option displayed by [BebeSegmentedSelector].
 class BebeSegmentedItem<T> {
   const BebeSegmentedItem({
     required this.value,
@@ -18,10 +17,6 @@ class BebeSegmentedItem<T> {
   final bool enabled;
 }
 
-/// A controlled, single-selection segmented control.
-///
-/// The selected value is owned by the consuming feature. This component only
-/// renders selection and forwards changes.
 class BebeSegmentedSelector<T> extends StatelessWidget {
   const BebeSegmentedSelector({
     required this.items,

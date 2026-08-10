@@ -10,10 +10,8 @@ class BebeAgendaMonthlyOverview extends StatelessWidget {
     super.key,
   });
 
-  /// Normalmente recibe [BebeMonthCalendar].
   final Widget calendar;
 
-  /// Normalmente recibe [BebeEventPreview].
   final Widget nextEvent;
 
   final String title;

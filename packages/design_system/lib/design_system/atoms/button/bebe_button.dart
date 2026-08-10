@@ -1,10 +1,8 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-/// Visual variants supported by [BebeButton].
 enum BebeButtonVariant { primary, secondary, text, destructive }
 
-/// Intrinsic button heights that preserve an accessible touch target.
 enum BebeButtonSize {
   medium(48),
   large(56);
@@ -14,10 +12,6 @@ enum BebeButtonSize {
   final double height;
 }
 
-/// BebéApp's base action button.
-///
-/// This widget only owns visual state. Saving, validation and navigation stay
-/// in the consuming feature through [onPressed].
 class BebeButton extends StatelessWidget {
   const BebeButton({
     required this.label,

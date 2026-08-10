@@ -1,4 +1,3 @@
-/// Visual categories available in the register-event package.
 enum RegisterEventKind {
   feeding,
   sleep,

@@ -1,7 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-/// Rating molecule used by consultation and pediatrician evaluation flows.
 class BebeRatingSelector extends StatelessWidget {
   const BebeRatingSelector({
     required this.value,

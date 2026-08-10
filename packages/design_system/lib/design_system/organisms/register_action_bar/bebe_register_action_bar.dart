@@ -1,7 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-/// Standard save and cancel actions for register forms.
 class BebeRegisterActionBar extends StatelessWidget {
   const BebeRegisterActionBar({
     required this.onSavePressed,

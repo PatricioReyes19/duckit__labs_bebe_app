@@ -24,11 +24,8 @@ class BebeUpcomingHealthCard extends StatelessWidget {
   final Widget icon;
   final String? caregiverLabel;
 
-  /// Variante propia de la molécula.
   final BebeUpcomingHealthCardVariant variant;
 
-  /// Slot abierto. Puede recibir BebeUpcomingHealthActions
-  /// u otro footer compatible.
   final Widget? footer;
 
   final VoidCallback? onPressed;

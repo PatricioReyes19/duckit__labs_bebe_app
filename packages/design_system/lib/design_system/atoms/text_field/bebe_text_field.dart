@@ -2,10 +2,6 @@ import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// BebéApp's base text input.
-///
-/// Labels, helper text and errors are visual inputs. Validation remains in the
-/// consuming feature.
 class BebeTextField extends StatelessWidget {
   const BebeTextField({
     this.controller,

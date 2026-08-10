@@ -1,7 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-/// A visual photo supplied to [BebePhotoPicker].
 class BebePhotoItem {
   const BebePhotoItem({
     required this.id,
@@ -14,7 +13,6 @@ class BebePhotoItem {
   final String semanticLabel;
 }
 
-/// Photo preview and add/remove controls without device or permission logic.
 class BebePhotoPicker extends StatelessWidget {
   const BebePhotoPicker({
     required this.label,

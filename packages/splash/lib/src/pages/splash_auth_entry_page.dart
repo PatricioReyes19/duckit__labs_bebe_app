@@ -5,7 +5,6 @@ import '../views/splash_auth_entry.dart';
 
 typedef SplashAuthEntryAction = void Function(BuildContext context);
 
-/// Selector de acceso independiente de la animación de arranque.
 class SplashAuthEntryPage extends GoRoute {
   SplashAuthEntryPage({
     required super.path,

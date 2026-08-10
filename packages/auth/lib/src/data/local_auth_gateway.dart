@@ -7,9 +7,6 @@ import '../domain/auth_failure.dart';
 import '../domain/entities/auth_session.dart';
 import '../domain/entities/auth_user.dart';
 
-/// Adaptador local para desarrollo. No persiste ni compara contraseñas.
-///
-/// Debe reemplazarse por `FirebaseAuthGateway` en la composición productiva.
 class LocalAuthGateway implements AuthGateway {
   LocalAuthGateway(this._preferences);
 

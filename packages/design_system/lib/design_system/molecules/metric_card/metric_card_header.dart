@@ -14,12 +14,6 @@ class MetricCardHeader extends StatelessWidget {
   final Widget icon;
   final BebeMetricCardPalette palette;
 
-  /// Contenido visual opcional ubicado al final del encabezado.
-  ///
-  /// Puede utilizarse para un badge, estado, tendencia o percentil.
-  ///
-  /// No debe contener una acción interactiva cuando la card completa
-  /// tenga un [onPressed].
   final Widget? trailing;
 
   static const double _iconContainerSize = 40;

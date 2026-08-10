@@ -18,13 +18,6 @@ class BebeSiblingSummaryData {
   final String? semanticLabel;
 }
 
-/// Header visual del bebé activo y acceso a sus hermanos.
-///
-/// El bebé activo utiliza el selector completo. Los demás bebés utilizan una
-/// tarjeta compacta específica y se muestran en una lista horizontal.
-///
-/// Esto evita reutilizar [BebeBabySelector] dentro de un ancho insuficiente,
-/// elimina los overflows y permite cualquier cantidad de bebés.
 class BebeActiveBabyHeader extends StatelessWidget {
   const BebeActiveBabyHeader({
     required this.name,
@@ -43,7 +36,6 @@ class BebeActiveBabyHeader extends StatelessWidget {
   final ImageProvider avatar;
   final String familyContextLabel;
 
-  /// Bebés distintos del bebé activo.
   final List<BebeSiblingSummaryData> siblings;
 
   final VoidCallback? onBabyPressed;

@@ -1,7 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-/// Composes a persistent label, a field control and optional feedback.
 class BebeFormField extends StatelessWidget {
   const BebeFormField({
     required this.label,

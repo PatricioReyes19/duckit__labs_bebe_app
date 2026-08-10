@@ -3,7 +3,6 @@ import '../domain/auth_gateway.dart';
 import '../domain/auth_validation.dart';
 import '../domain/entities/auth_session.dart';
 
-/// Casos de uso de autenticación compartidos por login y registro.
 class AuthService {
   const AuthService(this._gateway);
 

@@ -22,46 +22,28 @@ class BebeMonthCalendar extends StatelessWidget {
     super.key,
   });
 
-  /// Primera fecha disponible en el calendario.
   final DateTime firstDay;
 
-  /// Última fecha disponible en el calendario.
   final DateTime lastDay;
 
-  /// Mes y fecha actualmente enfocados.
-  ///
-  /// Este valor debe ser controlado externamente.
   final DateTime focusedDay;
 
-  /// Día actualmente seleccionado.
   final DateTime? selectedDay;
 
-  /// Se ejecuta al seleccionar una fecha.
   final void Function(DateTime selectedDay, DateTime focusedDay) onDaySelected;
 
-  /// Se ejecuta cuando el usuario cambia de mes mediante swipe.
-  ///
-  /// El consumidor debe actualizar [focusedDay].
   final ValueChanged<DateTime> onPageChanged;
 
-  /// Devuelve los marcadores asociados a una fecha.
   final List<BebeCalendarMarkerData> Function(DateTime day)? markersForDay;
 
-  /// Permite controlar qué fechas están habilitadas.
   final bool Function(DateTime day)? enabledDayPredicate;
 
-  /// Acciones externas para navegar al mes anterior y siguiente.
-  ///
-  /// La actualización de [focusedDay] pertenece al consumidor.
   final VoidCallback? onPreviousMonthPressed;
   final VoidCallback? onNextMonthPressed;
 
   final String locale;
   final StartingDayOfWeek startingDayOfWeek;
 
-  /// Cuando es false, el calendario se integra sin card propia.
-  ///
-  /// Resulta útil dentro de [BebeAgendaMonthlyOverview].
   final bool showContainer;
 
   final String? semanticLabel;

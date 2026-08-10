@@ -21,7 +21,6 @@ class BebeUpcomingHealthData {
   final String timeLabel;
   final Widget icon;
 
-  /// Tipo funcional del evento.
   final BebeUpcomingHealthType type;
 
   final String? caregiverLabel;

@@ -1,11 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-/// Controlled visual form for diaper records.
-///
-/// Urine and stool fields are rendered only when they apply to the selected
-/// diaper subtype. This keeps the form clinically coherent and prevents
-/// persisting stool characteristics for a wet-only diaper.
 class DiaperRegisterForm extends StatelessWidget {
   const DiaperRegisterForm({
     this.subtype = 'dirty',

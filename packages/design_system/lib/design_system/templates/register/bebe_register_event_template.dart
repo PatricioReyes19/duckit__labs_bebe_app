@@ -1,10 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-/// Responsive visual structure shared by all register event forms.
-///
-/// Every region is supplied as a slot. The template owns no navigation,
-/// validation, persistence or feature state.
 class BebeRegisterEventTemplate extends StatelessWidget {
   const BebeRegisterEventTemplate({
     required this.header,

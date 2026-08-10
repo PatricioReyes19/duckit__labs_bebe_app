@@ -27,65 +27,38 @@ class BebeAgendaTemplate extends StatelessWidget {
     super.key,
   });
 
-  /// Selector semanal.
-  ///
-  /// Normalmente recibe [BebeAgendaWeekPicker].
   final Widget weekPicker;
 
-  /// Filtros horizontales de Agenda.
-  ///
-  /// Normalmente recibe [BebeAgendaCategoryFilters].
   final Widget filters;
 
-  /// Eventos correspondientes al día seleccionado.
   final Widget todaySection;
 
-  /// Eventos futuros.
   final Widget upcomingSection;
 
-  /// Estado visual que reemplaza el contenido durante la carga inicial.
   final Widget loadingState;
 
-  /// Estado visual mostrado cuando no existe información.
   final Widget emptyState;
 
-  /// Estado visual mostrado ante un error que impide presentar contenido.
   final Widget errorState;
 
   final BebeAgendaTemplateState state;
 
-  /// En modo offline se muestra antes del contenido local.
   final Widget? offlineBanner;
 
-  /// Aviso de recordatorios configurados.
   final Widget? reminderBanner;
 
-  /// Calendario mensual y próximo evento.
   final Widget? monthlyOverview;
 
-  /// Acceso contextual al módulo Salud.
   final Widget? healthNotice;
 
-  /// Permite extender la composición sin modificar el template.
-  ///
-  /// No debe utilizarse para reemplazar slots ya definidos.
   final List<Widget> additionalSections;
 
-  /// Cuando está presente, habilita pull-to-refresh.
   final Future<void> Function()? onRefresh;
 
-  /// El template puede utilizarse directamente en el body del Scaffold.
-  ///
-  /// Desactívalo si el Shell ya administra SafeArea.
   final bool useSafeArea;
 
-  /// Padding exterior opcional.
-  ///
-  /// Si es null, utiliza los tokens del Design System.
   final EdgeInsetsGeometry? contentPadding;
 
-  /// Espacio inferior opcional para evitar que contenido flotante,
-  /// navegación o FAB cubran la última sección.
   final double? bottomSpacing;
 
   final double maximumContentWidth;

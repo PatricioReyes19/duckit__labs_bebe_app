@@ -5,10 +5,6 @@ import 'package:go_router/go_router.dart';
 
 typedef AppLayoutBlocFactory = AppLayoutBloc Function(BuildContext context);
 
-/// Shell exterior responsable únicamente de inyectar AppLayoutBloc.
-///
-/// El StatefulNavigationShell se obtiene dentro del builder de
-/// StatefulShellRoute.indexedStack, no desde el child de este ShellRoute.
 class AppLayoutPage extends ShellRoute {
   AppLayoutPage({
     required super.routes,

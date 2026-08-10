@@ -1,9 +1,5 @@
 import '../models/models.dart';
 
-/// Puerto para la persistencia del flujo inicial.
-///
-/// La implementación Firebase podrá usar Firestore y Cloud Functions para
-/// validar invitaciones de forma atómica sin modificar el Cubit ni las vistas.
 abstract interface class OnboardingRepository {
   Future<bool> isCompleted();
 

@@ -1,7 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-/// Accessible label for fields and groups of form controls.
 class BebeFormLabel extends StatelessWidget {
   const BebeFormLabel({
     required this.label,

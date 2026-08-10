@@ -10,19 +10,10 @@ class BebeCalendarMarkerData {
     this.semanticLabel,
   });
 
-  /// Identificador estable del indicador.
-  ///
-  /// Ejemplos:
-  /// vaccine
-  /// control
-  /// medication
   final String id;
 
-  /// El color es explícito porque la iconografía y los indicadores
-  /// calendáricos no se resolverán desde el tema.
   final Color color;
 
-  /// Descripción accesible opcional.
   final String? semanticLabel;
 }
 
@@ -48,10 +39,8 @@ class BebeWeekCalendar extends StatelessWidget {
 
   final void Function(DateTime selectedDay, DateTime focusedDay) onDaySelected;
 
-  /// Indicadores visuales de cada fecha.
   final List<BebeCalendarMarkerData> Function(DateTime day)? markersForDay;
 
-  /// Se ejecuta cuando cambia la semana enfocada.
   final ValueChanged<DateTime>? onPageChanged;
 
   final String locale;

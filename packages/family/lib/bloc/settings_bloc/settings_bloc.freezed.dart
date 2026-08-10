@@ -11,7 +11,6 @@ part of 'settings_bloc.dart';
 
 // dart format off
 T _$identity<T>(T value) => value;
-/// @nodoc
 mixin _$SettingsEvent {
 
 
@@ -35,25 +34,12 @@ String toString() {
 
 }
 
-/// @nodoc
 class $SettingsEventCopyWith<$Res>  {
 $SettingsEventCopyWith(SettingsEvent _, $Res Function(SettingsEvent) __);
 }
 
 
-/// Adds pattern-matching-related methods to [SettingsEvent].
 extension SettingsEventPatterns on SettingsEvent {
-/// A variant of `map` that fallback to returning `orElse`.
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case final Subclass value:
-///     return ...;
-///   case _:
-///     return orElse();
-/// }
-/// ```
 
 @optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( _Started value)?  started,TResult Function( _ThemeChanged value)?  themeChanged,TResult Function( _HighContrastChanged value)?  highContrastChanged,TResult Function( _PersonalRemindersChanged value)?  personalRemindersChanged,TResult Function( _FamilyActivityChanged value)?  familyActivityChanged,TResult Function( _DailySummaryChanged value)?  dailySummaryChanged,TResult Function( _ReduceMotionChanged value)?  reduceMotionChanged,TResult Function( _WifiOnlyChanged value)?  wifiOnlyChanged,required TResult orElse(),}){
 final _that = this;
@@ -71,18 +57,6 @@ return wifiOnlyChanged(_that);case _:
 
 }
 }
-/// A `switch`-like method, using callbacks.
-///
-/// Callbacks receives the raw object, upcasted.
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case final Subclass value:
-///     return ...;
-///   case final Subclass2 value:
-///     return ...;
-/// }
-/// ```
 
 @optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( _Started value)  started,required TResult Function( _ThemeChanged value)  themeChanged,required TResult Function( _HighContrastChanged value)  highContrastChanged,required TResult Function( _PersonalRemindersChanged value)  personalRemindersChanged,required TResult Function( _FamilyActivityChanged value)  familyActivityChanged,required TResult Function( _DailySummaryChanged value)  dailySummaryChanged,required TResult Function( _ReduceMotionChanged value)  reduceMotionChanged,required TResult Function( _WifiOnlyChanged value)  wifiOnlyChanged,}){
 final _that = this;
@@ -97,17 +71,6 @@ return dailySummaryChanged(_that);case _ReduceMotionChanged():
 return reduceMotionChanged(_that);case _WifiOnlyChanged():
 return wifiOnlyChanged(_that);}
 }
-/// A variant of `map` that fallback to returning `null`.
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case final Subclass value:
-///     return ...;
-///   case _:
-///     return null;
-/// }
-/// ```
 
 @optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( _Started value)?  started,TResult? Function( _ThemeChanged value)?  themeChanged,TResult? Function( _HighContrastChanged value)?  highContrastChanged,TResult? Function( _PersonalRemindersChanged value)?  personalRemindersChanged,TResult? Function( _FamilyActivityChanged value)?  familyActivityChanged,TResult? Function( _DailySummaryChanged value)?  dailySummaryChanged,TResult? Function( _ReduceMotionChanged value)?  reduceMotionChanged,TResult? Function( _WifiOnlyChanged value)?  wifiOnlyChanged,}){
 final _that = this;
@@ -125,17 +88,6 @@ return wifiOnlyChanged(_that);case _:
 
 }
 }
-/// A variant of `when` that fallback to an `orElse` callback.
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case Subclass(:final field):
-///     return ...;
-///   case _:
-///     return orElse();
-/// }
-/// ```
 
 @optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  started,TResult Function( BebeThemeModeOption value)?  themeChanged,TResult Function( bool value)?  highContrastChanged,TResult Function( bool value)?  personalRemindersChanged,TResult Function( bool value)?  familyActivityChanged,TResult Function( bool value)?  dailySummaryChanged,TResult Function( bool value)?  reduceMotionChanged,TResult Function( bool value)?  wifiOnlyChanged,required TResult orElse(),}) {final _that = this;
 switch (_that) {
@@ -152,18 +104,6 @@ return wifiOnlyChanged(_that.value);case _:
 
 }
 }
-/// A `switch`-like method, using callbacks.
-///
-/// As opposed to `map`, this offers destructuring.
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case Subclass(:final field):
-///     return ...;
-///   case Subclass2(:final field2):
-///     return ...;
-/// }
-/// ```
 
 @optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  started,required TResult Function( BebeThemeModeOption value)  themeChanged,required TResult Function( bool value)  highContrastChanged,required TResult Function( bool value)  personalRemindersChanged,required TResult Function( bool value)  familyActivityChanged,required TResult Function( bool value)  dailySummaryChanged,required TResult Function( bool value)  reduceMotionChanged,required TResult Function( bool value)  wifiOnlyChanged,}) {final _that = this;
 switch (_that) {
@@ -177,17 +117,6 @@ return dailySummaryChanged(_that.value);case _ReduceMotionChanged():
 return reduceMotionChanged(_that.value);case _WifiOnlyChanged():
 return wifiOnlyChanged(_that.value);}
 }
-/// A variant of `when` that fallback to returning `null`
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case Subclass(:final field):
-///     return ...;
-///   case _:
-///     return null;
-/// }
-/// ```
 
 @optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  started,TResult? Function( BebeThemeModeOption value)?  themeChanged,TResult? Function( bool value)?  highContrastChanged,TResult? Function( bool value)?  personalRemindersChanged,TResult? Function( bool value)?  familyActivityChanged,TResult? Function( bool value)?  dailySummaryChanged,TResult? Function( bool value)?  reduceMotionChanged,TResult? Function( bool value)?  wifiOnlyChanged,}) {final _that = this;
 switch (_that) {
@@ -207,7 +136,6 @@ return wifiOnlyChanged(_that.value);case _:
 
 }
 
-/// @nodoc
 
 
 class _Started implements SettingsEvent {
@@ -239,7 +167,6 @@ String toString() {
 
 
 
-/// @nodoc
 
 
 class _ThemeChanged implements SettingsEvent {
@@ -248,8 +175,6 @@ class _ThemeChanged implements SettingsEvent {
 
  final  BebeThemeModeOption value;
 
-/// Create a copy of SettingsEvent
-/// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
 _$ThemeChangedCopyWith<_ThemeChanged> get copyWith => __$ThemeChangedCopyWithImpl<_ThemeChanged>(this, _$identity);
@@ -273,7 +198,6 @@ String toString() {
 
 }
 
-/// @nodoc
 abstract mixin class _$ThemeChangedCopyWith<$Res> implements $SettingsEventCopyWith<$Res> {
   factory _$ThemeChangedCopyWith(_ThemeChanged value, $Res Function(_ThemeChanged) _then) = __$ThemeChangedCopyWithImpl;
 @useResult
@@ -285,7 +209,6 @@ $Res call({
 
 
 }
-/// @nodoc
 class __$ThemeChangedCopyWithImpl<$Res>
     implements _$ThemeChangedCopyWith<$Res> {
   __$ThemeChangedCopyWithImpl(this._self, this._then);
@@ -293,8 +216,6 @@ class __$ThemeChangedCopyWithImpl<$Res>
   final _ThemeChanged _self;
   final $Res Function(_ThemeChanged) _then;
 
-/// Create a copy of SettingsEvent
-/// with the given fields replaced by the non-null parameter values.
 @pragma('vm:prefer-inline') $Res call({Object? value = null,}) {
   return _then(_ThemeChanged(
 null == value ? _self.value : value // ignore: cast_nullable_to_non_nullable
@@ -305,7 +226,6 @@ as BebeThemeModeOption,
 
 }
 
-/// @nodoc
 
 
 class _HighContrastChanged implements SettingsEvent {
@@ -314,8 +234,6 @@ class _HighContrastChanged implements SettingsEvent {
 
  final  bool value;
 
-/// Create a copy of SettingsEvent
-/// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
 _$HighContrastChangedCopyWith<_HighContrastChanged> get copyWith => __$HighContrastChangedCopyWithImpl<_HighContrastChanged>(this, _$identity);
@@ -339,7 +257,6 @@ String toString() {
 
 }
 
-/// @nodoc
 abstract mixin class _$HighContrastChangedCopyWith<$Res> implements $SettingsEventCopyWith<$Res> {
   factory _$HighContrastChangedCopyWith(_HighContrastChanged value, $Res Function(_HighContrastChanged) _then) = __$HighContrastChangedCopyWithImpl;
 @useResult
@@ -351,7 +268,6 @@ $Res call({
 
 
 }
-/// @nodoc
 class __$HighContrastChangedCopyWithImpl<$Res>
     implements _$HighContrastChangedCopyWith<$Res> {
   __$HighContrastChangedCopyWithImpl(this._self, this._then);
@@ -359,8 +275,6 @@ class __$HighContrastChangedCopyWithImpl<$Res>
   final _HighContrastChanged _self;
   final $Res Function(_HighContrastChanged) _then;
 
-/// Create a copy of SettingsEvent
-/// with the given fields replaced by the non-null parameter values.
 @pragma('vm:prefer-inline') $Res call({Object? value = null,}) {
   return _then(_HighContrastChanged(
 null == value ? _self.value : value // ignore: cast_nullable_to_non_nullable
@@ -371,7 +285,6 @@ as bool,
 
 }
 
-/// @nodoc
 
 
 class _PersonalRemindersChanged implements SettingsEvent {
@@ -380,8 +293,6 @@ class _PersonalRemindersChanged implements SettingsEvent {
 
  final  bool value;
 
-/// Create a copy of SettingsEvent
-/// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
 _$PersonalRemindersChangedCopyWith<_PersonalRemindersChanged> get copyWith => __$PersonalRemindersChangedCopyWithImpl<_PersonalRemindersChanged>(this, _$identity);
@@ -405,7 +316,6 @@ String toString() {
 
 }
 
-/// @nodoc
 abstract mixin class _$PersonalRemindersChangedCopyWith<$Res> implements $SettingsEventCopyWith<$Res> {
   factory _$PersonalRemindersChangedCopyWith(_PersonalRemindersChanged value, $Res Function(_PersonalRemindersChanged) _then) = __$PersonalRemindersChangedCopyWithImpl;
 @useResult
@@ -417,7 +327,6 @@ $Res call({
 
 
 }
-/// @nodoc
 class __$PersonalRemindersChangedCopyWithImpl<$Res>
     implements _$PersonalRemindersChangedCopyWith<$Res> {
   __$PersonalRemindersChangedCopyWithImpl(this._self, this._then);
@@ -425,8 +334,6 @@ class __$PersonalRemindersChangedCopyWithImpl<$Res>
   final _PersonalRemindersChanged _self;
   final $Res Function(_PersonalRemindersChanged) _then;
 
-/// Create a copy of SettingsEvent
-/// with the given fields replaced by the non-null parameter values.
 @pragma('vm:prefer-inline') $Res call({Object? value = null,}) {
   return _then(_PersonalRemindersChanged(
 null == value ? _self.value : value // ignore: cast_nullable_to_non_nullable
@@ -437,7 +344,6 @@ as bool,
 
 }
 
-/// @nodoc
 
 
 class _FamilyActivityChanged implements SettingsEvent {
@@ -446,8 +352,6 @@ class _FamilyActivityChanged implements SettingsEvent {
 
  final  bool value;
 
-/// Create a copy of SettingsEvent
-/// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
 _$FamilyActivityChangedCopyWith<_FamilyActivityChanged> get copyWith => __$FamilyActivityChangedCopyWithImpl<_FamilyActivityChanged>(this, _$identity);
@@ -471,7 +375,6 @@ String toString() {
 
 }
 
-/// @nodoc
 abstract mixin class _$FamilyActivityChangedCopyWith<$Res> implements $SettingsEventCopyWith<$Res> {
   factory _$FamilyActivityChangedCopyWith(_FamilyActivityChanged value, $Res Function(_FamilyActivityChanged) _then) = __$FamilyActivityChangedCopyWithImpl;
 @useResult
@@ -483,7 +386,6 @@ $Res call({
 
 
 }
-/// @nodoc
 class __$FamilyActivityChangedCopyWithImpl<$Res>
     implements _$FamilyActivityChangedCopyWith<$Res> {
   __$FamilyActivityChangedCopyWithImpl(this._self, this._then);
@@ -491,8 +393,6 @@ class __$FamilyActivityChangedCopyWithImpl<$Res>
   final _FamilyActivityChanged _self;
   final $Res Function(_FamilyActivityChanged) _then;
 
-/// Create a copy of SettingsEvent
-/// with the given fields replaced by the non-null parameter values.
 @pragma('vm:prefer-inline') $Res call({Object? value = null,}) {
   return _then(_FamilyActivityChanged(
 null == value ? _self.value : value // ignore: cast_nullable_to_non_nullable
@@ -503,7 +403,6 @@ as bool,
 
 }
 
-/// @nodoc
 
 
 class _DailySummaryChanged implements SettingsEvent {
@@ -512,8 +411,6 @@ class _DailySummaryChanged implements SettingsEvent {
 
  final  bool value;
 
-/// Create a copy of SettingsEvent
-/// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
 _$DailySummaryChangedCopyWith<_DailySummaryChanged> get copyWith => __$DailySummaryChangedCopyWithImpl<_DailySummaryChanged>(this, _$identity);
@@ -537,7 +434,6 @@ String toString() {
 
 }
 
-/// @nodoc
 abstract mixin class _$DailySummaryChangedCopyWith<$Res> implements $SettingsEventCopyWith<$Res> {
   factory _$DailySummaryChangedCopyWith(_DailySummaryChanged value, $Res Function(_DailySummaryChanged) _then) = __$DailySummaryChangedCopyWithImpl;
 @useResult
@@ -549,7 +445,6 @@ $Res call({
 
 
 }
-/// @nodoc
 class __$DailySummaryChangedCopyWithImpl<$Res>
     implements _$DailySummaryChangedCopyWith<$Res> {
   __$DailySummaryChangedCopyWithImpl(this._self, this._then);
@@ -557,8 +452,6 @@ class __$DailySummaryChangedCopyWithImpl<$Res>
   final _DailySummaryChanged _self;
   final $Res Function(_DailySummaryChanged) _then;
 
-/// Create a copy of SettingsEvent
-/// with the given fields replaced by the non-null parameter values.
 @pragma('vm:prefer-inline') $Res call({Object? value = null,}) {
   return _then(_DailySummaryChanged(
 null == value ? _self.value : value // ignore: cast_nullable_to_non_nullable
@@ -569,7 +462,6 @@ as bool,
 
 }
 
-/// @nodoc
 
 
 class _ReduceMotionChanged implements SettingsEvent {
@@ -578,8 +470,6 @@ class _ReduceMotionChanged implements SettingsEvent {
 
  final  bool value;
 
-/// Create a copy of SettingsEvent
-/// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
 _$ReduceMotionChangedCopyWith<_ReduceMotionChanged> get copyWith => __$ReduceMotionChangedCopyWithImpl<_ReduceMotionChanged>(this, _$identity);
@@ -603,7 +493,6 @@ String toString() {
 
 }
 
-/// @nodoc
 abstract mixin class _$ReduceMotionChangedCopyWith<$Res> implements $SettingsEventCopyWith<$Res> {
   factory _$ReduceMotionChangedCopyWith(_ReduceMotionChanged value, $Res Function(_ReduceMotionChanged) _then) = __$ReduceMotionChangedCopyWithImpl;
 @useResult
@@ -615,7 +504,6 @@ $Res call({
 
 
 }
-/// @nodoc
 class __$ReduceMotionChangedCopyWithImpl<$Res>
     implements _$ReduceMotionChangedCopyWith<$Res> {
   __$ReduceMotionChangedCopyWithImpl(this._self, this._then);
@@ -623,8 +511,6 @@ class __$ReduceMotionChangedCopyWithImpl<$Res>
   final _ReduceMotionChanged _self;
   final $Res Function(_ReduceMotionChanged) _then;
 
-/// Create a copy of SettingsEvent
-/// with the given fields replaced by the non-null parameter values.
 @pragma('vm:prefer-inline') $Res call({Object? value = null,}) {
   return _then(_ReduceMotionChanged(
 null == value ? _self.value : value // ignore: cast_nullable_to_non_nullable
@@ -635,7 +521,6 @@ as bool,
 
 }
 
-/// @nodoc
 
 
 class _WifiOnlyChanged implements SettingsEvent {
@@ -644,8 +529,6 @@ class _WifiOnlyChanged implements SettingsEvent {
 
  final  bool value;
 
-/// Create a copy of SettingsEvent
-/// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
 _$WifiOnlyChangedCopyWith<_WifiOnlyChanged> get copyWith => __$WifiOnlyChangedCopyWithImpl<_WifiOnlyChanged>(this, _$identity);
@@ -669,7 +552,6 @@ String toString() {
 
 }
 
-/// @nodoc
 abstract mixin class _$WifiOnlyChangedCopyWith<$Res> implements $SettingsEventCopyWith<$Res> {
   factory _$WifiOnlyChangedCopyWith(_WifiOnlyChanged value, $Res Function(_WifiOnlyChanged) _then) = __$WifiOnlyChangedCopyWithImpl;
 @useResult
@@ -681,7 +563,6 @@ $Res call({
 
 
 }
-/// @nodoc
 class __$WifiOnlyChangedCopyWithImpl<$Res>
     implements _$WifiOnlyChangedCopyWith<$Res> {
   __$WifiOnlyChangedCopyWithImpl(this._self, this._then);
@@ -689,8 +570,6 @@ class __$WifiOnlyChangedCopyWithImpl<$Res>
   final _WifiOnlyChanged _self;
   final $Res Function(_WifiOnlyChanged) _then;
 
-/// Create a copy of SettingsEvent
-/// with the given fields replaced by the non-null parameter values.
 @pragma('vm:prefer-inline') $Res call({Object? value = null,}) {
   return _then(_WifiOnlyChanged(
 null == value ? _self.value : value // ignore: cast_nullable_to_non_nullable
@@ -701,12 +580,9 @@ as bool,
 
 }
 
-/// @nodoc
 mixin _$SettingsState {
 
  bool get isLoading; BebeThemeModeOption get themeMode; bool get highContrast; bool get personalReminders; bool get familyActivity; bool get dailySummary; bool get reduceMotion; bool get wifiOnly; String get name; String get email; String get language; String get timeFormat; String get textSize; String get localStorage; String get appVersion; String? get errorMessage;
-/// Create a copy of SettingsState
-/// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
 $SettingsStateCopyWith<SettingsState> get copyWith => _$SettingsStateCopyWithImpl<SettingsState>(this as SettingsState, _$identity);
@@ -730,7 +606,6 @@ String toString() {
 
 }
 
-/// @nodoc
 abstract mixin class $SettingsStateCopyWith<$Res>  {
   factory $SettingsStateCopyWith(SettingsState value, $Res Function(SettingsState) _then) = _$SettingsStateCopyWithImpl;
 @useResult
@@ -742,7 +617,6 @@ $Res call({
 
 
 }
-/// @nodoc
 class _$SettingsStateCopyWithImpl<$Res>
     implements $SettingsStateCopyWith<$Res> {
   _$SettingsStateCopyWithImpl(this._self, this._then);
@@ -750,8 +624,6 @@ class _$SettingsStateCopyWithImpl<$Res>
   final SettingsState _self;
   final $Res Function(SettingsState) _then;
 
-/// Create a copy of SettingsState
-/// with the given fields replaced by the non-null parameter values.
 @pragma('vm:prefer-inline') @override $Res call({Object? isLoading = null,Object? themeMode = null,Object? highContrast = null,Object? personalReminders = null,Object? familyActivity = null,Object? dailySummary = null,Object? reduceMotion = null,Object? wifiOnly = null,Object? name = null,Object? email = null,Object? language = null,Object? timeFormat = null,Object? textSize = null,Object? localStorage = null,Object? appVersion = null,Object? errorMessage = freezed,}) {
   return _then(_self.copyWith(
 isLoading: null == isLoading ? _self.isLoading : isLoading // ignore: cast_nullable_to_non_nullable
@@ -777,19 +649,7 @@ as String?,
 }
 
 
-/// Adds pattern-matching-related methods to [SettingsState].
 extension SettingsStatePatterns on SettingsState {
-/// A variant of `map` that fallback to returning `orElse`.
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case final Subclass value:
-///     return ...;
-///   case _:
-///     return orElse();
-/// }
-/// ```
 
 @optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _SettingsState value)?  $default,{required TResult orElse(),}){
 final _that = this;
@@ -800,18 +660,6 @@ return $default(_that);case _:
 
 }
 }
-/// A `switch`-like method, using callbacks.
-///
-/// Callbacks receives the raw object, upcasted.
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case final Subclass value:
-///     return ...;
-///   case final Subclass2 value:
-///     return ...;
-/// }
-/// ```
 
 @optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _SettingsState value)  $default,){
 final _that = this;
@@ -822,17 +670,6 @@ return $default(_that);case _:
 
 }
 }
-/// A variant of `map` that fallback to returning `null`.
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case final Subclass value:
-///     return ...;
-///   case _:
-///     return null;
-/// }
-/// ```
 
 @optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _SettingsState value)?  $default,){
 final _that = this;
@@ -843,17 +680,6 @@ return $default(_that);case _:
 
 }
 }
-/// A variant of `when` that fallback to an `orElse` callback.
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case Subclass(:final field):
-///     return ...;
-///   case _:
-///     return orElse();
-/// }
-/// ```
 
 @optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( bool isLoading,  BebeThemeModeOption themeMode,  bool highContrast,  bool personalReminders,  bool familyActivity,  bool dailySummary,  bool reduceMotion,  bool wifiOnly,  String name,  String email,  String language,  String timeFormat,  String textSize,  String localStorage,  String appVersion,  String? errorMessage)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
@@ -863,18 +689,6 @@ return $default(_that.isLoading,_that.themeMode,_that.highContrast,_that.persona
 
 }
 }
-/// A `switch`-like method, using callbacks.
-///
-/// As opposed to `map`, this offers destructuring.
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case Subclass(:final field):
-///     return ...;
-///   case Subclass2(:final field2):
-///     return ...;
-/// }
-/// ```
 
 @optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( bool isLoading,  BebeThemeModeOption themeMode,  bool highContrast,  bool personalReminders,  bool familyActivity,  bool dailySummary,  bool reduceMotion,  bool wifiOnly,  String name,  String email,  String language,  String timeFormat,  String textSize,  String localStorage,  String appVersion,  String? errorMessage)  $default,) {final _that = this;
 switch (_that) {
@@ -884,17 +698,6 @@ return $default(_that.isLoading,_that.themeMode,_that.highContrast,_that.persona
 
 }
 }
-/// A variant of `when` that fallback to returning `null`
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case Subclass(:final field):
-///     return ...;
-///   case _:
-///     return null;
-/// }
-/// ```
 
 @optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( bool isLoading,  BebeThemeModeOption themeMode,  bool highContrast,  bool personalReminders,  bool familyActivity,  bool dailySummary,  bool reduceMotion,  bool wifiOnly,  String name,  String email,  String language,  String timeFormat,  String textSize,  String localStorage,  String appVersion,  String? errorMessage)?  $default,) {final _that = this;
 switch (_that) {
@@ -907,7 +710,6 @@ return $default(_that.isLoading,_that.themeMode,_that.highContrast,_that.persona
 
 }
 
-/// @nodoc
 
 
 class _SettingsState implements SettingsState {
@@ -931,8 +733,6 @@ class _SettingsState implements SettingsState {
 @override@JsonKey() final  String appVersion;
 @override final  String? errorMessage;
 
-/// Create a copy of SettingsState
-/// with the given fields replaced by the non-null parameter values.
 @override @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
 _$SettingsStateCopyWith<_SettingsState> get copyWith => __$SettingsStateCopyWithImpl<_SettingsState>(this, _$identity);
@@ -956,7 +756,6 @@ String toString() {
 
 }
 
-/// @nodoc
 abstract mixin class _$SettingsStateCopyWith<$Res> implements $SettingsStateCopyWith<$Res> {
   factory _$SettingsStateCopyWith(_SettingsState value, $Res Function(_SettingsState) _then) = __$SettingsStateCopyWithImpl;
 @override @useResult
@@ -968,7 +767,6 @@ $Res call({
 
 
 }
-/// @nodoc
 class __$SettingsStateCopyWithImpl<$Res>
     implements _$SettingsStateCopyWith<$Res> {
   __$SettingsStateCopyWithImpl(this._self, this._then);
@@ -976,8 +774,6 @@ class __$SettingsStateCopyWithImpl<$Res>
   final _SettingsState _self;
   final $Res Function(_SettingsState) _then;
 
-/// Create a copy of SettingsState
-/// with the given fields replaced by the non-null parameter values.
 @override @pragma('vm:prefer-inline') $Res call({Object? isLoading = null,Object? themeMode = null,Object? highContrast = null,Object? personalReminders = null,Object? familyActivity = null,Object? dailySummary = null,Object? reduceMotion = null,Object? wifiOnly = null,Object? name = null,Object? email = null,Object? language = null,Object? timeFormat = null,Object? textSize = null,Object? localStorage = null,Object? appVersion = null,Object? errorMessage = freezed,}) {
   return _then(_SettingsState(
 isLoading: null == isLoading ? _self.isLoading : isLoading // ignore: cast_nullable_to_non_nullable

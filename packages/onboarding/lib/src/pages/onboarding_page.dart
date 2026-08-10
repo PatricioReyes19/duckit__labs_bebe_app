@@ -13,11 +13,6 @@ typedef OnboardingRepositoryFactory = OnboardingRepository Function(
 
 typedef OnboardingRouteAction = void Function(BuildContext context);
 
-/// Ruta raíz del flujo de onboarding.
-///
-/// La composición de navegación permanece en `app_base`, mientras este
-/// paquete conserva la creación del Cubit y de su View, igual que el resto de
-/// los paquetes de feature.
 class OnboardingPage extends GoRoute {
   OnboardingPage({
     required super.path,

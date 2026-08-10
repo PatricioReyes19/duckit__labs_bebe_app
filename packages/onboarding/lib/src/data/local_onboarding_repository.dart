@@ -3,9 +3,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../domain/onboarding_repository.dart';
 import '../models/models.dart';
 
-/// Adaptador navegable para desarrollo y pruebas manuales.
-///
-/// Códigos útiles: MATEO2026, VENCIDA, REVOCADA, CUENTA y YAESTOY.
 class LocalOnboardingRepository implements OnboardingRepository {
   LocalOnboardingRepository(this._preferences);
 

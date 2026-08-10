@@ -18,35 +18,22 @@ class BebeTodaySummary extends StatelessWidget {
   final List<BebeTodayMetricData> items;
   final String title;
 
-  /// Texto de la acción opcional del encabezado.
-  ///
-  /// Debe proporcionarse junto con [onActionPressed].
   final String? actionLabel;
 
-  /// Acción opcional del encabezado.
-  ///
-  /// Debe proporcionarse junto con [actionLabel].
   final VoidCallback? onActionPressed;
 
-  /// Acción específica para abrir el detalle completo del día.
-  ///
-  /// La feature mantiene el control de la navegación mediante este callback.
   final VoidCallback? onHistoryPressed;
 
-  /// Etiqueta mostrada cuando [onHistoryPressed] está disponible.
   final String historyActionLabel;
 
   static const int _maximumInlineItems = 3;
 
-  /// Ancho mínimo que necesita una métrica para conservar el layout inline.
   // Mantiene las tres métricas visibles en los anchos móviles de referencia
   // (375–430 px) y cambia a carrusel en pantallas realmente estrechas.
   static const double _minimumInlineCardWidth = 96;
 
-  /// Ancho estructural utilizado por las cards de la lista horizontal.
   static const double _horizontalCardWidth = 120;
 
-  /// Altura reservada para el patrón compacto de Today Summary.
   static const double _maximumInlineTextScale = 1.3;
 
   @override
@@ -250,10 +237,6 @@ class _TodayMetricSupporting extends StatelessWidget {
   }
 }
 
-/// Modelo visual utilizado por [BebeTodaySummary].
-///
-/// Representa una métrica breve del día actual. No contiene entidades,
-/// reglas de negocio, navegación ni estado de la feature.
 class BebeTodayMetricData {
   const BebeTodayMetricData({
     required this.variant,

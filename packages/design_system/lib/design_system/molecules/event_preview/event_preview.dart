@@ -29,12 +29,8 @@ class BebeEventPreview extends StatelessWidget {
   final Widget icon;
   final String? description;
 
-  /// Permite recibir un badge, texto o indicador temporal.
-  ///
-  /// Ejemplo: BebeStatusBadge(label: 'Mañana').
   final Widget? overline;
 
-  /// Puede recibir cuidador, estado u otra metadata.
   final Widget? supporting;
 
   final BebeEventPreviewVariant variant;

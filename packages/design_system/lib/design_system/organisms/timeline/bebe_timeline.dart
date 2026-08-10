@@ -26,7 +26,6 @@ class BebeTimelineEntry {
   final String? semanticLabel;
 }
 
-/// Timeline organism used by daily history and clinical activity screens.
 class BebeTimeline extends StatelessWidget {
   const BebeTimeline({
     required this.entries,

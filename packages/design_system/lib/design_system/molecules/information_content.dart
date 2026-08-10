@@ -15,11 +15,8 @@ class BebeInformationContent extends StatelessWidget {
   final String title;
   final String? description;
 
-  /// Puede contener uno o más BebeMetadataItem.
   final Widget? metadata;
 
-  /// Contenido adicional inferior, como cuidador,
-  /// ubicación u otra información secundaria.
   final Widget? supporting;
 
   final int? maxTitleLines;

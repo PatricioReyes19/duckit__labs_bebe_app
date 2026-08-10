@@ -18,8 +18,6 @@ class BebeInfoBanner extends StatelessWidget {
   final String description;
   final Widget icon;
 
-  /// Slot controlado. Puede recibir BebeInlineAction,
-  /// un botón secundario u otra acción compatible.
   final Widget? action;
 
   final BebeInfoBannerVariant variant;

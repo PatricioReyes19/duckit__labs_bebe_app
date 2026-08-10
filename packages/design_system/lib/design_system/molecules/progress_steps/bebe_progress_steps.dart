@@ -9,7 +9,6 @@ class BebeProgressStep {
   final String? semanticLabel;
 }
 
-/// Accessible progress indicator for the three-step flows in the mockups.
 class BebeProgressSteps extends StatelessWidget {
   const BebeProgressSteps({
     required this.steps,

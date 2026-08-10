@@ -7,11 +7,6 @@ enum RegisterEventType {
   measurement,
 }
 
-/// Input accepted by the register domain.
-///
-/// Feature Cubits own validation and convert their typed state to this draft.
-/// The details map is persisted as versioned JSON so new form fields do not
-/// require duplicating a SQLite table per event type.
 class RegisterEventDraft {
   RegisterEventDraft({
     required this.babyId,
@@ -56,10 +51,6 @@ class RegisteredEvent {
   final int schemaVersion;
 }
 
-/// Partial changes accepted by the register domain.
-///
-/// The explicit clear flags preserve PATCH semantics: an omitted nullable
-/// value is different from intentionally setting that value to `null`.
 class RegisterEventPatch {
   RegisterEventPatch({
     this.occurredAt,

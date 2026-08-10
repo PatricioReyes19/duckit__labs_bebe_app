@@ -1,7 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-/// Controlled visual form for feeding records.
 class FeedingRegisterForm extends StatelessWidget {
   const FeedingRegisterForm({
     this.subtype = 'breast',

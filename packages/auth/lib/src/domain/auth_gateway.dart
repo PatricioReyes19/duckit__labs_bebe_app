@@ -1,9 +1,5 @@
 import 'entities/auth_session.dart';
 
-/// Puerto implementable con Firebase Auth, Supabase o un fake.
-///
-/// La UI y AuthService no conocen el SDK concreto. Una futura integración con
-/// Firebase solo debe implementar este contrato y registrarlo en la composición.
 abstract interface class AuthGateway {
   Future<AuthSession?> currentSession();
 

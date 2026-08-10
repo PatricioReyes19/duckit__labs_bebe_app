@@ -1,9 +1,5 @@
 import 'package:flutter/foundation.dart';
 
-/// Shared responsive thresholds and content widths for BebéApp.
-///
-/// These values describe layout behavior, not device types. Components should
-/// resolve against the width they receive from [LayoutBuilder].
 abstract final class BebeLayout {
   static const double compactBreakpoint = 360;
   static const double mediumBreakpoint = 600;

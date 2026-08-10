@@ -16,8 +16,6 @@ class BebeCalendarMarkers extends StatelessWidget {
 
   final List<BebeCalendarMarkerData> markers;
 
-  /// Son parámetros visuales explícitos porque los marcadores
-  /// no se resuelven desde el tema.
   final int maximumVisibleMarkers;
   final double markerSize;
   final double markerSpacing;

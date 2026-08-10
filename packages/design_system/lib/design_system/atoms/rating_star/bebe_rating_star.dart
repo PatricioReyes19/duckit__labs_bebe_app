@@ -1,7 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-/// Atomic star used by read-only ratings and interactive rating selectors.
 class BebeRatingStar extends StatelessWidget {
   const BebeRatingStar({
     required this.selected,

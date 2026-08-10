@@ -12,7 +12,6 @@ part of 'home_bloc.dart';
 // dart format off
 T _$identity<T>(T value) => value;
 
-/// @nodoc
 mixin _$HomeEvent {
   @override
   bool operator ==(Object other) {
@@ -29,24 +28,11 @@ mixin _$HomeEvent {
   }
 }
 
-/// @nodoc
 class $HomeEventCopyWith<$Res> {
   $HomeEventCopyWith(HomeEvent _, $Res Function(HomeEvent) __);
 }
 
-/// Adds pattern-matching-related methods to [HomeEvent].
 extension HomeEventPatterns on HomeEvent {
-  /// A variant of `map` that fallback to returning `orElse`.
-  ///
-  /// It is equivalent to doing:
-  /// ```dart
-  /// switch (sealedClass) {
-  ///   case final Subclass value:
-  ///     return ...;
-  ///   case _:
-  ///     return orElse();
-  /// }
-  /// ```
 
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
@@ -68,18 +54,6 @@ extension HomeEventPatterns on HomeEvent {
     }
   }
 
-  /// A `switch`-like method, using callbacks.
-  ///
-  /// Callbacks receives the raw object, upcasted.
-  /// It is equivalent to doing:
-  /// ```dart
-  /// switch (sealedClass) {
-  ///   case final Subclass value:
-  ///     return ...;
-  ///   case final Subclass2 value:
-  ///     return ...;
-  /// }
-  /// ```
 
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
@@ -98,17 +72,6 @@ extension HomeEventPatterns on HomeEvent {
     }
   }
 
-  /// A variant of `map` that fallback to returning `null`.
-  ///
-  /// It is equivalent to doing:
-  /// ```dart
-  /// switch (sealedClass) {
-  ///   case final Subclass value:
-  ///     return ...;
-  ///   case _:
-  ///     return null;
-  /// }
-  /// ```
 
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
@@ -129,17 +92,6 @@ extension HomeEventPatterns on HomeEvent {
     }
   }
 
-  /// A variant of `when` that fallback to an `orElse` callback.
-  ///
-  /// It is equivalent to doing:
-  /// ```dart
-  /// switch (sealedClass) {
-  ///   case Subclass(:final field):
-  ///     return ...;
-  ///   case _:
-  ///     return orElse();
-  /// }
-  /// ```
 
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
@@ -161,18 +113,6 @@ extension HomeEventPatterns on HomeEvent {
     }
   }
 
-  /// A `switch`-like method, using callbacks.
-  ///
-  /// As opposed to `map`, this offers destructuring.
-  /// It is equivalent to doing:
-  /// ```dart
-  /// switch (sealedClass) {
-  ///   case Subclass(:final field):
-  ///     return ...;
-  ///   case Subclass2(:final field2):
-  ///     return ...;
-  /// }
-  /// ```
 
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
@@ -191,17 +131,6 @@ extension HomeEventPatterns on HomeEvent {
     }
   }
 
-  /// A variant of `when` that fallback to returning `null`
-  ///
-  /// It is equivalent to doing:
-  /// ```dart
-  /// switch (sealedClass) {
-  ///   case Subclass(:final field):
-  ///     return ...;
-  ///   case _:
-  ///     return null;
-  /// }
-  /// ```
 
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
@@ -223,7 +152,6 @@ extension HomeEventPatterns on HomeEvent {
   }
 }
 
-/// @nodoc
 
 class _Started implements HomeEvent {
   const _Started();
@@ -243,7 +171,6 @@ class _Started implements HomeEvent {
   }
 }
 
-/// @nodoc
 
 class _Refreshed implements HomeEvent {
   const _Refreshed();
@@ -263,7 +190,6 @@ class _Refreshed implements HomeEvent {
   }
 }
 
-/// @nodoc
 
 class _Retried implements HomeEvent {
   const _Retried();
@@ -283,7 +209,6 @@ class _Retried implements HomeEvent {
   }
 }
 
-/// @nodoc
 mixin _$HomeState {
   @override
   bool operator ==(Object other) {
@@ -300,24 +225,11 @@ mixin _$HomeState {
   }
 }
 
-/// @nodoc
 class $HomeStateCopyWith<$Res> {
   $HomeStateCopyWith(HomeState _, $Res Function(HomeState) __);
 }
 
-/// Adds pattern-matching-related methods to [HomeState].
 extension HomeStatePatterns on HomeState {
-  /// A variant of `map` that fallback to returning `orElse`.
-  ///
-  /// It is equivalent to doing:
-  /// ```dart
-  /// switch (sealedClass) {
-  ///   case final Subclass value:
-  ///     return ...;
-  ///   case _:
-  ///     return orElse();
-  /// }
-  /// ```
 
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
@@ -342,18 +254,6 @@ extension HomeStatePatterns on HomeState {
     }
   }
 
-  /// A `switch`-like method, using callbacks.
-  ///
-  /// Callbacks receives the raw object, upcasted.
-  /// It is equivalent to doing:
-  /// ```dart
-  /// switch (sealedClass) {
-  ///   case final Subclass value:
-  ///     return ...;
-  ///   case final Subclass2 value:
-  ///     return ...;
-  /// }
-  /// ```
 
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
@@ -375,17 +275,6 @@ extension HomeStatePatterns on HomeState {
     }
   }
 
-  /// A variant of `map` that fallback to returning `null`.
-  ///
-  /// It is equivalent to doing:
-  /// ```dart
-  /// switch (sealedClass) {
-  ///   case final Subclass value:
-  ///     return ...;
-  ///   case _:
-  ///     return null;
-  /// }
-  /// ```
 
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
@@ -409,17 +298,6 @@ extension HomeStatePatterns on HomeState {
     }
   }
 
-  /// A variant of `when` that fallback to an `orElse` callback.
-  ///
-  /// It is equivalent to doing:
-  /// ```dart
-  /// switch (sealedClass) {
-  ///   case Subclass(:final field):
-  ///     return ...;
-  ///   case _:
-  ///     return orElse();
-  /// }
-  /// ```
 
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
@@ -444,18 +322,6 @@ extension HomeStatePatterns on HomeState {
     }
   }
 
-  /// A `switch`-like method, using callbacks.
-  ///
-  /// As opposed to `map`, this offers destructuring.
-  /// It is equivalent to doing:
-  /// ```dart
-  /// switch (sealedClass) {
-  ///   case Subclass(:final field):
-  ///     return ...;
-  ///   case Subclass2(:final field2):
-  ///     return ...;
-  /// }
-  /// ```
 
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
@@ -478,17 +344,6 @@ extension HomeStatePatterns on HomeState {
     }
   }
 
-  /// A variant of `when` that fallback to returning `null`
-  ///
-  /// It is equivalent to doing:
-  /// ```dart
-  /// switch (sealedClass) {
-  ///   case Subclass(:final field):
-  ///     return ...;
-  ///   case _:
-  ///     return null;
-  /// }
-  /// ```
 
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
@@ -513,7 +368,6 @@ extension HomeStatePatterns on HomeState {
   }
 }
 
-/// @nodoc
 
 class HomeInitial implements HomeState {
   const HomeInitial();
@@ -533,7 +387,6 @@ class HomeInitial implements HomeState {
   }
 }
 
-/// @nodoc
 
 class HomeLoading implements HomeState {
   const HomeLoading();
@@ -553,7 +406,6 @@ class HomeLoading implements HomeState {
   }
 }
 
-/// @nodoc
 
 class HomeLoaded implements HomeState {
   const HomeLoaded({required this.overview, this.isRefreshing = false});
@@ -562,8 +414,6 @@ class HomeLoaded implements HomeState {
   @JsonKey()
   final bool isRefreshing;
 
-  /// Create a copy of HomeState
-  /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
   $HomeLoadedCopyWith<HomeLoaded> get copyWith =>
@@ -589,7 +439,6 @@ class HomeLoaded implements HomeState {
   }
 }
 
-/// @nodoc
 abstract mixin class $HomeLoadedCopyWith<$Res>
     implements $HomeStateCopyWith<$Res> {
   factory $HomeLoadedCopyWith(
@@ -599,15 +448,12 @@ abstract mixin class $HomeLoadedCopyWith<$Res>
   $Res call({HomeOverviewVm overview, bool isRefreshing});
 }
 
-/// @nodoc
 class _$HomeLoadedCopyWithImpl<$Res> implements $HomeLoadedCopyWith<$Res> {
   _$HomeLoadedCopyWithImpl(this._self, this._then);
 
   final HomeLoaded _self;
   final $Res Function(HomeLoaded) _then;
 
-  /// Create a copy of HomeState
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   $Res call({
     Object? overview = null,
@@ -626,15 +472,12 @@ class _$HomeLoadedCopyWithImpl<$Res> implements $HomeLoadedCopyWith<$Res> {
   }
 }
 
-/// @nodoc
 
 class HomeFailure implements HomeState {
   const HomeFailure({required this.message});
 
   final String message;
 
-  /// Create a copy of HomeState
-  /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
   $HomeFailureCopyWith<HomeFailure> get copyWith =>
@@ -657,7 +500,6 @@ class HomeFailure implements HomeState {
   }
 }
 
-/// @nodoc
 abstract mixin class $HomeFailureCopyWith<$Res>
     implements $HomeStateCopyWith<$Res> {
   factory $HomeFailureCopyWith(
@@ -667,15 +509,12 @@ abstract mixin class $HomeFailureCopyWith<$Res>
   $Res call({String message});
 }
 
-/// @nodoc
 class _$HomeFailureCopyWithImpl<$Res> implements $HomeFailureCopyWith<$Res> {
   _$HomeFailureCopyWithImpl(this._self, this._then);
 
   final HomeFailure _self;
   final $Res Function(HomeFailure) _then;
 
-  /// Create a copy of HomeState
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   $Res call({
     Object? message = null,

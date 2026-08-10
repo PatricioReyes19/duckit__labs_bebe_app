@@ -24,9 +24,6 @@ class BebeTitleSection extends StatelessWidget {
 
   final IconData trailingIcon;
 
-  /// Optional visual limits for exceptional dense surfaces.
-  ///
-  /// They default to null so section copy can grow with its content.
   final int? maxTitleLines;
   final int? maxDescriptionLines;
 

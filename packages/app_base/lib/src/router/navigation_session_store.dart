@@ -2,10 +2,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'startup_route_mapper.dart';
 
-/// Conserva una ubicación segura entre reconstrucciones completas de la app.
-///
-/// El splash sigue siendo la entrada de una instalación o sesión sin historial,
-/// pero no se vuelve a insertar al recargar una ruta funcional conocida.
 class NavigationSessionStore {
   NavigationSessionStore(this._preferences);
 

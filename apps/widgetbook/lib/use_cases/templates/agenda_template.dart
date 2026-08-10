@@ -2,9 +2,6 @@ import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:widgetbook_annotation/widgetbook_annotation.dart' as widgetbook;
 
-/// ---------------------------------------------------------------------------
-/// USE CASES
-/// ---------------------------------------------------------------------------
 
 @widgetbook.UseCase(
   name: 'Contenido completo',
@@ -71,9 +68,6 @@ Widget bebeAgendaTemplateErrorUseCase(
   );
 }
 
-/// ---------------------------------------------------------------------------
-/// FIXTURE PRINCIPAL
-/// ---------------------------------------------------------------------------
 
 class _AgendaTemplateExample extends StatefulWidget {
   const _AgendaTemplateExample({
@@ -512,9 +506,6 @@ class _AgendaTemplateExampleState extends State<_AgendaTemplateExample> {
   }
 }
 
-/// ---------------------------------------------------------------------------
-/// SECCIONES DE EVENTOS
-/// ---------------------------------------------------------------------------
 
 class _AgendaEventFixture {
   const _AgendaEventFixture({
@@ -605,9 +596,6 @@ class _AgendaSectionEmptyState extends StatelessWidget {
   }
 }
 
-/// ---------------------------------------------------------------------------
-/// ESTADOS DEL TEMPLATE
-/// ---------------------------------------------------------------------------
 
 class _AgendaOfflineState extends StatelessWidget {
   const _AgendaOfflineState();
@@ -728,11 +716,6 @@ class _AgendaErrorState extends StatelessWidget {
   }
 }
 
-/// ---------------------------------------------------------------------------
-/// CARD GENÉRICA PARA ESTADOS DEL FIXTURE
-///
-/// Pertenece solo a Widgetbook. No forma parte del Design System.
-/// ---------------------------------------------------------------------------
 
 enum _AgendaStateCardVariant {
   brand,
@@ -936,9 +919,6 @@ class _AgendaStateCardContent extends StatelessWidget {
   }
 }
 
-/// ---------------------------------------------------------------------------
-/// SKELETON DEL FIXTURE
-/// ---------------------------------------------------------------------------
 
 class _AgendaSkeletonBox extends StatelessWidget {
   const _AgendaSkeletonBox({
@@ -965,11 +945,6 @@ class _AgendaSkeletonBox extends StatelessWidget {
   }
 }
 
-/// ---------------------------------------------------------------------------
-/// BADGES Y AVATAR LOCALES DEL FIXTURE
-///
-/// Se mantienen privados para no inventar contratos públicos adicionales.
-/// ---------------------------------------------------------------------------
 
 class _TemporalBadge extends StatelessWidget {
   const _TemporalBadge({

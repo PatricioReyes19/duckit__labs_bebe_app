@@ -1,11 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-/// Bottom navigation shown while the full-screen register flow is open.
-///
-/// The register route lives above the main navigation shell, so this component
-/// preserves the same five-destination mental model without coupling the
-/// feature package to GoRouter or AppLayout.
 class RegisterBottomNavigation extends StatelessWidget {
   const RegisterBottomNavigation({
     this.onHomePressed,

@@ -30,10 +30,6 @@ final class BebeSvgIconSource extends BebeIconSource {
   final String assetPath;
 }
 
-/// Átomo visual para normalizar iconografía.
-///
-/// No agrega superficie, interacción ni navegación.
-/// Para acciones táctiles use [BebeIconButton].
 class BebeIcon extends StatelessWidget {
   const BebeIcon({
     required this.source,
@@ -83,7 +79,6 @@ class BebeIcon extends StatelessWidget {
   final Color? color;
   final String? semanticLabel;
 
-  /// Solo relevante para librerías que expongan stroke configurable.
   final double? strokeWidth;
 
   @override

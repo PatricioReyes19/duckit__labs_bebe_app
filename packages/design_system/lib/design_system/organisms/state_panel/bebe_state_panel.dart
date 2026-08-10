@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 
 enum BebeStatePanelVariant { success, empty, error, offline, information }
 
-/// Reusable result/empty/offline composition extracted from the mockups.
 class BebeStatePanel extends StatelessWidget {
   const BebeStatePanel({
     required this.title,

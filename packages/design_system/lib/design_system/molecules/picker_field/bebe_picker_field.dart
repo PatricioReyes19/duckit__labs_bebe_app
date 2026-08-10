@@ -1,13 +1,8 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-/// Visual kinds available to [BebePickerField].
 enum BebePickerFieldKind { date, time, duration, selection }
 
-/// A controlled field that requests a date, time, duration or list selection.
-///
-/// It never opens a picker itself; [onPressed] delegates that behavior to the
-/// consuming feature.
 class BebePickerField extends StatelessWidget {
   const BebePickerField({
     required this.label,

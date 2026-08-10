@@ -1,7 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-/// Standard multi-line field for notes and observations.
 class BebeNotesField extends StatelessWidget {
   const BebeNotesField({
     required this.label,

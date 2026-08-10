@@ -1,7 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-/// Compact domain action used in category selectors and quick actions.
 class BebeCategoryActionTile extends StatelessWidget {
   const BebeCategoryActionTile({
     required this.variant,
@@ -124,7 +123,6 @@ class BebeCategoryActionTile extends StatelessWidget {
   }
 }
 
-/// Backward-compatible alias for the original public API.
 @Deprecated('Use BebeCategoryActionTile instead.')
 class CategoryActionTile extends BebeCategoryActionTile {
   const CategoryActionTile({

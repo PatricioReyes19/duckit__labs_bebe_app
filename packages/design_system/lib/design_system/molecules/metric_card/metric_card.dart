@@ -24,67 +24,22 @@ class BebeMetricCard extends StatelessWidget {
   final String label;
   final Widget icon;
 
-  /// Valor principal de la métrica.
-  ///
-  /// Ejemplos:
-  /// - `7,25`
-  /// - `4`
-  /// - `12`
   final String? value;
 
-  /// Unidad asociada al valor principal.
-  ///
-  /// Ejemplos:
-  /// - `kg`
-  /// - `al día`
-  /// - `eventos`
   final String? unit;
 
-  /// Contenido opcional ubicado al final del encabezado.
-  ///
-  /// Puede representar un badge, estado, tendencia o percentil.
   final Widget? trailing;
 
-  /// Contenido visual adicional ubicado después del valor.
-  ///
-  /// Puede representar:
-  /// - un gráfico;
-  /// - una barra de progreso;
-  /// - una tendencia;
-  /// - otra visualización no interactiva.
   final Widget? content;
 
-  /// Información secundaria ubicada después del contenido principal.
-  ///
-  /// Ejemplos:
-  /// - `1 pendiente`;
-  /// - `Última medición: 15 may`;
-  /// - una composición de label y valor.
   final Widget? supporting;
 
-  /// Contenido visual opcional ubicado al final de la card.
-  ///
-  /// Ejemplos:
-  /// - `Próxima: Lun, 26 may`;
-  /// - estado de sincronización;
-  /// - una leyenda no interactiva.
-  ///
-  /// No debe contener acciones interactivas cuando [onPressed] no sea null.
   final Widget? footer;
 
-  /// Determina si se muestra un divisor antes del footer.
   final bool showFooterDivider;
 
-  /// Descripción completa de la métrica para tecnologías de asistencia.
-  ///
-  /// Cuando se proporciona, reemplaza las semánticas visuales internas
-  /// de la card para evitar anuncios duplicados.
   final String? semanticLabel;
 
-  /// Acción opcional de la card completa.
-  ///
-  /// Cuando existe, los slots internos no deben contener controles
-  /// interactivos independientes.
   final VoidCallback? onPressed;
 
   static const double _minimumHeight = 168;

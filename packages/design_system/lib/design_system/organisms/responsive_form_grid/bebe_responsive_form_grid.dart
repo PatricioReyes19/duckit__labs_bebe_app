@@ -1,7 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-/// Fluid grid for short fields in a form.
 class BebeResponsiveFormGrid extends StatelessWidget {
   const BebeResponsiveFormGrid({
     required this.children,

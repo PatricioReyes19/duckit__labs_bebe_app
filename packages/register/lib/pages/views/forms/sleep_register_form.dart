@@ -1,7 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-/// Controlled visual form for sleep records.
 class SleepRegisterForm extends StatelessWidget {
   const SleepRegisterForm({
     this.startTime = '01:30 PM',

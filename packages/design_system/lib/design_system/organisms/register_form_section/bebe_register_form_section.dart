@@ -1,7 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-/// Surface used to group the controls of one register form.
 class BebeRegisterFormSection extends StatelessWidget {
   const BebeRegisterFormSection({
     required this.child,

@@ -1,9 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Semantic colors for care and clinical event categories.
-///
-/// These values are sourced from `bebe_theme.json` and keep the same meaning
-/// in light and dark themes.
 class ClinicalColors {
   const ClinicalColors(this._colors);
 
