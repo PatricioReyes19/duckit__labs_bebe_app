@@ -311,11 +311,19 @@ class _AccountEditorState extends State<_AccountEditor> {
   void _save() {
     final name = _nameController.text.trim();
     if (name.length < 2) {
-      _message(context, 'Escribe un nombre válido.');
+      _message(
+        context,
+        'Escribe un nombre válido.',
+        variant: BebeInAppSnackbarVariant.warning,
+      );
       return;
     }
     context.read<SettingsBloc>().add(SettingsAccountNameChanged(name));
-    _message(context, 'Datos personales guardados.');
+    _message(
+      context,
+      'Datos personales guardados.',
+      variant: BebeInAppSnackbarVariant.success,
+    );
   }
 }
 
@@ -405,7 +413,11 @@ class _ChoiceEditor extends StatelessWidget {
             onChanged: (next) {
               if (next != null) {
                 onChanged(next);
-                _message(context, 'Preferencia guardada.');
+                _message(
+                  context,
+                  'Preferencia guardada.',
+                  variant: BebeInAppSnackbarVariant.success,
+                );
               }
             },
             child: Column(
@@ -583,8 +595,11 @@ class _StorageEditor extends StatelessWidget {
             title: 'Limpiar archivos temporales',
             description: 'No elimina registros ni fotografías guardadas.',
             icon: const Icon(Icons.cleaning_services_outlined),
-            onPressed: () =>
-                _message(context, 'Archivos temporales eliminados.'),
+            onPressed: () => _message(
+              context,
+              'Archivos temporales eliminados.',
+              variant: BebeInAppSnackbarVariant.success,
+            ),
           ),
         ],
       ),
@@ -686,11 +701,19 @@ class _ProblemReportViewState extends State<_ProblemReportView> {
 
   void _send() {
     if (_controller.text.trim().length < 10) {
-      _message(context, 'Agrega un poco más de detalle para poder ayudarte.');
+      _message(
+        context,
+        'Agrega un poco más de detalle para poder ayudarte.',
+        variant: BebeInAppSnackbarVariant.warning,
+      );
       return;
     }
     _controller.clear();
-    _message(context, 'Reporte enviado. Gracias por ayudarnos a mejorar.');
+    _message(
+      context,
+      'Reporte enviado. Gracias por ayudarnos a mejorar.',
+      variant: BebeInAppSnackbarVariant.success,
+    );
   }
 }
 
@@ -704,8 +727,8 @@ String _initials(String value) {
   return result.isEmpty ? 'CU' : result;
 }
 
-void _message(BuildContext context, String value) {
-  ScaffoldMessenger.of(context)
-    ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(content: Text(value)));
-}
+void _message(
+  BuildContext context,
+  String value, {
+  BebeInAppSnackbarVariant variant = BebeInAppSnackbarVariant.information,
+}) => BebeInAppSnackbar.show(context, message: value, variant: variant);

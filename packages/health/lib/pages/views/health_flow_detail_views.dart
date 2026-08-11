@@ -1,4 +1,5 @@
 import 'package:core/core.dart';
+import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:health/models/health_flow_controller.dart';
 import 'package:health/pages/health_section_page.dart';
@@ -44,7 +45,10 @@ class HealthFlowDetailView extends StatelessWidget {
       return _ObservationForm(controller: controller, openFlow: openFlow);
     }
     if (action == HealthFlowAction.compare) {
-      return _ComparePediatriciansView(openFlow: openFlow);
+      return _ComparePediatriciansView(
+        controller: controller,
+        openFlow: openFlow,
+      );
     }
     if (action == HealthFlowAction.success) {
       return _HealthSavedView(
@@ -83,7 +87,7 @@ class HealthFlowDetailView extends StatelessWidget {
     }
     if (kind == HealthSectionKind.pediatricCare &&
         action == HealthFlowAction.register) {
-      return _PediatricianForm(openFlow: openFlow);
+      return _PediatricianForm(controller: controller, openFlow: openFlow);
     }
     return _HealthRecordDetailView(
       kind: kind,
@@ -105,9 +109,9 @@ class _VaccinationForm extends StatefulWidget {
 
 class _VaccinationFormState extends State<_VaccinationForm> {
   final formKey = GlobalKey<FormState>();
-  final vaccine = TextEditingController(text: 'Neumococo');
-  final dose = TextEditingController(text: '2da dosis');
-  final location = TextEditingController(text: 'CESFAM Cien Águilas');
+  final vaccine = TextEditingController();
+  final dose = TextEditingController();
+  final location = TextEditingController();
   final professional = TextEditingController();
   final lot = TextEditingController();
   final notes = TextEditingController();
@@ -383,8 +387,8 @@ class _ConsultationWizard extends StatefulWidget {
 
 class _ConsultationWizardState extends State<_ConsultationWizard> {
   final formKey = GlobalKey<FormState>();
-  final pediatrician = TextEditingController(text: 'Dra. Valeria Ruiz');
-  final reason = TextEditingController(text: 'Control pediátrico');
+  final pediatrician = TextEditingController();
+  final reason = TextEditingController();
   final summary = TextEditingController();
   final treatment = TextEditingController();
   final followUp = TextEditingController();
@@ -589,8 +593,10 @@ class _ConsultationWizardState extends State<_ConsultationWizard> {
   void _continue() {
     if (step == 0 && !(formKey.currentState?.validate() ?? false)) return;
     if (step == 1 && summary.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Agrega el resumen de la consulta.')),
+      BebeInAppSnackbar.show(
+        context,
+        message: 'Agrega el resumen de la consulta.',
+        variant: BebeInAppSnackbarVariant.warning,
       );
       return;
     }
@@ -698,8 +704,10 @@ class _ObservationFormState extends State<_ObservationForm> {
 
   Future<void> _save() async {
     if (title.text.trim().isEmpty || description.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Completa el título y la descripción.')),
+      BebeInAppSnackbar.show(
+        context,
+        message: 'Completa el título y la descripción.',
+        variant: BebeInAppSnackbarVariant.warning,
       );
       return;
     }
@@ -720,8 +728,9 @@ class _ObservationFormState extends State<_ObservationForm> {
 }
 
 class _PediatricianForm extends StatefulWidget {
-  const _PediatricianForm({required this.openFlow});
+  const _PediatricianForm({required this.controller, required this.openFlow});
 
+  final HealthFlowController controller;
   final HealthFlowNavigator openFlow;
 
   @override
@@ -731,10 +740,11 @@ class _PediatricianForm extends StatefulWidget {
 class _PediatricianFormState extends State<_PediatricianForm> {
   final formKey = GlobalKey<FormState>();
   final name = TextEditingController();
-  final specialty = TextEditingController(text: 'Pediatría general');
+  final specialty = TextEditingController();
   final phone = TextEditingController();
   final place = TextEditingController();
   final notes = TextEditingController();
+  bool busy = false;
 
   @override
   void dispose() {
@@ -817,19 +827,37 @@ class _PediatricianFormState extends State<_PediatricianForm> {
           const SizedBox(height: 18),
           HealthPrimaryButton(
             label: 'Guardar pediatra',
-            onPressed: () {
-              if (!(formKey.currentState?.validate() ?? false)) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${name.text} se guardó en tus pediatras.'),
-                ),
-              );
-              widget.openFlow(HealthFlowAction.detail);
-            },
+            busy: busy,
+            onPressed: _save,
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _save() async {
+    if (!(formKey.currentState?.validate() ?? false)) return;
+    setState(() => busy = true);
+    try {
+      await widget.controller.savePediatrician(
+        name: name.text,
+        specialty: specialty.text,
+        phone: phone.text,
+        place: place.text,
+        notes: notes.text,
+      );
+      if (!mounted) return;
+      BebeInAppSnackbar.show(
+        context,
+        message: '${name.text.trim()} se guardó en Salud.',
+        variant: BebeInAppSnackbarVariant.success,
+      );
+      widget.openFlow(HealthFlowAction.detail);
+    } on Object catch (error) {
+      if (mounted) _showError(context, error);
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
   }
 }
 
@@ -987,92 +1015,83 @@ class _HealthRecordDetailView extends StatelessWidget {
     );
   }
 
-  List<Widget> _vaccineDetail(BuildContext context) => [
-    HealthSurface(
-      color: Theme.of(context).colorScheme.secondaryContainer,
-      child: const Column(
-        children: [
-          Icon(Icons.health_and_safety_outlined, size: 72),
-          SizedBox(height: 12),
-          Text(
-            'Neumococo · 2da dosis',
-            style: TextStyle(fontSize: 23, fontWeight: FontWeight.w800),
-          ),
-          SizedBox(height: 6),
-          Text('Protege contra infecciones graves por neumococo.'),
-        ],
+  List<Widget> _vaccineDetail(BuildContext context) {
+    final selected = controller.selectedHealthEvent;
+    final event = selected?.type == HealthEventType.vaccine
+        ? selected
+        : controller.vaccines.firstOrNull;
+    if (event == null) {
+      return [
+        HealthEmptyState(
+          title: 'No hay una vacuna para mostrar',
+          description:
+              'Registra una vacuna aplicada para consultar aquí su detalle.',
+          icon: Icons.vaccines_outlined,
+          actionLabel: 'Registrar vacuna',
+          onActionPressed: () => openFlow(HealthFlowAction.register),
+        ),
+      ];
+    }
+    final applied = event.status == HealthEventStatus.completed;
+    return [
+      HealthSurface(
+        color: Theme.of(context).colorScheme.secondaryContainer,
+        child: Column(
+          children: [
+            const Icon(Icons.health_and_safety_outlined, size: 64),
+            const SizedBox(height: 12),
+            Text(
+              event.title,
+              textAlign: TextAlign.center,
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            if (event.description.trim().isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(event.description, textAlign: TextAlign.center),
+            ],
+          ],
+        ),
       ),
-    ),
-    const SizedBox(height: 14),
-    const HealthActionRow(
-      icon: Icons.calendar_today_outlined,
-      title: 'Fecha programada',
-      subtitle: 'Próxima fecha recomendada',
-      trailing: Text('26 may'),
-    ),
-    const SizedBox(height: 10),
-    const HealthActionRow(
-      icon: Icons.location_on_outlined,
-      title: 'Lugar sugerido',
-      subtitle: 'CESFAM Cien Águilas',
-    ),
-    const SizedBox(height: 18),
-    HealthPrimaryButton(
-      label: 'Registrar aplicación',
-      icon: Icons.vaccines_outlined,
-      onPressed: () => openFlow(HealthFlowAction.register),
-    ),
-  ];
+      const SizedBox(height: 14),
+      HealthActionRow(
+        icon: Icons.calendar_today_outlined,
+        title: applied ? 'Fecha de aplicación' : 'Fecha programada',
+        subtitle:
+            '${healthDateLabel(event.startsAt)} · ${healthTimeLabel(event.startsAt)}',
+        trailing: _EventStatusLabel(event.status),
+      ),
+      if (!applied) ...[
+        const SizedBox(height: 18),
+        HealthPrimaryButton(
+          label: 'Registrar aplicación',
+          icon: Icons.vaccines_outlined,
+          onPressed: () => openFlow(HealthFlowAction.register),
+        ),
+      ],
+    ];
+  }
 
   List<Widget> _measurementDetail(BuildContext context) {
-    final measurements =
-        <(HealthMeasurementType, double, DateTime, RegisterSyncStatus, String)>[
-          for (final event in controller.measurementRecords)
-            if (event.details['value'] is num &&
-                HealthMeasurementType.values.any(
-                  (type) => type.name == event.details['measurement_type'],
-                ))
-              (
-                HealthMeasurementType.values.firstWhere(
-                  (type) => type.name == event.details['measurement_type'],
-                ),
-                (event.details['value']! as num).toDouble(),
-                event.occurredAt,
-                event.syncStatus,
-                'Registro de actividad',
-              ),
-          for (final measurement
-              in controller.overview?.measurements ?? const [])
-            (
-              measurement.type,
-              measurement.value,
-              measurement.recordedAt,
-              RegisterSyncStatus.synced,
-              measurement.source.trim().isEmpty
-                  ? 'Registro de salud'
-                  : measurement.source,
-            ),
-        ]..sort((a, b) => b.$3.compareTo(a.$3));
-    if (measurements.isEmpty) {
+    final measurement =
+        controller.selectedMeasurement ?? controller.measurements.firstOrNull;
+    if (measurement == null) {
       return [
-        const HealthSurface(
-          child: Padding(
-            padding: EdgeInsets.symmetric(vertical: 24),
-            child: Center(
-              child: Text(
-                'Todavía no hay mediciones registradas.',
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
+        HealthEmptyState(
+          title: 'Todavía no hay mediciones',
+          description:
+              'Registra peso o talla para consultar el detalle de crecimiento.',
+          icon: Icons.monitor_weight_outlined,
+          actionLabel: 'Registrar medición',
+          onActionPressed: () => openFlow(HealthFlowAction.register),
         ),
       ];
     }
 
-    final measurement = measurements.first;
-    final isWeight = measurement.$1 == HealthMeasurementType.weight;
-    final unit = isWeight ? 'kg' : 'cm';
-    final value = measurement.$2.toStringAsFixed(isWeight ? 2 : 1);
+    final isWeight = measurement.type == HealthMeasurementType.weight;
+    final unit = measurement.unit;
+    final value = measurement.value.toStringAsFixed(isWeight ? 2 : 1);
     return [
       HealthSurface(
         child: Row(
@@ -1112,145 +1131,263 @@ class _HealthRecordDetailView extends StatelessWidget {
         icon: Icons.calendar_today_outlined,
         title: 'Fecha y hora',
         subtitle:
-            '${healthDateLabel(measurement.$3)} · ${healthTimeLabel(measurement.$3)}',
+            '${healthDateLabel(measurement.recordedAt)} · ${healthTimeLabel(measurement.recordedAt)}',
       ),
       const SizedBox(height: 10),
       HealthActionRow(
         icon: Icons.person_outline_rounded,
         title: 'Origen del registro',
-        subtitle: measurement.$5,
+        subtitle: measurement.source,
       ),
       const SizedBox(height: 10),
       HealthActionRow(
         icon: Icons.sync_rounded,
         title: 'Estado de sincronización',
         subtitle: 'Revisa el respaldo de este registro',
-        trailing: HealthSyncBadge(status: measurement.$4, compact: true),
+        trailing: HealthSyncBadge(
+          status: measurement.syncStatus,
+          compact: true,
+        ),
         onTap: () => openFlow(HealthFlowAction.sync),
       ),
     ];
   }
 
-  List<Widget> _consultationDetail(BuildContext context) => [
-    const HealthActionRow(
-      icon: Icons.person_outline_rounded,
-      title: 'Dra. Valeria Ruiz',
-      subtitle: 'Pediatra · Consulta ingresada por el cuidador',
-    ),
-    const SizedBox(height: 10),
-    const HealthActionRow(
-      icon: Icons.medical_services_outlined,
-      title: 'Evaluación',
-      subtitle: 'El bebé está creciendo adecuadamente.',
-    ),
-    const SizedBox(height: 10),
-    HealthActionRow(
-      icon: Icons.medication_outlined,
-      title: 'Tratamiento',
-      subtitle: 'Hidratación de la piel 2 veces al día.',
-      tint: Theme.of(context).colorScheme.error,
-    ),
-    const SizedBox(height: 10),
-    const HealthActionRow(
-      icon: Icons.calendar_month_outlined,
-      title: 'Seguimiento',
-      subtitle: 'Próximo control el 12 jun a las 11:30.',
-    ),
-    const SizedBox(height: 10),
-    HealthActionRow(
-      icon: Icons.visibility_outlined,
-      title: 'Vigilancia',
-      subtitle: 'Observar fiebre, irritabilidad o empeoramiento.',
-      tint: Theme.of(context).colorScheme.secondary,
-    ),
-    const SizedBox(height: 10),
-    const HealthActionRow(
-      icon: Icons.attachment_outlined,
-      title: 'Adjuntos y observaciones',
-      subtitle: '2 fotos · Nota de mamá',
-    ),
-    const SizedBox(height: 18),
-    HealthPrimaryButton(
-      label: 'Ver reportes',
-      onPressed: () => openFlow(HealthFlowAction.reports),
-    ),
-  ];
+  List<Widget> _consultationDetail(BuildContext context) {
+    final selectedEvent = controller.selectedHealthEvent;
+    if (selectedEvent != null &&
+        (selectedEvent.type == HealthEventType.pediatricControl ||
+            selectedEvent.type == HealthEventType.growthControl)) {
+      return [
+        HealthActionRow(
+          icon: selectedEvent.type == HealthEventType.growthControl
+              ? Icons.monitor_weight_outlined
+              : Icons.medical_services_outlined,
+          title: selectedEvent.title,
+          subtitle: selectedEvent.description.trim().isEmpty
+              ? 'Sin descripción adicional'
+              : selectedEvent.description,
+          trailing: _EventStatusLabel(selectedEvent.status),
+        ),
+        const SizedBox(height: 10),
+        HealthActionRow(
+          icon: Icons.calendar_today_outlined,
+          title: 'Fecha y hora',
+          subtitle:
+              '${healthDateLabel(selectedEvent.startsAt)} · ${healthTimeLabel(selectedEvent.startsAt)}',
+        ),
+      ];
+    }
 
-  List<Widget> _pediatricianDetail(BuildContext context) => [
-    HealthSurface(
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 42,
-            child: Icon(
-              Icons.medical_services_outlined,
-              size: 40,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-          ),
-          const SizedBox(width: 16),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Dra. Valeria Ruiz',
-                  style: TextStyle(fontSize: 21, fontWeight: FontWeight.w800),
-                ),
-                Text('Pediatría general'),
-                SizedBox(height: 6),
-                Row(
-                  children: [
-                    Icon(Icons.star_rounded, color: Colors.amber),
-                    Text(' 5.0 · valoración privada'),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
+    final consultation =
+        controller.selectedConsultation ?? controller.consultations.firstOrNull;
+    if (consultation == null) {
+      return [
+        HealthEmptyState(
+          title: 'No hay una consulta para mostrar',
+          description:
+              'Registra una consulta para conservar su evaluación e indicaciones.',
+          icon: Icons.medical_information_outlined,
+          actionLabel: 'Registrar consulta',
+          onActionPressed: () => openFlow(HealthFlowAction.register),
+        ),
+      ];
+    }
+    return [
+      HealthActionRow(
+        icon: Icons.person_outline_rounded,
+        title: consultation.pediatrician,
+        subtitle:
+            '${healthDateLabel(consultation.occurredAt)} · ${healthTimeLabel(consultation.occurredAt)}',
       ),
-    ),
-    const SizedBox(height: 12),
-    const HealthActionRow(
-      icon: Icons.phone_outlined,
-      title: 'Información de contacto',
-      subtitle: '+56 9 1234 5678 · Prefiere WhatsApp',
-    ),
-    const SizedBox(height: 10),
-    const HealthActionRow(
-      icon: Icons.local_hospital_outlined,
-      title: 'Clínica infantil',
-      subtitle: 'Lun a vie · 08:00 a 17:00',
-    ),
-    const SizedBox(height: 10),
-    const HealthActionRow(
-      icon: Icons.history_rounded,
-      title: 'Consultas asociadas',
-      subtitle: '4 consultas · Última el 15 may',
-    ),
-    const SizedBox(height: 18),
-    HealthPrimaryButton(
-      label: 'Comparar experiencias',
-      icon: Icons.star_outline_rounded,
-      onPressed: () => openFlow(HealthFlowAction.compare),
-    ),
-  ];
+      const SizedBox(height: 10),
+      HealthActionRow(
+        icon: Icons.medical_services_outlined,
+        title: consultation.title,
+        subtitle: consultation.summary.isEmpty
+            ? 'Sin evaluación registrada'
+            : consultation.summary,
+      ),
+      if (consultation.treatment != null) ...[
+        const SizedBox(height: 10),
+        HealthActionRow(
+          icon: Icons.medication_outlined,
+          title: 'Tratamiento',
+          subtitle: consultation.treatment,
+          tint: Theme.of(context).colorScheme.error,
+        ),
+      ],
+      if (consultation.followUp != null) ...[
+        const SizedBox(height: 10),
+        HealthActionRow(
+          icon: Icons.calendar_month_outlined,
+          title: 'Seguimiento',
+          subtitle: consultation.followUp,
+        ),
+      ],
+      if (consultation.vigilance != null) ...[
+        const SizedBox(height: 10),
+        HealthActionRow(
+          icon: Icons.visibility_outlined,
+          title: 'Vigilancia',
+          subtitle: consultation.vigilance,
+          tint: Theme.of(context).colorScheme.secondary,
+        ),
+      ],
+      if (consultation.notes != null) ...[
+        const SizedBox(height: 10),
+        HealthActionRow(
+          icon: Icons.notes_outlined,
+          title: 'Notas del cuidador',
+          subtitle: consultation.notes,
+        ),
+      ],
+      const SizedBox(height: 18),
+      HealthPrimaryButton(
+        label: 'Ver reportes',
+        onPressed: () => openFlow(HealthFlowAction.reports),
+      ),
+    ];
+  }
 
-  List<Widget> _clinicalDetail(BuildContext context) => [
-    const HealthActionRow(
-      icon: Icons.note_alt_outlined,
-      title: 'Observación clínica',
-      subtitle: 'Registro disponible en el historial del bebé.',
-    ),
-    const SizedBox(height: 10),
-    HealthActionRow(
-      icon: Icons.sync_rounded,
-      title: 'Sincronización familiar',
-      subtitle: 'Consulta el estado del respaldo.',
-      onTap: () => openFlow(HealthFlowAction.sync),
-    ),
-  ];
+  List<Widget> _pediatricianDetail(BuildContext context) {
+    final pediatrician =
+        controller.selectedPediatrician ?? controller.pediatricians.firstOrNull;
+    if (pediatrician == null) {
+      return [
+        HealthEmptyState(
+          title: 'No hay un pediatra para mostrar',
+          description: 'Agrega un profesional para consultar aquí sus datos.',
+          icon: Icons.medical_services_outlined,
+          actionLabel: 'Agregar pediatra',
+          onActionPressed: () => openFlow(HealthFlowAction.register),
+        ),
+      ];
+    }
+    final consultationLabel = pediatrician.consultationCount == 0
+        ? 'Sin consultas asociadas'
+        : '${pediatrician.consultationCount} ${pediatrician.consultationCount == 1 ? 'consulta' : 'consultas'} · Última ${healthDateLabel(pediatrician.lastConsultationAt!)}';
+    return [
+      HealthSurface(
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 36,
+              child: Text(
+                pediatrician.name.characters.first.toUpperCase(),
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    pediatrician.name,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  Text(pediatrician.specialty),
+                  const SizedBox(height: 6),
+                  Text(
+                    consultationLabel,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      if (pediatrician.phone != null) ...[
+        const SizedBox(height: 12),
+        HealthActionRow(
+          icon: Icons.phone_outlined,
+          title: 'Información de contacto',
+          subtitle: pediatrician.phone,
+        ),
+      ],
+      if (pediatrician.place != null) ...[
+        const SizedBox(height: 10),
+        HealthActionRow(
+          icon: Icons.local_hospital_outlined,
+          title: 'Lugar habitual',
+          subtitle: pediatrician.place,
+        ),
+      ],
+      if (pediatrician.notes != null) ...[
+        const SizedBox(height: 10),
+        HealthActionRow(
+          icon: Icons.notes_outlined,
+          title: 'Notas personales',
+          subtitle: pediatrician.notes,
+        ),
+      ],
+      const SizedBox(height: 18),
+      HealthPrimaryButton(
+        label: 'Comparar experiencias',
+        icon: Icons.compare_arrows_rounded,
+        onPressed: () => openFlow(HealthFlowAction.compare),
+      ),
+    ];
+  }
+
+  List<Widget> _clinicalDetail(BuildContext context) {
+    final healthEvent = controller.selectedHealthEvent;
+    if (healthEvent != null) {
+      return [
+        HealthActionRow(
+          icon: healthEvent.type == HealthEventType.vaccine
+              ? Icons.vaccines_outlined
+              : Icons.medical_services_outlined,
+          title: healthEvent.title,
+          subtitle: healthEvent.description.trim().isEmpty
+              ? healthDateLabel(healthEvent.startsAt)
+              : '${healthDateLabel(healthEvent.startsAt)} · ${healthEvent.description}',
+          trailing: _EventStatusLabel(healthEvent.status),
+        ),
+      ];
+    }
+    final record =
+        controller.selectedRecord ?? controller.clinicalNotes.firstOrNull;
+    if (record == null) {
+      return const [
+        HealthEmptyState(
+          title: 'No hay un registro para mostrar',
+          description: 'Los detalles aparecerán al seleccionar un registro.',
+          icon: Icons.folder_open_outlined,
+        ),
+      ];
+    }
+    return [
+      HealthActionRow(
+        icon: Icons.note_alt_outlined,
+        title: _recordText(record, 'title', 'Registro de salud'),
+        subtitle: _recordText(
+          record,
+          'description',
+          record.notes ?? 'Sin descripción adicional',
+        ),
+        trailing: HealthSyncBadge(status: record.syncStatus, compact: true),
+      ),
+      const SizedBox(height: 10),
+      HealthActionRow(
+        icon: Icons.calendar_today_outlined,
+        title: 'Fecha y hora',
+        subtitle:
+            '${healthDateLabel(record.occurredAt)} · ${healthTimeLabel(record.occurredAt)}',
+      ),
+      const SizedBox(height: 10),
+      HealthActionRow(
+        icon: Icons.sync_rounded,
+        title: 'Sincronización familiar',
+        subtitle: 'Consulta el estado del respaldo.',
+        onTap: () => openFlow(HealthFlowAction.sync),
+      ),
+    ];
+  }
 }
 
 class _ExportReportView extends StatelessWidget {
@@ -1270,8 +1407,10 @@ class _ExportReportView extends StatelessWidget {
       if (context.mounted) openFlow(HealthFlowAction.exported);
     } on Object catch (error) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo generar el reporte: $error')),
+      BebeInAppSnackbar.show(
+        context,
+        message: 'No se pudo generar el reporte: $error',
+        variant: BebeInAppSnackbarVariant.error,
       );
     }
   }
@@ -1343,8 +1482,10 @@ class _ExportedReportView extends StatelessWidget {
       await const HealthReportExporter().sharePdf(controller);
     } on Object catch (error) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo compartir el reporte: $error')),
+      BebeInAppSnackbar.show(
+        context,
+        message: 'No se pudo compartir el reporte: $error',
+        variant: BebeInAppSnackbarVariant.error,
       );
     }
   }
@@ -1419,74 +1560,99 @@ class _ExportedReportView extends StatelessWidget {
 }
 
 class _ComparePediatriciansView extends StatelessWidget {
-  const _ComparePediatriciansView({required this.openFlow});
+  const _ComparePediatriciansView({
+    required this.controller,
+    required this.openFlow,
+  });
 
+  final HealthFlowController controller;
   final HealthFlowNavigator openFlow;
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
-      children: [
-        const HealthSectionHeading(
-          title: 'Comparar experiencias',
-          subtitle: 'Resumen privado de tus consultas con pediatras.',
-        ),
-        const SizedBox(height: 18),
-        HealthSurface(
-          color: Theme.of(context).colorScheme.primaryContainer,
-          child: const Row(
-            children: [
-              Icon(Icons.lock_outline_rounded),
-              SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Esta comparación es privada y solo tú puedes verla.',
-                ),
-              ),
-            ],
+    return HealthFlowBody(
+      controller: controller,
+      builder: (context) {
+        final pediatricians = controller.pediatricians;
+        return [
+          const HealthSectionHeading(
+            title: 'Comparar experiencias',
+            subtitle: 'Resumen privado basado en las consultas registradas.',
           ),
-        ),
-        const SizedBox(height: 14),
-        for (final pediatrician in const [
-          ('Dra. Valeria Ruiz', '5.0', '4 consultas', 'Claridad · Calidez'),
-          ('Dr. Mateo Salazar', '4.7', '2 consultas', 'Puntualidad'),
-          ('Dra. Juliana Torres', '4.6', '3 consultas', 'Empatía'),
-        ]) ...[
+          const SizedBox(height: 18),
           HealthSurface(
-            onTap: () => openFlow(HealthFlowAction.detail),
-            child: Row(
+            color: Theme.of(context).colorScheme.primaryContainer,
+            child: const Row(
               children: [
-                CircleAvatar(
-                  radius: 30,
-                  child: Text(pediatrician.$1.split(' ').last[0]),
-                ),
-                const SizedBox(width: 14),
+                Icon(Icons.lock_outline_rounded),
+                SizedBox(width: 12),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        pediatrician.$1,
-                        style: const TextStyle(fontWeight: FontWeight.w800),
-                      ),
-                      Text('${pediatrician.$2} ★ · ${pediatrician.$3}'),
-                      Text(
-                        pediatrician.$4,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    'Esta comparación es privada y solo tú puedes verla.',
                   ),
                 ),
-                const Icon(Icons.chevron_right_rounded),
               ],
             ),
           ),
-          const SizedBox(height: 12),
-        ],
-      ],
+          const SizedBox(height: 14),
+          if (pediatricians.isEmpty)
+            const HealthEmptyState(
+              title: 'No hay experiencias para comparar',
+              description:
+                  'Agrega pediatras o registra consultas para construir este resumen.',
+              icon: Icons.compare_arrows_rounded,
+            )
+          else
+            for (final pediatrician in pediatricians) ...[
+              HealthSurface(
+                onTap: () {
+                  controller.selectPediatrician(pediatrician);
+                  openFlow(HealthFlowAction.detail);
+                },
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 30,
+                      child: Text(
+                        pediatrician.name.characters.first.toUpperCase(),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            pediatrician.name,
+                            style: const TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                          Text(pediatrician.specialty),
+                          const SizedBox(height: 4),
+                          Text(
+                            pediatrician.consultationCount == 0
+                                ? 'Sin consultas asociadas'
+                                : '${pediatrician.consultationCount} ${pediatrician.consultationCount == 1 ? 'consulta' : 'consultas'}',
+                          ),
+                          if (pediatrician.latestReason != null)
+                            Text(
+                              'Última: ${pediatrician.latestReason} · ${healthDateLabel(pediatrician.lastConsultationAt!)}',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right_rounded),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+        ];
+      },
     );
   }
 }
@@ -1561,6 +1727,44 @@ class _DateTimeField extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _EventStatusLabel extends StatelessWidget {
+  const _EventStatusLabel(this.status);
+
+  final HealthEventStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, color) = switch (status) {
+      HealthEventStatus.scheduled => (
+        'Programado',
+        Theme.of(context).colorScheme.primary,
+      ),
+      HealthEventStatus.completed => (
+        'Completado',
+        Theme.of(context).colorScheme.tertiary,
+      ),
+      HealthEventStatus.cancelled => (
+        'Cancelado',
+        Theme.of(context).colorScheme.error,
+      ),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: color,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
     );
   }
 }
@@ -1649,16 +1853,23 @@ class _SummaryLine extends StatelessWidget {
 String? _required(String? value) =>
     value == null || value.trim().isEmpty ? 'Este campo es obligatorio.' : null;
 
+String _recordText(RegisteredEvent event, String key, String fallback) {
+  final value = event.details[key];
+  return value is String && value.trim().isNotEmpty ? value.trim() : fallback;
+}
+
 void _showError(BuildContext context, Object error) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text('No pudimos guardar el registro: $error')),
+  BebeInAppSnackbar.show(
+    context,
+    message: 'No pudimos guardar el registro: $error',
+    variant: BebeInAppSnackbarVariant.error,
   );
 }
 
 void _notAvailable(BuildContext context) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-      content: Text('Esta acción estará disponible en el dispositivo.'),
-    ),
+  BebeInAppSnackbar.show(
+    context,
+    message: 'Esta acción estará disponible en el dispositivo.',
+    variant: BebeInAppSnackbarVariant.information,
   );
 }

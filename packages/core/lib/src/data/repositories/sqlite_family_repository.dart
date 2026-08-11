@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:sqflite/sqflite.dart' as sqlite;
@@ -22,6 +23,11 @@ class SqliteFamilyRepository implements FamilyRepository {
   final BebeDatabase _database;
   final LocalIdGenerator _idGenerator;
   final SupabaseRestClient? _remoteClient;
+  final StreamController<String> _activeBabyChanges =
+      StreamController<String>.broadcast();
+
+  @override
+  Stream<String> get activeBabyChanges => _activeBabyChanges.stream;
 
   @override
   Future<FamilyOverviewEntity> getCurrent() async {
@@ -62,7 +68,12 @@ class SqliteFamilyRepository implements FamilyRepository {
       whereArgs: [baby.familyId],
       limit: 1,
     );
-    return _overview(database, FamilyModel.fromRow(familyRows.single));
+    final overview = await _overview(
+      database,
+      FamilyModel.fromRow(familyRows.single),
+    );
+    _activeBabyChanges.add(babyId);
+    return overview;
   }
 
   @override

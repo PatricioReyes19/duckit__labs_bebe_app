@@ -47,7 +47,10 @@ class AgendaView extends StatelessWidget {
           ),
           AgendaEmpty(:final overview) => _AgendaContent(
             overview: overview,
-            templateState: BebeAgendaTemplateState.empty,
+            templateState:
+                overview.connectionStatus == AgendaConnectionStatus.offline
+                ? BebeAgendaTemplateState.offline
+                : BebeAgendaTemplateState.content,
             onNotificationsPressed: onNotificationsPressed,
             onConfigureRemindersPressed: onConfigureRemindersPressed,
             onHealthPressed: onHealthPressed,
@@ -243,6 +246,7 @@ class _AgendaContent extends StatelessWidget {
         emptyMessage: 'No hay próximos eventos para la categoría seleccionada.',
         events: upcomingEvents,
         scrollable: true,
+        collapseRecurring: true,
         onEventPressed: onEventPressed,
       ),
       reminderBanner: BebeAgendaReminderBanner(
@@ -273,13 +277,7 @@ class _AgendaContent extends StatelessWidget {
         message: 'Revisa tu conexión e intenta nuevamente.',
         onRetryPressed: () => bloc.add(const AgendaEvent.retried()),
       ),
-      onRefresh: () async {
-        final completed = bloc.stream.firstWhere(
-          (state) => state is AgendaLoaded || state is AgendaFailure,
-        );
-        bloc.add(const AgendaEvent.refreshed());
-        await completed;
-      },
+      onRefresh: bloc.refreshFromRemote,
       useSafeArea: false,
       bottomSpacing: spacing.spacing8xl + spacing.spacing4xl,
     );
@@ -385,6 +383,7 @@ class _AgendaEventGroup extends StatelessWidget {
     required this.emptyMessage,
     required this.events,
     this.scrollable = false,
+    this.collapseRecurring = false,
     this.onEventPressed,
   });
 
@@ -392,6 +391,7 @@ class _AgendaEventGroup extends StatelessWidget {
   final String emptyMessage;
   final List<AgendaEventVm> events;
   final bool scrollable;
+  final bool collapseRecurring;
   final ValueChanged<String>? onEventPressed;
 
   static const _maximumVisibleItems = 5;
@@ -401,15 +401,18 @@ class _AgendaEventGroup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final spacing = context.theme.spacing;
+    final items = collapseRecurring
+        ? _collapseRecurringEvents(events)
+        : events.map(_AgendaEventListItem.single).toList(growable: false);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         BebeTitleSection(title: title),
         SizedBox(height: spacing.spacingL),
-        if (events.isEmpty)
+        if (items.isEmpty)
           _AgendaSectionEmptyState(message: emptyMessage)
-        else if (scrollable && events.length > _maximumVisibleItems)
+        else if (scrollable && items.length > _maximumVisibleItems)
           LayoutBuilder(
             builder: (context, constraints) {
               final textScale = MediaQuery.textScalerOf(
@@ -431,12 +434,13 @@ class _AgendaEventGroup extends StatelessWidget {
                     primary: false,
                     physics: const BouncingScrollPhysics(),
                     padding: EdgeInsets.only(right: spacing.spacingXs),
-                    itemCount: events.length,
+                    itemCount: items.length,
                     separatorBuilder: (_, _) =>
                         SizedBox(height: spacing.spacingM),
                     itemBuilder: (context, index) => _AgendaEventCard(
-                      event: events[index],
-                      onPressed: () => onEventPressed?.call(events[index].id),
+                      item: items[index],
+                      onPressed: () =>
+                          onEventPressed?.call(items[index].event.id),
                     ),
                   ),
                 ),
@@ -444,12 +448,12 @@ class _AgendaEventGroup extends StatelessWidget {
             },
           )
         else
-          for (var index = 0; index < events.length; index++) ...[
+          for (var index = 0; index < items.length; index++) ...[
             _AgendaEventCard(
-              event: events[index],
-              onPressed: () => onEventPressed?.call(events[index].id),
+              item: items[index],
+              onPressed: () => onEventPressed?.call(items[index].event.id),
             ),
-            if (index != events.length - 1) SizedBox(height: spacing.spacingM),
+            if (index != items.length - 1) SizedBox(height: spacing.spacingM),
           ],
       ],
     );
@@ -457,13 +461,17 @@ class _AgendaEventGroup extends StatelessWidget {
 }
 
 class _AgendaEventCard extends StatelessWidget {
-  const _AgendaEventCard({required this.event, required this.onPressed});
+  const _AgendaEventCard({required this.item, required this.onPressed});
 
-  final AgendaEventVm event;
+  final _AgendaEventListItem item;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
+    final event = item.event;
+    final recurrenceLabel = item.isRecurring
+        ? _recurrenceLabel(event.description)
+        : null;
     return BebeAgendaEventCard(
       time: BebeTimeBlock(
         dateLabel: _date(event.startsAt),
@@ -474,6 +482,19 @@ class _AgendaEventCard extends StatelessWidget {
       title: event.title,
       description: event.description,
       variant: _eventVariant(event.category),
+      status: recurrenceLabel == null
+          ? null
+          : BebeStatusBadge(
+              label: recurrenceLabel,
+              variant: BebeStatusBadgeVariant.information,
+              icon: const Icon(Icons.repeat_rounded),
+              semanticLabel: [
+                'Evento recurrente',
+                recurrenceLabel,
+                if (item.occurrenceCount > 1)
+                  '${item.occurrenceCount} próximas ocurrencias agrupadas',
+              ].join('. '),
+            ),
       caregiver: event.caregiver == null
           ? null
           : BebeCaregiverBadge(
@@ -487,9 +508,60 @@ class _AgendaEventCard extends StatelessWidget {
       syncIndicator: event.syncStatus == AgendaSyncStatus.synced
           ? null
           : _SyncBadge(label: _agendaSyncLabel(event.syncStatus)),
+      semanticLabel: [
+        event.title,
+        event.description,
+        if (recurrenceLabel != null) 'Evento recurrente: $recurrenceLabel',
+        if (item.occurrenceCount > 1)
+          '${item.occurrenceCount} próximas ocurrencias agrupadas',
+      ].join('. '),
       onPressed: onPressed,
     );
   }
+}
+
+class _AgendaEventListItem {
+  _AgendaEventListItem.single(this.event) : occurrenceCount = 1;
+
+  final AgendaEventVm event;
+  int occurrenceCount;
+
+  bool get isRecurring => event.isRecurring;
+}
+
+List<_AgendaEventListItem> _collapseRecurringEvents(
+  List<AgendaEventVm> events,
+) {
+  final result = <_AgendaEventListItem>[];
+  final seriesPositions = <String, int>{};
+  for (final event in events) {
+    final seriesId = event.sourceRegisterEventId?.trim();
+    if (seriesId == null || seriesId.isEmpty) {
+      result.add(_AgendaEventListItem.single(event));
+      continue;
+    }
+    final position = seriesPositions[seriesId];
+    if (position == null) {
+      seriesPositions[seriesId] = result.length;
+      result.add(_AgendaEventListItem.single(event));
+    } else {
+      result[position].occurrenceCount += 1;
+    }
+  }
+  return result;
+}
+
+String _recurrenceLabel(String description) {
+  final frequency = description
+      .split('·')
+      .map((part) => part.trim())
+      .where((part) => part.startsWith('Cada ') || part == 'Una vez al día')
+      .firstOrNull;
+  return switch (frequency) {
+    'Una vez al día' => 'Todos los días',
+    final String value => value,
+    null => 'Recurrente',
+  };
 }
 
 class _RegisteredActivityGroup extends StatelessWidget {
@@ -897,39 +969,196 @@ class _AgendaLoadingState extends StatelessWidget {
   Widget build(BuildContext context) {
     final spacing = context.theme.spacing;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const _Skeleton(height: 112),
-        SizedBox(height: spacing.spacingL),
-        const _Skeleton(height: 52),
-        SizedBox(height: spacing.spacing2xl),
-        const _Skeleton(height: 112),
-        SizedBox(height: spacing.spacingM),
-        const _Skeleton(height: 112),
-        SizedBox(height: spacing.spacing2xl),
-        const _Skeleton(height: 260),
-      ],
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      label: 'Cargando componentes de la agenda',
+      child: ExcludeSemantics(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const _AgendaWeekPickerSkeleton(),
+            SizedBox(height: spacing.spacingL),
+            const _AgendaFiltersSkeleton(),
+            SizedBox(height: spacing.spacing2xl),
+            const _AgendaSectionSkeleton(
+              key: ValueKey('agenda-loading-today'),
+              cardCount: 2,
+            ),
+            SizedBox(height: spacing.spacing2xl),
+            const _AgendaSectionSkeleton(
+              key: ValueKey('agenda-loading-upcoming'),
+              cardCount: 2,
+            ),
+            SizedBox(height: spacing.spacing2xl),
+            const _AgendaMonthlySkeleton(),
+          ],
+        ),
+      ),
     );
   }
 }
 
-class _Skeleton extends StatelessWidget {
-  const _Skeleton({required this.height});
-
-  final double height;
+class _AgendaWeekPickerSkeleton extends StatelessWidget {
+  const _AgendaWeekPickerSkeleton();
 
   @override
   Widget build(BuildContext context) {
     final theme = context.theme;
 
+    return DecoratedBox(
+      key: const ValueKey('agenda-loading-week-picker'),
+      decoration: BoxDecoration(
+        color: theme.colors.background.neutralsSurface,
+        borderRadius: BorderRadius.circular(theme.borderRadius.radius3xl),
+        border: Border.all(color: theme.colors.border.neutralDefault),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(theme.spacing.spacingL),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const BebeSkeleton.line(width: 132, height: 16),
+            SizedBox(height: theme.spacing.spacingL),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                for (var index = 0; index < 7; index++)
+                  Column(
+                    children: [
+                      const BebeSkeleton.line(width: 18, height: 8),
+                      SizedBox(height: theme.spacing.spacingS),
+                      const BebeSkeleton.circle(size: 32),
+                    ],
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AgendaFiltersSkeleton extends StatelessWidget {
+  const _AgendaFiltersSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final spacing = context.theme.spacing;
     return SizedBox(
-      height: height,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: theme.colors.background.neutralsActive,
-          borderRadius: BorderRadius.circular(theme.borderRadius.radius3xl),
-          border: Border.all(color: theme.colors.border.neutralDefault),
+      key: const ValueKey('agenda-loading-filters'),
+      height: 40,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        physics: const NeverScrollableScrollPhysics(),
+        child: Row(
+          children: [
+            for (final width in [88.0, 104.0, 96.0, 112.0]) ...[
+              BebeSkeleton(
+                width: width,
+                height: 40,
+                shape: BebeSkeletonShape.pill,
+              ),
+              SizedBox(width: spacing.spacingS),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AgendaSectionSkeleton extends StatelessWidget {
+  const _AgendaSectionSkeleton({required this.cardCount, super.key});
+
+  final int cardCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final spacing = context.theme.spacing;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const BebeSkeleton.line(width: 144, height: 18),
+        SizedBox(height: spacing.spacingL),
+        for (var index = 0; index < cardCount; index++) ...[
+          const _AgendaEventCardSkeleton(),
+          if (index != cardCount - 1) SizedBox(height: spacing.spacingM),
+        ],
+      ],
+    );
+  }
+}
+
+class _AgendaEventCardSkeleton extends StatelessWidget {
+  const _AgendaEventCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: theme.colors.background.neutralsSurface,
+        borderRadius: BorderRadius.circular(theme.borderRadius.radius3xl),
+        border: Border.all(color: theme.colors.border.neutralDefault),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(theme.spacing.spacingL),
+        child: Row(
+          children: [
+            const BebeSkeleton.circle(size: 40),
+            SizedBox(width: theme.spacing.spacingM),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  BebeSkeleton.line(width: 156, height: 14),
+                  SizedBox(height: 8),
+                  BebeSkeleton.line(height: 10),
+                  SizedBox(height: 6),
+                  BebeSkeleton.line(width: 112, height: 10),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AgendaMonthlySkeleton extends StatelessWidget {
+  const _AgendaMonthlySkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    return DecoratedBox(
+      key: const ValueKey('agenda-loading-monthly'),
+      decoration: BoxDecoration(
+        color: theme.colors.background.neutralsSurface,
+        borderRadius: BorderRadius.circular(theme.borderRadius.radius3xl),
+        border: Border.all(color: theme.colors.border.neutralDefault),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(theme.spacing.spacingL),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const BebeSkeleton.line(width: 184, height: 18),
+            SizedBox(height: theme.spacing.spacingL),
+            for (var row = 0; row < 5; row++) ...[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  for (var day = 0; day < 7; day++)
+                    const BebeSkeleton.circle(size: 24),
+                ],
+              ),
+              if (row != 4) SizedBox(height: theme.spacing.spacingS),
+            ],
+          ],
         ),
       ),
     );

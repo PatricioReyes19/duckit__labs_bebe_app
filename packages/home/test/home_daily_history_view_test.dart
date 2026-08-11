@@ -133,12 +133,105 @@ void main() {
     expect(registerPressed, isTrue);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('ongoing sleep is visible and offers wake registration', (
+    tester,
+  ) async {
+    final now = DateTime.now();
+    final event = RegisteredEvent(
+      id: 'ongoing-sleep',
+      babyId: 'baby-1',
+      type: RegisterEventType.sleep,
+      occurredAt: now.subtract(const Duration(minutes: 30)),
+      createdAt: now,
+      details: const {
+        'subtype': 'Siesta',
+        'sleep_status': 'ongoing',
+        'duration_minutes': null,
+        'end_at': null,
+      },
+    );
+    final repository = _FakeRegisterEventRepository([event]);
+    final cubit = HomeDailyHistoryCubit(
+      getRegisterEvents: GetRegisterEvents(repository),
+      updateRegisterEvent: UpdateRegisterEvent(repository),
+      babyId: 'baby-1',
+      clock: () => now,
+    )..load();
+    addTearDown(cubit.close);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: bebeTheme.lightTheme(),
+        home: Scaffold(
+          body: BlocProvider.value(
+            value: cubit,
+            child: HomeDailyHistoryView(
+              babyName: 'Mateo Reyes',
+              onRegisterPressed: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Siesta · En curso'), findsOneWidget);
+    await tester.tap(find.text('Siesta · En curso'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('En curso'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('finish-sleep-ongoing-sleep')),
+      findsOneWidget,
+    );
+    expect(find.text('Duración'), findsNothing);
+    expect(find.text('Hora de despertar'), findsNothing);
+  });
+
+  test('finishing sleep patches the original record', () async {
+    final startedAt = DateTime(2026, 8, 10, 23, 30);
+    final endedAt = DateTime(2026, 8, 11, 1);
+    final event = RegisteredEvent(
+      id: 'ongoing-sleep',
+      babyId: 'baby-1',
+      type: RegisterEventType.sleep,
+      occurredAt: startedAt,
+      createdAt: startedAt,
+      details: const {
+        'subtype': 'night',
+        'sleep_status': 'ongoing',
+        'duration_minutes': null,
+        'end_at': null,
+      },
+    );
+    final repository = _FakeRegisterEventRepository([event]);
+    final cubit = HomeDailyHistoryCubit(
+      getRegisterEvents: GetRegisterEvents(repository),
+      updateRegisterEvent: UpdateRegisterEvent(repository),
+      babyId: 'baby-1',
+    );
+    addTearDown(cubit.close);
+
+    final completed = await cubit.finishSleep(event, endedAt);
+
+    expect(completed, isTrue);
+    expect(repository.updatedId, event.id);
+    expect(repository.updatedPatch?.details?['sleep_status'], 'completed');
+    expect(repository.updatedPatch?.details?['duration_minutes'], 90);
+    expect(
+      repository.updatedPatch?.details?['end_at'],
+      endedAt.toUtc().toIso8601String(),
+    );
+  });
 }
 
 class _FakeRegisterEventRepository implements RegisterEventRepository {
-  const _FakeRegisterEventRepository(this.events);
+  _FakeRegisterEventRepository(this.events);
 
   final List<RegisteredEvent> events;
+  String? updatedId;
+  RegisterEventPatch? updatedPatch;
 
   @override
   Stream<void> get changes => const Stream.empty();
@@ -178,6 +271,9 @@ class _FakeRegisterEventRepository implements RegisterEventRepository {
   }
 
   @override
-  Future<RegisteredEvent?> update(String id, RegisterEventPatch patch) async =>
-      null;
+  Future<RegisteredEvent?> update(String id, RegisterEventPatch patch) async {
+    updatedId = id;
+    updatedPatch = patch;
+    return null;
+  }
 }

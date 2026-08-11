@@ -154,7 +154,6 @@ class FeedingRegisterForm extends StatelessWidget {
           ],
           selectedValue: mood,
           onChanged: onMoodChanged,
-          allowWrap: true,
         ),
         SizedBox(height: spacing.spacingXl),
         BebeNotesField(

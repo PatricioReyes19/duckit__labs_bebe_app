@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:core/core.dart';
+import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -39,17 +40,17 @@ class _AppListenersState extends State<AppListeners> {
     _notificationSubscription = service.notifications.listen((items) {
       if (items.length > _knownNotificationCount && items.isNotEmpty) {
         final notification = items.first;
-        appScaffoldMessengerKey.currentState
-          ?..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text('${notification.title}: ${notification.body}'),
-              action: SnackBarAction(
-                label: 'Ver',
-                onPressed: () => _openNotification(notification),
-              ),
-            ),
+        final messenger = appScaffoldMessengerKey.currentState;
+        if (messenger != null) {
+          BebeInAppSnackbar.showOn(
+            messenger,
+            title: notification.title,
+            message: notification.body,
+            variant: BebeInAppSnackbarVariant.information,
+            actionLabel: 'Ver',
+            onActionPressed: () => _openNotification(notification),
           );
+        }
       }
       _knownNotificationCount = items.length;
     });

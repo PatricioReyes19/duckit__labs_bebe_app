@@ -61,8 +61,7 @@ class SupabaseAuthInterceptor extends Interceptor {
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) async {
     final options = err.requestOptions;
-    if (err.response?.statusCode != 401 ||
-        options.extra[_retriedKey] == true) {
+    if (err.response?.statusCode != 401 || options.extra[_retriedKey] == true) {
       handler.next(err);
       return;
     }

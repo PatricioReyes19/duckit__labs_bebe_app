@@ -136,6 +136,51 @@ void main() {
     expect(repository.drafts.single.details['reminder_interval_hours'], 3);
   });
 
+  test('sleep starts in progress without inventing a wake time', () async {
+    final startedAt = DateTime(2026, 8, 11, 13, 30);
+    final cubit = SleepRegisterCubit(
+      saveRegisterEvent: saveRegisterEvent,
+      babyId: 'baby-1',
+      initialDateTime: startedAt,
+      clock: () => startedAt,
+    );
+    addTearDown(cubit.close);
+
+    await cubit.submit();
+
+    final details = repository.drafts.single.details;
+    expect(cubit.state.status, RegisterSubmissionStatus.success);
+    expect(details['sleep_status'], 'ongoing');
+    expect(details['duration_minutes'], isNull);
+    expect(details['end_at'], isNull);
+    expect(details.containsKey('mood'), isFalse);
+  });
+
+  test('past sleep persists its calculated duration and wake time', () async {
+    final startedAt = DateTime(2026, 8, 11, 13, 30);
+    final cubit = SleepRegisterCubit(
+      saveRegisterEvent: saveRegisterEvent,
+      babyId: 'baby-1',
+      initialDateTime: startedAt,
+      clock: () => startedAt.add(const Duration(hours: 2)),
+    )
+      ..modeChanged(SleepRegisterMode.completed.name)
+      ..durationChanged(45)
+      ..moodChanged('sleepy');
+    addTearDown(cubit.close);
+
+    await cubit.submit();
+
+    final details = repository.drafts.single.details;
+    expect(details['sleep_status'], 'completed');
+    expect(details['duration_minutes'], 45);
+    expect(
+      DateTime.parse(details['end_at']! as String),
+      startedAt.add(const Duration(minutes: 45)).toUtc(),
+    );
+    expect(details['mood'], 'sleepy');
+  });
+
   test('wet diaper persists urine data without stool characteristics',
       () async {
     final cubit = DiaperRegisterCubit(

@@ -13,16 +13,19 @@ class HomeDailyHistoryCubit extends Cubit<HomeDailyHistoryState> {
     required GetRegisterEvents getRegisterEvents,
     required this.babyId,
     DeleteRegisterEvent? deleteRegisterEvent,
+    UpdateRegisterEvent? updateRegisterEvent,
     RegisterEventSyncService? syncService,
     DailyHistoryClock? clock,
   })  : _getRegisterEvents = getRegisterEvents,
         _deleteRegisterEvent = deleteRegisterEvent,
+        _updateRegisterEvent = updateRegisterEvent,
         _syncService = syncService,
         _clock = clock ?? DateTime.now,
         super(HomeDailyHistoryState.initial(referenceDate: clock?.call()));
 
   final GetRegisterEvents _getRegisterEvents;
   final DeleteRegisterEvent? _deleteRegisterEvent;
+  final UpdateRegisterEvent? _updateRegisterEvent;
   final RegisterEventSyncService? _syncService;
   final String babyId;
   final DailyHistoryClock _clock;
@@ -43,7 +46,11 @@ class HomeDailyHistoryCubit extends Cubit<HomeDailyHistoryState> {
       _eventsSubscription = _getRegisterEvents.watch(babyId).listen(
         (all) {
           final today = all
-              .where((event) => _sameLocalDay(event.occurredAt, referenceDate))
+              .where(
+                (event) =>
+                    _sameLocalDay(event.occurredAt, referenceDate) ||
+                    _isOngoingSleep(event),
+              )
               .toList(growable: false)
             ..sort((a, b) => b.occurredAt.compareTo(a.occurredAt));
           emit(
@@ -88,6 +95,28 @@ class HomeDailyHistoryCubit extends Cubit<HomeDailyHistoryState> {
     await delete(id);
   }
 
+  Future<bool> finishSleep(RegisteredEvent event, DateTime endedAt) async {
+    final update = _updateRegisterEvent;
+    final localEnd = endedAt.toLocal();
+    final localStart = event.occurredAt.toLocal();
+    if (update == null ||
+        event.type != RegisterEventType.sleep ||
+        event.details['sleep_status'] != 'ongoing' ||
+        !localEnd.isAfter(localStart)) {
+      return false;
+    }
+    final elapsedMinutes = localEnd.difference(localStart).inMinutes;
+    final durationMinutes = elapsedMinutes < 1 ? 1 : elapsedMinutes;
+    final details = <String, Object?>{
+      ...event.details,
+      'sleep_status': 'completed',
+      'duration_minutes': durationMinutes,
+      'end_at': localEnd.toUtc().toIso8601String(),
+    };
+    await update(event.id, RegisterEventPatch(details: details));
+    return true;
+  }
+
   Future<void> synchronize() async {
     await _syncService?.synchronize();
   }
@@ -101,6 +130,10 @@ class HomeDailyHistoryCubit extends Cubit<HomeDailyHistoryState> {
     final b = second.toLocal();
     return a.year == b.year && a.month == b.month && a.day == b.day;
   }
+
+  static bool _isOngoingSleep(RegisteredEvent event) =>
+      event.type == RegisterEventType.sleep &&
+      event.details['sleep_status'] == 'ongoing';
 
   @override
   Future<void> close() async {

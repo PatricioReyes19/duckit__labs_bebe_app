@@ -12,6 +12,7 @@ class BebeHomeTemplate extends StatelessWidget {
     required this.quickActions,
     required this.upcomingHealth,
     required this.recentInformation,
+    this.visualReminder,
     this.isEmpty = false,
     this.emptyState,
     this.isLoading = false,
@@ -29,6 +30,7 @@ class BebeHomeTemplate extends StatelessWidget {
   final Widget quickActions;
   final Widget upcomingHealth;
   final Widget recentInformation;
+  final Widget? visualReminder;
   final bool isEmpty;
   final Widget? emptyState;
 
@@ -80,6 +82,10 @@ class BebeHomeTemplate extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   padded(activeBabyHeader),
+                  if (visualReminder != null) ...[
+                    SizedBox(height: spacing.spacingL),
+                    padded(visualReminder!),
+                  ],
                   if (isEmpty) ...[
                     SizedBox(height: spacing.spacing4xl),
                     padded(emptyState ?? const SizedBox.shrink()),

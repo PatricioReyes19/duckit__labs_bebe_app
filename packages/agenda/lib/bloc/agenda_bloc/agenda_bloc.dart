@@ -26,8 +26,12 @@ class AgendaBloc extends Bloc<AgendaEvent, AgendaState> {
        // ignore: prefer_initializing_formals
        _getFamilyOverview = getFamilyOverview,
        super(const AgendaState.initial()) {
-    on<_Started>((event, emit) => _load(emit, showLoading: true));
-    on<_Retried>((event, emit) => _load(emit, showLoading: true));
+    on<_Started>(
+      (event, emit) => _load(emit, showLoading: true, requestSync: true),
+    );
+    on<_Retried>(
+      (event, emit) => _load(emit, showLoading: true, requestSync: true),
+    );
     on<_Refreshed>((event, emit) => _load(emit, showLoading: false));
     on<_DaySelected>(_onDaySelected);
     on<_WeekChanged>(_onWeekChanged);
@@ -35,11 +39,18 @@ class AgendaBloc extends Bloc<AgendaEvent, AgendaState> {
     on<_MonthChanged>(_onMonthChanged);
     on<_CategorySelected>(_onCategorySelected);
     _changesSubscription = _getAgendaOverview.changes.listen((_) {
-      if (!isClosed) add(const AgendaEvent.refreshed());
+      _scheduleReload();
     });
     _syncSubscription = _syncService?.states.listen((syncState) {
       _remoteUnavailable = syncState.phase == RegisterSyncPhase.failed;
-      if (!isClosed) add(const AgendaEvent.refreshed());
+      if (syncState.phase != RegisterSyncPhase.syncing) {
+        _scheduleReload();
+      }
+    });
+    _familyChangesSubscription = _getFamilyOverview?.activeBabyChanges.listen((
+      _,
+    ) {
+      if (!isClosed) add(const AgendaEvent.started());
     });
   }
 
@@ -50,20 +61,20 @@ class AgendaBloc extends Bloc<AgendaEvent, AgendaState> {
   final AgendaClock _clock;
   late final StreamSubscription<void> _changesSubscription;
   StreamSubscription<RegisterSyncState>? _syncSubscription;
+  StreamSubscription<String>? _familyChangesSubscription;
+  Timer? _reloadDebounce;
   bool _remoteUnavailable = false;
 
   Future<void> _load(
     Emitter<AgendaState> emit, {
     required bool showLoading,
+    bool requestSync = false,
   }) async {
     final previous = _currentOverview;
     if (showLoading) emit(const AgendaState.loading());
-    if (_syncService != null) {
-      if (showLoading) {
-        unawaited(_syncService.synchronize());
-      } else {
-        await _syncService.synchronize();
-      }
+    final syncService = _syncService;
+    if (requestSync && syncService != null) {
+      unawaited(_synchronize(syncService));
     }
     try {
       final resolvedBabyId =
@@ -98,6 +109,35 @@ class AgendaBloc extends Bloc<AgendaEvent, AgendaState> {
     } on Object catch (error) {
       emit(AgendaState.failure(message: 'No pudimos cargar la agenda: $error'));
     }
+  }
+
+  Future<void> _synchronize(AgendaEventSyncService syncService) async {
+    try {
+      await syncService.synchronize();
+    } on Object {
+      _remoteUnavailable = true;
+      _scheduleReload();
+    }
+  }
+
+  Future<void> refreshFromRemote() async {
+    final syncService = _syncService;
+    if (syncService != null) await _synchronize(syncService);
+    if (isClosed) return;
+    final completed = stream.firstWhere(
+      (next) =>
+          next is AgendaLoaded || next is AgendaEmpty || next is AgendaFailure,
+    );
+    add(const AgendaEvent.refreshed());
+    await completed;
+  }
+
+  void _scheduleReload() {
+    if (isClosed) return;
+    _reloadDebounce?.cancel();
+    _reloadDebounce = Timer(const Duration(milliseconds: 32), () {
+      if (!isClosed) add(const AgendaEvent.refreshed());
+    });
   }
 
   void _onDaySelected(_DaySelected event, Emitter<AgendaState> emit) => _update(
@@ -154,8 +194,10 @@ class AgendaBloc extends Bloc<AgendaEvent, AgendaState> {
 
   @override
   Future<void> close() async {
+    _reloadDebounce?.cancel();
     await _changesSubscription.cancel();
     await _syncSubscription?.cancel();
+    await _familyChangesSubscription?.cancel();
     return super.close();
   }
 }

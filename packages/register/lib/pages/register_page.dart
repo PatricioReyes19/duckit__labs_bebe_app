@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:core/core.dart';
@@ -30,6 +31,7 @@ class RegisterPage extends GoRoute {
     this.onAgendaPressed,
     this.onHealthPressed,
     this.onFamilyPressed,
+    this.onBabyPressed,
     this.babyId = 'baby-preview',
     this.babyName = 'Tu bebé',
     this.babyAge = 'Perfil activo',
@@ -60,6 +62,7 @@ class RegisterPage extends GoRoute {
             onAgendaPressed: onAgendaPressed,
             onHealthPressed: onHealthPressed,
             onFamilyPressed: onFamilyPressed,
+            onBabyPressed: onBabyPressed,
             babyId: babyId,
             babyName: babyName,
             babyAge: babyAge,
@@ -95,6 +98,7 @@ class RegisterPage extends GoRoute {
                 onAgendaPressed: onAgendaPressed,
                 onHealthPressed: onHealthPressed,
                 onFamilyPressed: onFamilyPressed,
+                onBabyPressed: onBabyPressed,
                 babyId: babyId,
                 babyName: babyName,
                 babyAge: babyAge,
@@ -116,6 +120,7 @@ class RegisterPage extends GoRoute {
   final RegisterRouteAction? onAgendaPressed;
   final RegisterRouteAction? onHealthPressed;
   final RegisterRouteAction? onFamilyPressed;
+  final RegisterRouteAction? onBabyPressed;
 
   static const nameRoute = 'Register';
   static const kindNameRoute = 'RegisterKind';
@@ -146,6 +151,7 @@ Page<void> _buildPage({
   required RegisterRouteAction? onAgendaPressed,
   required RegisterRouteAction? onHealthPressed,
   required RegisterRouteAction? onFamilyPressed,
+  required RegisterRouteAction? onBabyPressed,
   required String babyId,
   required String babyName,
   required String babyAge,
@@ -167,23 +173,15 @@ Page<void> _buildPage({
             onAgendaPressed: onAgendaPressed,
             onHealthPressed: onHealthPressed,
             onFamilyPressed: onFamilyPressed,
+            onBabyPressed: onBabyPressed,
             babyId: babyId,
             babyName: babyName,
             babyAge: babyAge,
             familyContextLabel: familyContextLabel,
           )
-        : FutureBuilder<FamilyOverviewEntity>(
-            future: getFamilyOverview(context)(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState != ConnectionState.done) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              final family = snapshot.data;
-              if (family == null) {
-                return _RegisterContextError(
-                  onRetry: () => RegisterPage.open(context, kind: kind),
-                );
-              }
+        : _FamilyAwareRegisterContent(
+            getFamilyOverview: getFamilyOverview(context),
+            builder: (context, family) {
               final activeBaby = family.activeBaby;
               return _registerContent(
                 kind: kind,
@@ -195,6 +193,7 @@ Page<void> _buildPage({
                 onAgendaPressed: onAgendaPressed,
                 onHealthPressed: onHealthPressed,
                 onFamilyPressed: onFamilyPressed,
+                onBabyPressed: onBabyPressed,
                 babyId: activeBaby.id,
                 babyName: activeBaby.name,
                 babyAge: _babyAge(activeBaby.birthDate, DateTime.now()),
@@ -204,8 +203,97 @@ Page<void> _buildPage({
                 babyAvatar: _babyAvatar(activeBaby),
               );
             },
+            onRetry: () => RegisterPage.open(context, kind: kind),
           ),
   );
+}
+
+class _FamilyAwareRegisterContent extends StatefulWidget {
+  const _FamilyAwareRegisterContent({
+    required this.getFamilyOverview,
+    required this.builder,
+    required this.onRetry,
+  });
+
+  final GetFamilyOverview getFamilyOverview;
+  final Widget Function(BuildContext context, FamilyOverviewEntity family)
+      builder;
+  final VoidCallback onRetry;
+
+  @override
+  State<_FamilyAwareRegisterContent> createState() =>
+      _FamilyAwareRegisterContentState();
+}
+
+class _FamilyAwareRegisterContentState
+    extends State<_FamilyAwareRegisterContent> {
+  late Future<FamilyOverviewEntity> _family;
+  late final StreamSubscription<String> _activeBabySubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _family = widget.getFamilyOverview();
+    _activeBabySubscription = widget.getFamilyOverview.activeBabyChanges.listen(
+      (_) {
+        if (mounted) {
+          final nextFamily = widget.getFamilyOverview();
+          setState(() {
+            _family = nextFamily;
+          });
+        }
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    unawaited(_activeBabySubscription.cancel());
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<FamilyOverviewEntity>(
+      future: _family,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const _RegisterBabySwitchLoading();
+        }
+        final family = snapshot.data;
+        if (family == null) {
+          return _RegisterContextError(onRetry: widget.onRetry);
+        }
+        return KeyedSubtree(
+          key: ValueKey('register-active-baby-${family.activeBabyId}'),
+          child: widget.builder(context, family),
+        );
+      },
+    );
+  }
+}
+
+class _RegisterBabySwitchLoading extends StatelessWidget {
+  const _RegisterBabySwitchLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.all(context.theme.spacing.spacingXl),
+        child: BebeStatusBanner(
+          key: const ValueKey('register-baby-switch-loading'),
+          title: 'Cambiando de bebé',
+          description: 'Estamos cargando sus registros y preferenciasâ€¦',
+          type: BebeStatusBannerType.information,
+          leading: const SizedBox.square(
+            dimension: 22,
+            child: CircularProgressIndicator(strokeWidth: 2.5),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 Widget _registerContent({
@@ -218,6 +306,7 @@ Widget _registerContent({
   required RegisterRouteAction? onAgendaPressed,
   required RegisterRouteAction? onHealthPressed,
   required RegisterRouteAction? onFamilyPressed,
+  required RegisterRouteAction? onBabyPressed,
   required String babyId,
   required String babyName,
   required String babyAge,
@@ -287,6 +376,8 @@ Widget _registerContent({
             onHealthPressed == null ? null : () => onHealthPressed(pageContext),
         onFamilyPressed:
             onFamilyPressed == null ? null : () => onFamilyPressed(pageContext),
+        onBabyPressed:
+            onBabyPressed == null ? null : () => onBabyPressed(pageContext),
       ),
     ),
   );

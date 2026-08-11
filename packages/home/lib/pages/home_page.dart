@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:home/home.dart';
 
 typedef HomeBlocFactory = HomeBloc Function(BuildContext context);
+typedef HomeBabySwitcher = Future<void> Function(String babyId);
 
 class HomePage extends GoRoute {
   HomePage({
@@ -12,6 +13,7 @@ class HomePage extends GoRoute {
     required void Function(BuildContext context) openAgenda,
     required void Function(BuildContext context) openHealth,
     required void Function(BuildContext context) openTodayHistory,
+    required HomeBabySwitcher switchBaby,
     super.name,
     super.routes,
   }) : super(
@@ -28,6 +30,7 @@ class HomePage extends GoRoute {
                   openAgenda: openAgenda,
                   openHealth: openHealth,
                   openTodayHistory: openTodayHistory,
+                  switchBaby: switchBaby,
                 ),
               ),
             );

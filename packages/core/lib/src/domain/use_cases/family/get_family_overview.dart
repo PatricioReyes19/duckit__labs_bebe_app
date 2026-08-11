@@ -6,5 +6,7 @@ class GetFamilyOverview {
 
   final FamilyRepository _repository;
 
+  Stream<String> get activeBabyChanges => _repository.activeBabyChanges;
+
   Future<FamilyOverviewEntity> call() => _repository.getCurrent();
 }

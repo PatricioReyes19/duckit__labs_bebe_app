@@ -60,6 +60,24 @@ void main() {
             startsAt: now.add(const Duration(days: 5)),
             status: HealthEventStatus.scheduled,
           ),
+          HealthEventEntity(
+            id: 'control-1',
+            babyId: baby.id,
+            type: HealthEventType.pediatricControl,
+            title: 'Control pediátrico trimestral',
+            description: 'Seguimiento programado',
+            startsAt: now.add(const Duration(days: 10)),
+            status: HealthEventStatus.scheduled,
+          ),
+          HealthEventEntity(
+            id: 'control-2',
+            babyId: baby.id,
+            type: HealthEventType.growthControl,
+            title: 'Evaluación de crecimiento',
+            description: 'Control de peso y talla',
+            startsAt: now.add(const Duration(days: 20)),
+            status: HealthEventStatus.scheduled,
+          ),
         ],
         measurements: [
           HealthMeasurementEntity(
@@ -95,6 +113,36 @@ void main() {
           'description': 'Enrojecimiento leve.',
         },
         syncStatus: RegisterSyncStatus.pending,
+      ),
+      RegisteredEvent(
+        id: 'pediatrician-1',
+        babyId: baby.id,
+        type: RegisterEventType.clinicalObservation,
+        occurredAt: now.subtract(const Duration(days: 30)),
+        createdAt: now.subtract(const Duration(days: 30)),
+        details: const {
+          'observation_type': 'pediatrician_profile',
+          'name': 'Dra. Andrea Pérez',
+          'specialty': 'Pediatría general',
+          'phone': '+56 9 5555 0000',
+          'place': 'Centro médico del barrio',
+        },
+        syncStatus: RegisterSyncStatus.synced,
+      ),
+      RegisteredEvent(
+        id: 'consultation-1',
+        babyId: baby.id,
+        type: RegisterEventType.clinicalObservation,
+        occurredAt: now.subtract(const Duration(days: 7)),
+        createdAt: now.subtract(const Duration(days: 7)),
+        details: const {
+          'observation_type': 'medical_consultation',
+          'title': 'Revisión de rutina',
+          'description': 'Evolución acorde a lo esperado.',
+          'pediatrician': 'Dra. Andrea Pérez',
+          'follow_up': 'Nuevo control en tres meses.',
+        },
+        syncStatus: RegisterSyncStatus.synced,
       ),
       RegisteredEvent(
         id: 'measurement-1',
@@ -220,8 +268,8 @@ void main() {
     Finder row(String title) => find.byWidgetPredicate(
       (widget) => widget is HealthActionRow && widget.title == title,
     );
-    final first = tester.getRect(row('Control de 4 meses'));
-    final second = tester.getRect(row('Control de crecimiento'));
+    final first = tester.getRect(row('Control pediátrico trimestral'));
+    final second = tester.getRect(row('Evaluación de crecimiento'));
 
     expect(second.top - first.bottom, greaterThanOrEqualTo(12));
     expect(tester.takeException(), isNull);
@@ -271,9 +319,36 @@ void main() {
     );
     await tester.pump();
 
-    await tester.tap(find.text('Dra. Valeria Ruiz'));
+    await tester.tap(find.text('Dra. Andrea Pérez'));
 
     expect(action, HealthFlowAction.detail);
+    expect(find.text('Dra. Valeria Ruiz'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('crecimiento muestra estado vacío sin inventar una curva', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(430, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: bebeTheme.lightTheme(),
+        home: Scaffold(
+          body: GrowthSectionView(
+            controller: controller,
+            openFlow: _ignoreAction,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.text('Talla'));
+    await tester.pump();
+
+    expect(find.text('Sin mediciones de talla'), findsOneWidget);
+    expect(find.textContaining('P50'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -347,6 +422,34 @@ void main() {
 
     expect(overview.growthSummary.weightKg, 8.4);
     expect(overview.growthSummary.recordedAtLabel, isNotNull);
+    expect(
+      overview.growthSummary.recordedAtLabel,
+      isNot('Último registro disponible'),
+    );
+  });
+
+  test('Salud proyecta datos de Core sin completar perfiles ficticios', () {
+    expect(controller.measurements.first.value, 8.1);
+    expect(controller.consultations.single.title, 'Revisión de rutina');
+    expect(controller.clinicalNotes.single.id, 'observation-1');
+    expect(controller.pediatricians.single.name, 'Dra. Andrea Pérez');
+    expect(controller.pediatricians.single.consultationCount, 1);
+  });
+
+  test('guardar pediatra persiste mediante la capa Core de Registro', () async {
+    await controller.savePediatrician(
+      name: 'Dr. Tomás Silva',
+      specialty: 'Neonatología',
+      phone: '+56 9 4444 0000',
+      place: 'Centro de salud familiar',
+    );
+
+    final saved = controller.pediatricians.firstWhere(
+      (pediatrician) => pediatrician.name == 'Dr. Tomás Silva',
+    );
+    expect(saved.specialty, 'Neonatología');
+    expect(saved.phone, '+56 9 4444 0000');
+    expect(saved.consultationCount, 0);
   });
 }
 
@@ -368,6 +471,9 @@ class _FamilyRepository extends Fake implements FamilyRepository {
   final FamilyOverviewEntity overview;
 
   @override
+  Stream<String> get activeBabyChanges => const Stream<String>.empty();
+
+  @override
   Future<FamilyOverviewEntity> getCurrent() async => overview;
 }
 
@@ -384,6 +490,7 @@ class _RegisterRepository extends Fake implements RegisterEventRepository {
   _RegisterRepository(this.events);
 
   final List<RegisteredEvent> events;
+  int _sequence = 0;
 
   @override
   Stream<void> get changes => const Stream.empty();
@@ -399,8 +506,22 @@ class _RegisterRepository extends Fake implements RegisterEventRepository {
       .toList(growable: false);
 
   @override
-  Future<RegisteredEvent> save(RegisterEventDraft draft) async =>
-      throw UnimplementedError();
+  Future<RegisteredEvent> save(RegisterEventDraft draft) async {
+    final now = DateTime.now();
+    final saved = RegisteredEvent(
+      id: 'saved-${_sequence++}',
+      babyId: draft.babyId,
+      type: draft.type,
+      occurredAt: draft.occurredAt,
+      createdAt: now,
+      details: draft.details,
+      notes: draft.notes,
+      caregiverId: draft.caregiverId,
+      schemaVersion: draft.schemaVersion,
+    );
+    events.insert(0, saved);
+    return saved;
+  }
 }
 
 class _OfflineRemoteDataSource implements RegisterEventRemoteDataSource {

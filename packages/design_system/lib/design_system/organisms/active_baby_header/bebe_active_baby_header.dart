@@ -6,12 +6,14 @@ import 'package:flutter/material.dart';
 @immutable
 class BebeSiblingSummaryData {
   const BebeSiblingSummaryData({
+    required this.id,
     required this.name,
     required this.ageLabel,
     required this.avatar,
     this.semanticLabel,
   });
 
+  final String id;
   final String name;
   final String ageLabel;
   final ImageProvider avatar;
@@ -34,6 +36,7 @@ class BebeActiveBabyHeader extends StatelessWidget {
     this.siblings = const <BebeSiblingSummaryData>[],
     this.onBabyPressed,
     this.onSiblingPressed,
+    this.switchingBabyId,
     this.semanticLabel,
     super.key,
   });
@@ -48,6 +51,7 @@ class BebeActiveBabyHeader extends StatelessWidget {
 
   final VoidCallback? onBabyPressed;
   final ValueChanged<BebeSiblingSummaryData>? onSiblingPressed;
+  final String? switchingBabyId;
   final String? semanticLabel;
 
   static const double _minimumInlineWidth = 312;
@@ -73,6 +77,7 @@ class BebeActiveBabyHeader extends StatelessWidget {
       ),
       contextLabel: familyContextLabel,
       isSelected: true,
+      isLoading: switchingBabyId != null,
       onPressed: onBabyPressed,
       semanticLabel: semanticLabel,
     );
@@ -97,6 +102,7 @@ class BebeActiveBabyHeader extends StatelessWidget {
               _SiblingRail(
                 siblings: siblings,
                 itemWidth: _compactCardWidth,
+                switchingBabyId: switchingBabyId,
                 onSiblingPressed: onSiblingPressed,
               ),
             ],
@@ -120,6 +126,7 @@ class BebeActiveBabyHeader extends StatelessWidget {
                 child: _SiblingRail(
                   siblings: siblings,
                   itemWidth: _compactCardWidth,
+                  switchingBabyId: switchingBabyId,
                   onSiblingPressed: onSiblingPressed,
                 ),
               ),
@@ -156,11 +163,13 @@ class _SiblingRail extends StatelessWidget {
   const _SiblingRail({
     required this.siblings,
     required this.itemWidth,
+    required this.switchingBabyId,
     required this.onSiblingPressed,
   });
 
   final List<BebeSiblingSummaryData> siblings;
   final double itemWidth;
+  final String? switchingBabyId;
   final ValueChanged<BebeSiblingSummaryData>? onSiblingPressed;
 
   @override
@@ -181,6 +190,8 @@ class _SiblingRail extends StatelessWidget {
                 width: itemWidth,
                 child: _BebeCompactSiblingSelector(
                   data: siblings[index],
+                  isLoading: switchingBabyId == siblings[index].id,
+                  enabled: switchingBabyId == null,
                   onPressed: onSiblingPressed == null
                       ? null
                       : () => onSiblingPressed!(siblings[index]),
@@ -197,9 +208,16 @@ class _SiblingRail extends StatelessWidget {
 }
 
 class _BebeCompactSiblingSelector extends StatelessWidget {
-  const _BebeCompactSiblingSelector({required this.data, this.onPressed});
+  const _BebeCompactSiblingSelector({
+    required this.data,
+    required this.isLoading,
+    required this.enabled,
+    this.onPressed,
+  });
 
   final BebeSiblingSummaryData data;
+  final bool isLoading;
+  final bool enabled;
   final VoidCallback? onPressed;
 
   @override
@@ -220,7 +238,7 @@ class _BebeCompactSiblingSelector extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: onPressed,
+        onTap: enabled ? onPressed : null,
         overlayColor: WidgetStateProperty.resolveWith<Color?>((states) {
           if (states.contains(WidgetState.pressed)) {
             return overlays.interactionPressed;
@@ -240,11 +258,24 @@ class _BebeCompactSiblingSelector extends StatelessWidget {
           ),
           child: Row(
             children: [
-              BebeAvatar.image(
-                image: data.avatar,
-                size: BebeAvatarSize.md,
-                semanticLabel: 'Foto de ${data.name}',
-                borderColor: colors.border.accentDefault,
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 180),
+                child: isLoading
+                    ? SizedBox.square(
+                        key: const ValueKey('baby-sibling-loading'),
+                        dimension: 40,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 3,
+                          color: colors.icons.accentDefault,
+                        ),
+                      )
+                    : BebeAvatar.image(
+                        key: ValueKey('baby-sibling-avatar-${data.id}'),
+                        image: data.avatar,
+                        size: BebeAvatarSize.md,
+                        semanticLabel: 'Foto de ${data.name}',
+                        borderColor: colors.border.accentDefault,
+                      ),
               ),
               SizedBox(width: spacing.spacingS),
               Expanded(
@@ -278,7 +309,7 @@ class _BebeCompactSiblingSelector extends StatelessWidget {
     return Semantics(
       container: true,
       button: onPressed != null,
-      enabled: onPressed != null,
+      enabled: enabled && onPressed != null,
       selected: false,
       label:
           data.semanticLabel ??

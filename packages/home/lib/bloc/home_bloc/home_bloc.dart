@@ -44,9 +44,6 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       emit(current.copyWith(isRefreshing: true));
     }
     try {
-      if (!showLoading && _syncService != null) {
-        await _syncService.synchronize();
-      }
       final entity = await _getHomeOverview();
       emit(
         HomeState.loaded(
@@ -63,6 +60,20 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         ),
       );
     }
+  }
+
+  Future<void> refreshFromRemote() async {
+    try {
+      await _syncService?.synchronize();
+    } on Object {
+      // Home remains local-first when the remote source is unavailable.
+    }
+    if (isClosed) return;
+    final completed = stream.firstWhere(
+      (next) => next is HomeLoaded || next is HomeFailure,
+    );
+    add(const HomeEvent.refreshed());
+    await completed;
   }
 
   @override

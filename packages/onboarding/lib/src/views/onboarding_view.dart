@@ -857,10 +857,10 @@ Future<void> _pickBabyPhoto(
     if (photo != null) cubit.babyPhotoChanged(photo.path);
   } on Object {
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('No pudimos abrir la galería. Revisa los permisos.'),
-      ),
+    BebeInAppSnackbar.show(
+      context,
+      message: 'No pudimos abrir la galería. Revisa los permisos.',
+      variant: BebeInAppSnackbarVariant.error,
     );
   }
 }

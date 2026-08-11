@@ -23,6 +23,7 @@ class RegisterPageView extends StatefulWidget {
     this.onAgendaPressed,
     this.onHealthPressed,
     this.onFamilyPressed,
+    this.onBabyPressed,
     super.key,
   });
 
@@ -39,6 +40,7 @@ class RegisterPageView extends StatefulWidget {
   final VoidCallback? onAgendaPressed;
   final VoidCallback? onHealthPressed;
   final VoidCallback? onFamilyPressed;
+  final VoidCallback? onBabyPressed;
 
   @override
   State<RegisterPageView> createState() => _RegisterPageViewState();
@@ -204,9 +206,13 @@ class _RegisterPageViewState extends State<RegisterPageView> {
           selectedSubcategory: cubit.subtype,
           onSubcategoryChanged: cubit.subtypeChanged,
           contextTitle: 'Registra el sueño de ${widget.babyName}',
-          contextDescription: 'Guarda duración, lugar y estado al despertar.',
+          contextDescription: cubit.isOngoing
+              ? 'Guarda el inicio ahora y registra el despertar cuando ocurra.'
+              : 'Registra una siesta o sueño que ya terminó.',
+          saveLabel: cubit.isOngoing ? 'Iniciar sueño' : 'Guardar sueño',
           onSave: cubit.submit,
           form: SleepRegisterForm(
+            mode: cubit.mode.name,
             startTime: _time(context, cubit.startedAt),
             duration: _duration(cubit.durationMinutes),
             endTime:
@@ -215,6 +221,7 @@ class _RegisterPageViewState extends State<RegisterPageView> {
             mood: cubit.mood,
             notesController: _sleepNotes,
             symptomsController: _sleepSymptoms,
+            onModeChanged: cubit.modeChanged,
             onStartTimePressed: () => _pickTime(
               cubit.startedAt,
               cubit.timeChanged,
@@ -456,6 +463,7 @@ class _RegisterPageViewState extends State<RegisterPageView> {
     String title = 'Registrar evento',
     bool showEventContext = true,
     bool useFormSurface = true,
+    String saveLabel = 'Guardar registro',
     List<BebeSegmentedItem<String>> subcategories = const [],
     String? selectedSubcategory,
     ValueChanged<String>? onSubcategoryChanged,
@@ -471,6 +479,7 @@ class _RegisterPageViewState extends State<RegisterPageView> {
       babyAge: widget.babyAge,
       familyContextLabel: widget.familyContextLabel,
       babyAvatar: widget.babyAvatar,
+      onBabyPressed: widget.onBabyPressed,
       showEventContext: showEventContext,
       useFormSurface: useFormSurface,
       subcategories: subcategories,
@@ -486,6 +495,7 @@ class _RegisterPageViewState extends State<RegisterPageView> {
       onSavePressed: state.isSaving ? null : onSave,
       onCancelPressed: state.isSaving ? null : widget.onCancel,
       isSaving: state.isSaving,
+      saveLabel: saveLabel,
       errorMessage: state.message,
     );
   }
@@ -673,11 +683,6 @@ class _RegisterPageViewState extends State<RegisterPageView> {
       value: 'night',
       label: 'Sueño nocturno',
       icon: Icon(Icons.dark_mode_outlined),
-    ),
-    BebeSegmentedItem(
-      value: 'timer',
-      label: 'Temporizador',
-      icon: Icon(Icons.timer_outlined),
     ),
   ];
   static const _diaperTypes = <BebeSegmentedItem<String>>[

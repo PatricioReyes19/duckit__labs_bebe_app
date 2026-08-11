@@ -8,6 +8,7 @@ class HomeOverviewVm extends Equatable {
     required this.quickActions,
     required this.upcomingHealth,
     required this.recentInformation,
+    required this.visualReminders,
     required this.hasCareData,
   });
 
@@ -16,6 +17,7 @@ class HomeOverviewVm extends Equatable {
   final List<HomeQuickActionVm> quickActions;
   final HomeUpcomingHealthVm upcomingHealth;
   final HomeRecentInformationVm recentInformation;
+  final List<HomeVisualReminderVm> visualReminders;
   final bool hasCareData;
 
   factory HomeOverviewVm.fromEntity(
@@ -27,19 +29,26 @@ class HomeOverviewVm extends Equatable {
         .toList(growable: false);
     final upcoming = entity.upcomingHealthEvent;
     final recent = entity.mostRecentEvent;
+    final recentIsOngoingSleep =
+        recent?.type == domain.RegisterEventType.sleep &&
+            recent?.details['sleep_status'] == 'ongoing';
     return HomeOverviewVm(
       activeBaby: HomeActiveBabyVm(
+        id: entity.activeBaby.id,
         name: entity.activeBaby.name,
         ageLabel: _ageLabel(entity.activeBaby.birthDate, referenceDate),
         avatarAssetPath: entity.activeBaby.avatarAssetPath,
         familyContextLabel: entity.family.name,
-        sibling: siblings.isEmpty
-            ? null
-            : HomeSiblingVm(
-                name: siblings.first.name,
-                ageLabel: _ageLabel(siblings.first.birthDate, referenceDate),
-                avatarAssetPath: siblings.first.avatarAssetPath,
+        siblings: siblings
+            .map(
+              (baby) => HomeSiblingVm(
+                id: baby.id,
+                name: baby.name,
+                ageLabel: _ageLabel(baby.birthDate, referenceDate),
+                avatarAssetPath: baby.avatarAssetPath,
               ),
+            )
+            .toList(growable: false),
       ),
       todayMetrics: entity.metrics
           .map((metric) => _metric(metric, referenceDate))
@@ -96,15 +105,27 @@ class HomeOverviewVm extends Equatable {
             : _relativeTime(recent.occurredAt, referenceDate),
         description: recent == null
             ? 'Los nuevos registros aparecerán en esta sección.'
-            : 'Registro guardado correctamente en este dispositivo.',
+            : recentIsOngoingSleep
+                ? 'El sueño sigue en curso. Registra el despertar desde el historial.'
+                : 'Registro guardado correctamente en este dispositivo.',
         status: recent == null
             ? HomeRecentStatus.information
-            : HomeRecentStatus.success,
-        statusLabel: recent == null ? 'Sin registros' : 'Completado',
+            : recentIsOngoingSleep
+                ? HomeRecentStatus.information
+                : HomeRecentStatus.success,
+        statusLabel: recent == null
+            ? 'Sin registros'
+            : recentIsOngoingSleep
+                ? 'En curso'
+                : 'Completado',
       ),
+      visualReminders: entity.careReminders
+          .map(HomeVisualReminderVm.fromEntity)
+          .toList(growable: false),
       hasCareData: entity.metrics.any((metric) => metric.count > 0) ||
           upcoming != null ||
-          recent != null,
+          recent != null ||
+          entity.careReminders.isNotEmpty,
     );
   }
 
@@ -124,12 +145,14 @@ class HomeOverviewVm extends Equatable {
         HomeMetricType.sleep => 'Sueño',
         HomeMetricType.diaper => 'Pañales',
       },
-      value: type == HomeMetricType.sleep
-          ? _duration(metric.totalMinutes)
-          : '${metric.count}',
+      value: type == HomeMetricType.sleep && metric.ongoingCount > 0
+          ? 'En curso'
+          : type == HomeMetricType.sleep
+              ? _duration(metric.totalMinutes)
+              : '${metric.count}',
       unit: switch (type) {
         HomeMetricType.feeding => 'tomas',
-        HomeMetricType.sleep => 'total',
+        HomeMetricType.sleep => metric.ongoingCount > 0 ? 'ahora' : 'total',
         HomeMetricType.diaper => 'cambios',
       },
       lastLabel: 'Última vez',
@@ -206,48 +229,146 @@ class HomeOverviewVm extends Equatable {
         quickActions,
         upcomingHealth,
         recentInformation,
+        visualReminders,
         hasCareData,
       ];
 }
 
+enum HomeVisualReminderKind { feeding, bottle, formula, diaper, medication }
+
+class HomeVisualReminderVm extends Equatable {
+  const HomeVisualReminderVm({
+    required this.id,
+    required this.kind,
+    required this.title,
+    required this.detail,
+    required this.startsAt,
+  });
+
+  static const visibilityWindow = Duration(minutes: 10);
+
+  final String id;
+  final HomeVisualReminderKind kind;
+  final String title;
+  final String detail;
+  final DateTime startsAt;
+
+  factory HomeVisualReminderVm.fromEntity(
+    domain.HomeCareReminderEntity entity,
+  ) {
+    final subtype = entity.subtype?.trim().toLowerCase();
+    final kind = switch (entity.type) {
+      domain.HomeCareReminderType.diaper => HomeVisualReminderKind.diaper,
+      domain.HomeCareReminderType.medication =>
+        HomeVisualReminderKind.medication,
+      domain.HomeCareReminderType.feeding when subtype == 'formula' =>
+        HomeVisualReminderKind.formula,
+      domain.HomeCareReminderType.feeding
+          when subtype == 'bottle' || subtype == 'expressed' =>
+        HomeVisualReminderKind.bottle,
+      domain.HomeCareReminderType.feeding => HomeVisualReminderKind.feeding,
+    };
+    final medicationName =
+        entity.title.replaceFirst(RegExp(r'^Próxima dosis:\s*'), '').trim();
+    return HomeVisualReminderVm(
+      id: entity.id,
+      kind: kind,
+      title: switch (kind) {
+        HomeVisualReminderKind.formula => 'Se aproxima un relleno',
+        HomeVisualReminderKind.bottle => 'Se aproxima una mamadera',
+        HomeVisualReminderKind.feeding => 'Se aproxima una toma',
+        HomeVisualReminderKind.diaper => 'Se aproxima un cambio de pañal',
+        HomeVisualReminderKind.medication => 'Se aproxima una medicina',
+      },
+      detail: switch (kind) {
+        HomeVisualReminderKind.medication when medicationName.isNotEmpty =>
+          'Próxima dosis de $medicationName',
+        HomeVisualReminderKind.medication => 'Próxima dosis programada',
+        HomeVisualReminderKind.formula => 'Relleno programado',
+        HomeVisualReminderKind.bottle => 'Mamadera programada',
+        HomeVisualReminderKind.feeding => 'Próxima toma programada',
+        HomeVisualReminderKind.diaper => 'Cambio programado',
+      },
+      startsAt: entity.startsAt.toLocal(),
+    );
+  }
+
+  static HomeVisualReminderVm? activeAt(
+    Iterable<HomeVisualReminderVm> reminders,
+    DateTime referenceDate,
+  ) {
+    final windowEnd = referenceDate.add(visibilityWindow);
+    final visible = reminders
+        .where((reminder) => reminder.startsAt.isAfter(referenceDate))
+        .where((reminder) => !reminder.startsAt.isAfter(windowEnd))
+        .toList()
+      ..sort((first, second) => first.startsAt.compareTo(second.startsAt));
+    return visible.firstOrNull;
+  }
+
+  static DateTime? nextTransitionAt(
+    Iterable<HomeVisualReminderVm> reminders,
+    DateTime referenceDate,
+  ) {
+    final transitions = <DateTime>[];
+    for (final reminder in reminders) {
+      final appearsAt = reminder.startsAt.subtract(visibilityWindow);
+      if (appearsAt.isAfter(referenceDate)) transitions.add(appearsAt);
+      if (reminder.startsAt.isAfter(referenceDate)) {
+        transitions.add(reminder.startsAt);
+      }
+    }
+    transitions.sort();
+    return transitions.firstOrNull;
+  }
+
+  @override
+  List<Object?> get props => [id, kind, title, detail, startsAt];
+}
+
 class HomeActiveBabyVm extends Equatable {
   const HomeActiveBabyVm({
+    this.id = '',
     required this.name,
     required this.ageLabel,
     required this.avatarAssetPath,
     required this.familyContextLabel,
-    this.sibling,
+    this.siblings = const [],
   });
 
+  final String id;
   final String name;
   final String ageLabel;
   final String? avatarAssetPath;
   final String familyContextLabel;
-  final HomeSiblingVm? sibling;
+  final List<HomeSiblingVm> siblings;
 
   @override
   List<Object?> get props => [
+        id,
         name,
         ageLabel,
         avatarAssetPath,
         familyContextLabel,
-        sibling,
+        siblings,
       ];
 }
 
 class HomeSiblingVm extends Equatable {
   const HomeSiblingVm({
+    required this.id,
     required this.name,
     required this.ageLabel,
     required this.avatarAssetPath,
   });
 
+  final String id;
   final String name;
   final String ageLabel;
   final String? avatarAssetPath;
 
   @override
-  List<Object?> get props => [name, ageLabel, avatarAssetPath];
+  List<Object?> get props => [id, name, ageLabel, avatarAssetPath];
 }
 
 enum HomeMetricType { feeding, sleep, diaper }

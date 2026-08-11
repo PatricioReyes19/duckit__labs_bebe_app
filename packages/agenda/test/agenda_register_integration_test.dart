@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -50,6 +51,17 @@ void main() {
               title: 'Dosis ${index + 1}',
               description: 'Medicamento programado',
               startsAt: now.add(Duration(days: index + 1)),
+              syncStatus: AgendaSyncStatus.synced,
+            ),
+          for (var index = 0; index < 4; index++)
+            AgendaEventEntity(
+              id: 'recurring-dose-$index',
+              babyId: 'baby-1',
+              category: AgendaCategory.medication,
+              title: 'Próxima dosis: Vitamina D',
+              description: '5 gotas · Una vez al día',
+              startsAt: now.add(Duration(days: index + 10)),
+              sourceRegisterEventId: 'medication-vitamin-d',
               syncStatus: AgendaSyncStatus.synced,
             ),
         ],
@@ -110,12 +122,191 @@ void main() {
       find.byKey(const ValueKey('agenda-upcoming-scroll-list')),
       findsOneWidget,
     );
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('agenda-upcoming-scroll-viewport')),
+    );
+    await tester.pumpAndSettle();
+    await tester.drag(
+      find.byKey(const ValueKey('agenda-upcoming-scroll-list')),
+      const Offset(0, -900),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Próxima dosis: Vitamina D'), findsOneWidget);
+    expect(find.text('Todos los días'), findsOneWidget);
+    expect(
+      find.bySemanticsLabel(RegExp(r'4 próximas ocurrencias agrupadas')),
+      findsOneWidget,
+    );
 
     await tester.ensureVisible(find.text('Registrar evento ahora'));
     await tester.tap(find.text('Registrar evento ahora'));
     expect(registerPressed, isTrue);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('shows component skeletons during the initial load', (
+    tester,
+  ) async {
+    final bloc = AgendaBloc(
+      getAgendaOverview: GetAgendaOverview(
+        _FakeAgendaRepository(
+          const AgendaOverviewEntity(
+            events: [],
+            remindersEnabled: true,
+            isOffline: false,
+          ),
+        ),
+        _FakeRegisterRepository(const []),
+      ),
+      babyId: 'baby-1',
+    );
+    addTearDown(bloc.close);
+
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: bebeTheme.lightTheme(),
+        home: Scaffold(
+          body: BlocProvider.value(value: bloc, child: const AgendaView()),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byType(BebeSkeleton), findsWidgets);
+    expect(
+      find.byKey(const ValueKey('agenda-loading-week-picker')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('agenda-loading-filters')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('agenda-loading-today')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('agenda-loading-upcoming')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('agenda-loading-monthly')),
+      findsOneWidget,
+    );
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('keeps the agenda visible when there are no events', (
+    tester,
+  ) async {
+    final bloc = AgendaBloc(
+      getAgendaOverview: GetAgendaOverview(
+        _FakeAgendaRepository(
+          const AgendaOverviewEntity(
+            events: [],
+            remindersEnabled: true,
+            isOffline: false,
+          ),
+        ),
+        _FakeRegisterRepository(const []),
+      ),
+      babyId: 'baby-1',
+      clock: () => DateTime(2026, 8, 10, 10),
+    )..add(const AgendaEvent.started());
+    addTearDown(bloc.close);
+
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: bebeTheme.lightTheme(),
+        home: Scaffold(
+          body: BlocProvider.value(value: bloc, child: const AgendaView()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BebeAgendaWeekPicker), findsOneWidget);
+    expect(find.text('Programado'), findsOneWidget);
+    expect(find.text('Registros del día'), findsOneWidget);
+    expect(find.text('Próximos días'), findsOneWidget);
+    expect(find.text('Tu agenda está vacía'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  test(
+    'opening and refreshing Agenda never creates a sync feedback loop',
+    () async {
+      final syncService = _FakeAgendaSyncService();
+      final bloc = AgendaBloc(
+        getAgendaOverview: GetAgendaOverview(
+          _FakeAgendaRepository(
+            const AgendaOverviewEntity(
+              events: [],
+              remindersEnabled: true,
+              isOffline: false,
+            ),
+          ),
+          _FakeRegisterRepository(const []),
+        ),
+        syncService: syncService,
+        babyId: 'baby-1',
+      );
+      addTearDown(() async {
+        await bloc.close();
+        await syncService.close();
+      });
+
+      final opened = bloc.stream.firstWhere((state) => state is AgendaEmpty);
+      bloc.add(const AgendaEvent.started());
+      await opened.timeout(const Duration(seconds: 1));
+      await Future<void>.delayed(const Duration(milliseconds: 80));
+
+      expect(syncService.synchronizeCalls, 1);
+      expect(bloc.state, isA<AgendaEmpty>());
+
+      await bloc.refreshFromRemote().timeout(const Duration(seconds: 1));
+      await Future<void>.delayed(const Duration(milliseconds: 80));
+
+      expect(syncService.synchronizeCalls, 2);
+      expect(bloc.state, isA<AgendaEmpty>());
+    },
+  );
+}
+
+class _FakeAgendaSyncService implements AgendaEventSyncService {
+  final _states = StreamController<RegisterSyncState>.broadcast();
+  RegisterSyncState _state = const RegisterSyncState.idle();
+  int synchronizeCalls = 0;
+
+  @override
+  RegisterSyncState get state => _state;
+
+  @override
+  Stream<RegisterSyncState> get states => _states.stream;
+
+  @override
+  Future<RegisterSyncState> synchronize() async {
+    synchronizeCalls += 1;
+    _emit(const RegisterSyncState(phase: RegisterSyncPhase.syncing));
+    await Future<void>.delayed(Duration.zero);
+    return _emit(
+      RegisterSyncState(
+        phase: RegisterSyncPhase.synced,
+        lastSyncedAt: DateTime.utc(2026, 8, 11),
+      ),
+    );
+  }
+
+  RegisterSyncState _emit(RegisterSyncState state) {
+    _state = state;
+    _states.add(state);
+    return state;
+  }
+
+  @override
+  Future<void> close() => _states.close();
 }
 
 class _FakeAgendaRepository implements AgendaRepository {

@@ -10,6 +10,7 @@ class BebeBabySelector extends StatelessWidget {
     this.contextLabel,
     this.compact = false,
     this.showTrailing = true,
+    this.isLoading = false,
     this.onPressed,
     this.semanticLabel,
     super.key,
@@ -22,6 +23,7 @@ class BebeBabySelector extends StatelessWidget {
   final String? contextLabel;
   final bool compact;
   final bool showTrailing;
+  final bool isLoading;
   final VoidCallback? onPressed;
   final String? semanticLabel;
 
@@ -49,7 +51,7 @@ class BebeBabySelector extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: onPressed,
+        onTap: isLoading ? null : onPressed,
         overlayColor: WidgetStateProperty.resolveWith<Color?>((states) {
           if (states.contains(WidgetState.pressed)) {
             return overlays.interactionPressed;
@@ -73,6 +75,7 @@ class BebeBabySelector extends StatelessWidget {
           isSelected: isSelected,
           compact: compact,
           showTrailing: showTrailing,
+          isLoading: isLoading,
         ),
       ),
     );
@@ -80,7 +83,7 @@ class BebeBabySelector extends StatelessWidget {
     return Semantics(
       container: true,
       button: onPressed != null,
-      enabled: onPressed != null,
+      enabled: onPressed != null && !isLoading,
       selected: isSelected,
       label:
           semanticLabel ??
@@ -110,6 +113,7 @@ class _BabySelectorContent extends StatelessWidget {
     required this.isSelected,
     required this.compact,
     required this.showTrailing,
+    required this.isLoading,
   });
 
   final String name;
@@ -119,6 +123,7 @@ class _BabySelectorContent extends StatelessWidget {
   final bool isSelected;
   final bool compact;
   final bool showTrailing;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -173,6 +178,8 @@ class _BabySelectorContent extends StatelessWidget {
                       ),
                     ],
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 if (contextLabel != null &&
                     contextLabel!.trim().isNotEmpty) ...[
@@ -199,6 +206,30 @@ class _BabySelectorContent extends StatelessWidget {
               ],
             ),
           ),
+          if (showTrailing) ...[
+            SizedBox(width: spacing.spacingS),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 180),
+              child: isLoading
+                  ? SizedBox.square(
+                      key: const ValueKey('baby-selector-loading'),
+                      dimension: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: colors.icons.brandDefault,
+                      ),
+                    )
+                  : Icon(
+                      isSelected
+                          ? Icons.keyboard_arrow_down_rounded
+                          : Icons.chevron_right_rounded,
+                      key: const ValueKey('baby-selector-trailing'),
+                      color: isSelected
+                          ? colors.icons.brandDefault
+                          : colors.icons.neutralAlternative,
+                    ),
+            ),
+          ],
         ],
       ),
     );

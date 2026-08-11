@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -163,6 +164,44 @@ void main() {
     expect(repository.drafts.single.details['value'], 5.9);
     expect(savedEvent?.type, RegisterEventType.measurement);
   });
+
+  testWidgets('baby selector reloads forms with the selected baby id', (
+    tester,
+  ) async {
+    final repository = _MemoryRepository();
+    final familyRepository =
+        _FamilyRepository(_familyOverview(twoBabies: true));
+    final router = _router(
+      repository: repository,
+      initialLocation: RegisterPage.fullPath,
+      getFamilyOverview: GetFamilyOverview(familyRepository),
+      onBabyPressed: () => familyRepository.switchTo('baby-2'),
+    );
+    addTearDown(router.dispose);
+    addTearDown(familyRepository.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp.router(
+        theme: bebeTheme.lightTheme(),
+        routerConfig: router,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(BebeBabySelector));
+    await tester.pump();
+    expect(
+      find.byKey(const ValueKey('register-baby-switch-loading')),
+      findsOneWidget,
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('register-active-baby-baby-2')),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Emilia', findRichText: true), findsWidgets);
+  });
 }
 
 GoRouter _router({
@@ -170,6 +209,7 @@ GoRouter _router({
   required String initialLocation,
   ValueChanged<RegisteredEvent>? onSaved,
   GetFamilyOverview? getFamilyOverview,
+  VoidCallback? onBabyPressed,
 }) {
   return GoRouter(
     initialLocation: initialLocation,
@@ -184,12 +224,13 @@ GoRouter _router({
             context.pop();
           }
         },
+        onBabyPressed: onBabyPressed == null ? null : (_) => onBabyPressed(),
       ),
     ],
   );
 }
 
-FamilyOverviewEntity _familyOverview() {
+FamilyOverviewEntity _familyOverview({bool twoBabies = false}) {
   final now = DateTime.now();
   final baby = BabyEntity(
     id: 'baby-1',
@@ -201,7 +242,16 @@ FamilyOverviewEntity _familyOverview() {
     id: 'family-1',
     name: 'Familia Mateo',
     activeBabyId: baby.id,
-    babies: [baby],
+    babies: [
+      baby,
+      if (twoBabies)
+        BabyEntity(
+          id: 'baby-2',
+          familyId: 'family-1',
+          name: 'Emilia',
+          birthDate: DateTime(now.year, now.month - 4, now.day),
+        ),
+    ],
     members: const [],
   );
 }
@@ -209,10 +259,27 @@ FamilyOverviewEntity _familyOverview() {
 class _FamilyRepository extends Fake implements FamilyRepository {
   _FamilyRepository(this.overview);
 
-  final FamilyOverviewEntity overview;
+  FamilyOverviewEntity overview;
+  final StreamController<String> _changes = StreamController.broadcast();
+
+  @override
+  Stream<String> get activeBabyChanges => _changes.stream;
 
   @override
   Future<FamilyOverviewEntity> getCurrent() async => overview;
+
+  void switchTo(String babyId) {
+    overview = FamilyOverviewEntity(
+      id: overview.id,
+      name: overview.name,
+      activeBabyId: babyId,
+      babies: overview.babies,
+      members: overview.members,
+    );
+    _changes.add(babyId);
+  }
+
+  Future<void> dispose() => _changes.close();
 }
 
 class _MemoryRepository implements RegisterEventRepository {

@@ -6,13 +6,89 @@ import 'package:flutter/foundation.dart';
 
 enum HealthReportRange { day, week, month }
 
-enum HealthFlowSaveKind { vaccine, measurement, consultation, observation }
+enum HealthFlowSaveKind {
+  vaccine,
+  measurement,
+  consultation,
+  observation,
+  pediatrician,
+}
 
 class HealthFlowSaveResult {
   const HealthFlowSaveResult({required this.kind, required this.savedAt});
 
   final HealthFlowSaveKind kind;
   final DateTime savedAt;
+}
+
+class HealthMeasurementRecord {
+  const HealthMeasurementRecord({
+    required this.id,
+    required this.type,
+    required this.value,
+    required this.unit,
+    required this.recordedAt,
+    required this.source,
+    required this.syncStatus,
+  });
+
+  final String id;
+  final HealthMeasurementType type;
+  final double value;
+  final String unit;
+  final DateTime recordedAt;
+  final String source;
+  final RegisterSyncStatus syncStatus;
+}
+
+class HealthConsultationRecord {
+  const HealthConsultationRecord({
+    required this.id,
+    required this.title,
+    required this.summary,
+    required this.pediatrician,
+    required this.occurredAt,
+    required this.treatment,
+    required this.followUp,
+    required this.vigilance,
+    required this.notes,
+    required this.syncStatus,
+  });
+
+  final String id;
+  final String title;
+  final String summary;
+  final String pediatrician;
+  final DateTime occurredAt;
+  final String? treatment;
+  final String? followUp;
+  final String? vigilance;
+  final String? notes;
+  final RegisterSyncStatus syncStatus;
+}
+
+class HealthPediatricianSummary {
+  const HealthPediatricianSummary({
+    required this.name,
+    required this.specialty,
+    required this.consultationCount,
+    this.phone,
+    this.place,
+    this.notes,
+    this.lastConsultationAt,
+    this.latestReason,
+    this.syncStatus,
+  });
+
+  final String name;
+  final String specialty;
+  final String? phone;
+  final String? place;
+  final String? notes;
+  final int consultationCount;
+  final DateTime? lastConsultationAt;
+  final String? latestReason;
+  final RegisterSyncStatus? syncStatus;
 }
 
 /// Estado compartido por los recorridos secundarios de Salud.
@@ -45,6 +121,13 @@ class HealthFlowController extends ChangeNotifier {
       _handleConnectivityChanged,
       onError: (_) {},
     );
+    _activeBabySubscription = _getFamilyOverview.activeBabyChanges.listen((_) {
+      if (_isLoading) {
+        _reloadAfterCurrentLoad = true;
+      } else {
+        unawaited(load(force: true));
+      }
+    });
     unawaited(_refreshConnectivity());
   }
 
@@ -57,6 +140,7 @@ class HealthFlowController extends ChangeNotifier {
   final Connectivity _connectivity;
 
   late final StreamSubscription<RegisterSyncState> _syncSubscription;
+  late final StreamSubscription<String> _activeBabySubscription;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   FamilyOverviewEntity? _family;
   HealthOverviewEntity? _overview;
@@ -67,7 +151,11 @@ class HealthFlowController extends ChangeNotifier {
   bool _loadedOnce = false;
   bool _manualOfflineMode = false;
   bool _hasConnectivity = true;
+  bool _reloadAfterCurrentLoad = false;
   Object? _error;
+  String? _selectedHealthEventId;
+  String? _selectedRecordId;
+  String? _selectedPediatricianName;
 
   FamilyOverviewEntity? get family => _family;
   BabyEntity? get activeBaby => _family?.activeBaby;
@@ -80,12 +168,167 @@ class HealthFlowController extends ChangeNotifier {
   bool get networkUnavailable => !_hasConnectivity;
   Object? get error => _error;
 
+  List<HealthEventEntity> get vaccines {
+    final result =
+        _overview?.events
+            .where((event) => event.type == HealthEventType.vaccine)
+            .toList(growable: false) ??
+        const <HealthEventEntity>[];
+    return _sortedHealthEvents(result);
+  }
+
+  List<HealthEventEntity> get controls {
+    final result =
+        _overview?.events
+            .where(
+              (event) =>
+                  event.type == HealthEventType.pediatricControl ||
+                  event.type == HealthEventType.growthControl,
+            )
+            .toList(growable: false) ??
+        const <HealthEventEntity>[];
+    return _sortedHealthEvents(result);
+  }
+
+  List<HealthMeasurementRecord> get measurements {
+    final result = <HealthMeasurementRecord>[
+      for (final event in measurementRecords)
+        if (_measurementType(event) case final type?)
+          if (event.details['value'] case final num value)
+            HealthMeasurementRecord(
+              id: event.id,
+              type: type,
+              value: value.toDouble(),
+              unit:
+                  _text(event.details['unit']) ??
+                  (type == HealthMeasurementType.weight ? 'kg' : 'cm'),
+              recordedAt: event.occurredAt,
+              source: _text(event.details['source']) ?? 'Registro de actividad',
+              syncStatus: event.syncStatus,
+            ),
+      for (final measurement in _overview?.measurements ?? const [])
+        HealthMeasurementRecord(
+          id: measurement.id,
+          type: measurement.type,
+          value: measurement.value,
+          unit: measurement.unit,
+          recordedAt: measurement.recordedAt,
+          source: measurement.source.trim().isEmpty
+              ? 'Registro de salud'
+              : measurement.source.trim(),
+          syncStatus: RegisterSyncStatus.synced,
+        ),
+    ];
+    result.sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
+    return List.unmodifiable(result);
+  }
+
+  List<HealthConsultationRecord> get consultations {
+    final result = <HealthConsultationRecord>[
+      for (final event in clinicalRecords)
+        if (event.details['observation_type'] == 'medical_consultation')
+          HealthConsultationRecord(
+            id: event.id,
+            title: _text(event.details['title']) ?? 'Consulta pediátrica',
+            summary: _text(event.details['description']) ?? '',
+            pediatrician:
+                _text(event.details['pediatrician']) ??
+                'Profesional no especificado',
+            occurredAt: event.occurredAt,
+            treatment: _text(event.details['treatment']),
+            followUp: _text(event.details['follow_up']),
+            vigilance: _text(event.details['vigilance']),
+            notes: _text(event.notes),
+            syncStatus: event.syncStatus,
+          ),
+    ]..sort((a, b) => b.occurredAt.compareTo(a.occurredAt));
+    return List.unmodifiable(result);
+  }
+
+  List<RegisteredEvent> get clinicalNotes {
+    final result =
+        clinicalRecords
+            .where((event) {
+              final kind = event.details['observation_type'];
+              return kind == null || kind == 'clinical_note';
+            })
+            .toList(growable: false)
+          ..sort((a, b) => b.occurredAt.compareTo(a.occurredAt));
+    return List.unmodifiable(result);
+  }
+
+  List<HealthPediatricianSummary> get pediatricians {
+    final profiles = <String, RegisteredEvent>{};
+    for (final event in clinicalRecords) {
+      if (event.details['observation_type'] != 'pediatrician_profile') continue;
+      final name = _text(event.details['name']);
+      if (name == null) continue;
+      final key = name.toLowerCase();
+      final current = profiles[key];
+      if (current == null || event.occurredAt.isAfter(current.occurredAt)) {
+        profiles[key] = event;
+      }
+    }
+
+    final groupedConsultations = <String, List<HealthConsultationRecord>>{};
+    for (final consultation in consultations) {
+      final key = consultation.pediatrician.toLowerCase();
+      groupedConsultations.putIfAbsent(key, () => []).add(consultation);
+    }
+
+    final keys = <String>{...profiles.keys, ...groupedConsultations.keys};
+    final result =
+        <HealthPediatricianSummary>[
+          for (final key in keys)
+            _pediatricianSummary(
+              profiles[key],
+              groupedConsultations[key] ?? const [],
+            ),
+        ]..sort((a, b) {
+          final byDate = (b.lastConsultationAt ?? DateTime(0)).compareTo(
+            a.lastConsultationAt ?? DateTime(0),
+          );
+          return byDate != 0 ? byDate : a.name.compareTo(b.name);
+        });
+    return List.unmodifiable(result);
+  }
+
+  HealthEventEntity? get selectedHealthEvent => _firstWhereOrNull(
+    _overview?.events ?? const [],
+    (event) => event.id == _selectedHealthEventId,
+  );
+
+  HealthMeasurementRecord? get selectedMeasurement => _firstWhereOrNull(
+    measurements,
+    (measurement) => measurement.id == _selectedRecordId,
+  );
+
+  HealthConsultationRecord? get selectedConsultation => _firstWhereOrNull(
+    consultations,
+    (consultation) => consultation.id == _selectedRecordId,
+  );
+
+  RegisteredEvent? get selectedRecord =>
+      _firstWhereOrNull(_records, (record) => record.id == _selectedRecordId);
+
+  HealthPediatricianSummary? get selectedPediatrician => _firstWhereOrNull(
+    pediatricians,
+    (pediatrician) =>
+        pediatrician.name.toLowerCase() == _selectedPediatricianName,
+  );
+
   List<RegisteredEvent> get measurementRecords => _records
       .where((event) => event.type == RegisterEventType.measurement)
       .toList(growable: false);
 
   List<RegisteredEvent> get clinicalRecords => _records
       .where((event) => event.type == RegisterEventType.clinicalObservation)
+      .toList(growable: false);
+
+  List<RegisteredEvent> get reportableRecords => _records
+      .where(
+        (event) => event.details['observation_type'] != 'pediatrician_profile',
+      )
       .toList(growable: false);
 
   List<RegisteredEvent> get feedingRecords => _records
@@ -99,6 +342,30 @@ class HealthFlowController extends ChangeNotifier {
   List<RegisteredEvent> get diaperRecords => _records
       .where((event) => event.type == RegisterEventType.diaper)
       .toList(growable: false);
+
+  void selectHealthEvent(HealthEventEntity event) {
+    _selectedHealthEventId = event.id;
+    _selectedRecordId = null;
+  }
+
+  void selectMeasurement(HealthMeasurementRecord measurement) {
+    _selectedRecordId = measurement.id;
+    _selectedHealthEventId = null;
+  }
+
+  void selectConsultation(HealthConsultationRecord consultation) {
+    _selectedRecordId = consultation.id;
+    _selectedHealthEventId = null;
+  }
+
+  void selectRecord(RegisteredEvent record) {
+    _selectedRecordId = record.id;
+    _selectedHealthEventId = null;
+  }
+
+  void selectPediatrician(HealthPediatricianSummary pediatrician) {
+    _selectedPediatricianName = pediatrician.name.toLowerCase();
+  }
 
   int get pendingSyncCount => _records
       .where(
@@ -128,6 +395,10 @@ class HealthFlowController extends ChangeNotifier {
     } finally {
       _isLoading = false;
       notifyListeners();
+      if (_reloadAfterCurrentLoad) {
+        _reloadAfterCurrentLoad = false;
+        unawaited(load(force: true));
+      }
     }
   }
 
@@ -151,7 +422,7 @@ class HealthFlowController extends ChangeNotifier {
     String? notes,
   }) async {
     final babyId = await _requireBabyId();
-    await _saveRegisterEvent(
+    final saved = await _saveRegisterEvent(
       RegisterEventDraft(
         babyId: babyId,
         type: RegisterEventType.measurement,
@@ -165,6 +436,7 @@ class HealthFlowController extends ChangeNotifier {
         },
       ),
     );
+    _selectedRecordId = saved.id;
     await _refreshAfterSave();
     return HealthFlowSaveResult(
       kind: HealthFlowSaveKind.measurement,
@@ -185,7 +457,7 @@ class HealthFlowController extends ChangeNotifier {
     final title = dose.trim().isEmpty
         ? vaccineName.trim()
         : '${vaccineName.trim()} (${dose.trim()})';
-    await _healthRepository.createEvent(
+    final saved = await _healthRepository.createEvent(
       HealthEventDraft(
         babyId: babyId,
         type: HealthEventType.vaccine,
@@ -195,6 +467,7 @@ class HealthFlowController extends ChangeNotifier {
         status: HealthEventStatus.completed,
       ),
     );
+    _selectedHealthEventId = saved.id;
     await _saveRegisterEvent(
       RegisterEventDraft(
         babyId: babyId,
@@ -232,7 +505,7 @@ class HealthFlowController extends ChangeNotifier {
     String? notes,
   }) async {
     final babyId = await _requireBabyId();
-    await _saveRegisterEvent(
+    final saved = await _saveRegisterEvent(
       RegisterEventDraft(
         babyId: babyId,
         type: RegisterEventType.clinicalObservation,
@@ -252,6 +525,7 @@ class HealthFlowController extends ChangeNotifier {
         },
       ),
     );
+    _selectedRecordId = saved.id;
     await _refreshAfterSave();
     return HealthFlowSaveResult(
       kind: HealthFlowSaveKind.consultation,
@@ -265,7 +539,7 @@ class HealthFlowController extends ChangeNotifier {
     required String severity,
   }) async {
     final babyId = await _requireBabyId();
-    await _saveRegisterEvent(
+    final saved = await _saveRegisterEvent(
       RegisterEventDraft(
         babyId: babyId,
         type: RegisterEventType.clinicalObservation,
@@ -280,6 +554,41 @@ class HealthFlowController extends ChangeNotifier {
         },
       ),
     );
+    _selectedRecordId = saved.id;
+    await _refreshAfterSave();
+    return HealthFlowSaveResult(
+      kind: HealthFlowSaveKind.pediatrician,
+      savedAt: DateTime.now(),
+    );
+  }
+
+  Future<HealthFlowSaveResult> savePediatrician({
+    required String name,
+    required String specialty,
+    String? phone,
+    String? place,
+    String? notes,
+  }) async {
+    final babyId = await _requireBabyId();
+    final saved = await _saveRegisterEvent(
+      RegisterEventDraft(
+        babyId: babyId,
+        type: RegisterEventType.clinicalObservation,
+        occurredAt: DateTime.now(),
+        schemaVersion: 2,
+        notes: notes,
+        details: {
+          'observation_type': 'pediatrician_profile',
+          'name': name.trim(),
+          'specialty': specialty.trim(),
+          if (phone?.trim().isNotEmpty ?? false) 'phone': phone!.trim(),
+          if (place?.trim().isNotEmpty ?? false) 'place': place!.trim(),
+          'share_with_pediatrician': false,
+        },
+      ),
+    );
+    _selectedRecordId = saved.id;
+    _selectedPediatricianName = name.trim().toLowerCase();
     await _refreshAfterSave();
     return HealthFlowSaveResult(
       kind: HealthFlowSaveKind.observation,
@@ -330,7 +639,54 @@ class HealthFlowController extends ChangeNotifier {
   @override
   void dispose() {
     unawaited(_syncSubscription.cancel());
+    unawaited(_activeBabySubscription.cancel());
     unawaited(_connectivitySubscription?.cancel());
     super.dispose();
+  }
+
+  static List<HealthEventEntity> _sortedHealthEvents(
+    List<HealthEventEntity> events,
+  ) =>
+      List<HealthEventEntity>.of(events)
+        ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
+
+  static HealthMeasurementType? _measurementType(RegisteredEvent event) {
+    final value = event.details['measurement_type'];
+    for (final type in HealthMeasurementType.values) {
+      if (type.name == value) return type;
+    }
+    return null;
+  }
+
+  static HealthPediatricianSummary _pediatricianSummary(
+    RegisteredEvent? profile,
+    List<HealthConsultationRecord> consultations,
+  ) {
+    final latest = consultations.isEmpty ? null : consultations.first;
+    return HealthPediatricianSummary(
+      name: _text(profile?.details['name']) ?? latest!.pediatrician,
+      specialty:
+          _text(profile?.details['specialty']) ?? 'Pediatría no especificada',
+      phone: _text(profile?.details['phone']),
+      place: _text(profile?.details['place']),
+      notes: _text(profile?.notes),
+      consultationCount: consultations.length,
+      lastConsultationAt: latest?.occurredAt,
+      latestReason: latest?.title,
+      syncStatus: profile?.syncStatus ?? latest?.syncStatus,
+    );
+  }
+
+  static String? _text(Object? value) {
+    if (value is! String) return null;
+    final normalized = value.trim();
+    return normalized.isEmpty ? null : normalized;
+  }
+
+  static T? _firstWhereOrNull<T>(Iterable<T> values, bool Function(T) test) {
+    for (final value in values) {
+      if (test(value)) return value;
+    }
+    return null;
   }
 }

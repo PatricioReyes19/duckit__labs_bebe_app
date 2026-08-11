@@ -220,6 +220,7 @@ extension GetItInjectableX on _i174.GetIt {
               gh<_i494.FamilyRepository>(),
               gh<_i494.RegisterEventRepository>(),
               gh<_i494.HealthRepository>(),
+              gh<_i494.AgendaRepository>(),
             ));
     gh.factory<_i914.AgendaBloc>(() => blocsModule.agendaBloc(
           gh<_i494.GetAgendaOverview>(),

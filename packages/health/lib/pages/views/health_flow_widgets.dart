@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:core/core.dart';
+import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:health/bloc/health_flow_bloc.dart';
@@ -101,6 +102,46 @@ class HealthFlowError extends StatelessWidget {
             FilledButton(onPressed: onRetry, child: const Text('Reintentar')),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class HealthEmptyState extends StatelessWidget {
+  const HealthEmptyState({
+    required this.title,
+    required this.description,
+    required this.icon,
+    this.actionLabel,
+    this.onActionPressed,
+    super.key,
+  });
+
+  final String title;
+  final String description;
+  final IconData icon;
+  final String? actionLabel;
+  final VoidCallback? onActionPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return HealthSurface(
+      child: BebeStatePanel(
+        title: title,
+        description: description,
+        variant: BebeStatePanelVariant.empty,
+        illustration: Container(
+          width: 72,
+          height: 72,
+          decoration: BoxDecoration(
+            color: colors.primaryContainer,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, size: 34, color: colors.primary),
+        ),
+        primaryActionLabel: actionLabel,
+        onPrimaryActionPressed: onActionPressed,
       ),
     );
   }

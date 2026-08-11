@@ -67,6 +67,9 @@ class BebeSegmentedSelector<T> extends StatelessWidget {
                 item.label,
                 maxLines: allowWrap ? 2 : 1,
                 softWrap: allowWrap,
+                overflow: allowWrap
+                    ? TextOverflow.visible
+                    : TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
                 style: theme.typography.styles.label.md.regular,
               ),

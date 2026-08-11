@@ -77,7 +77,8 @@ class _BebeSkeletonState extends State<BebeSkeleton>
   Widget build(BuildContext context) {
     final theme = context.theme;
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
-    final radius = widget.borderRadius ??
+    final radius =
+        widget.borderRadius ??
         BorderRadius.circular(theme.borderRadius.radiusL);
 
     return ExcludeSemantics(

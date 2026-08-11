@@ -102,12 +102,17 @@ GoRouter createAppRouter({
                     openHealth: (context) => context.go(HealthPage.fullPath),
                     openTodayHistory: (context) =>
                         context.push(HomeDailyHistoryPage.fullPath),
+                    switchBaby: (babyId) async {
+                      await getIt<SetActiveFamilyBaby>()(babyId);
+                    },
                     routes: [
                       HomeDailyHistoryPage(
                         getRegisterEvents: (_) => getIt<GetRegisterEvents>(),
                         getFamilyOverview: (_) => getIt<GetFamilyOverview>(),
                         deleteRegisterEvent: (_) =>
                             getIt<DeleteRegisterEvent>(),
+                        updateRegisterEvent: (_) =>
+                            getIt<UpdateRegisterEvent>(),
                         syncService: (_) => getIt<RegisterEventSyncService>(),
                         onRegisterPressed: RegisterPage.open,
                       ),
@@ -500,14 +505,15 @@ GoRouter createAppRouter({
         onAgendaPressed: (context) => context.go(AgendaPage.fullPath),
         onHealthPressed: (context) => context.go(HealthPage.fullPath),
         onFamilyPressed: (context) => context.go(FamilyPage.fullPath),
+        onBabyPressed: (context) =>
+            unawaited(_selectActiveBabyFromSheet(context)),
         onSaved: (context, event) {
           unawaited(_scheduleRegisterReminder(event));
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Registro guardado localmente. Se sincronizará en segundo plano.',
-              ),
-            ),
+          BebeInAppSnackbar.show(
+            context,
+            title: 'Registro guardado',
+            message: 'Se guardó localmente y se sincronizará en segundo plano.',
+            variant: BebeInAppSnackbarVariant.syncing,
           );
           if (context.canPop()) {
             context.pop();
@@ -622,6 +628,76 @@ Future<void> _selectFamilyBaby(BuildContext context) async {
   context.read<FamilyBloc>().add(FamilyEvent.babySelected(babyId));
 }
 
+Future<void> _selectActiveBabyFromSheet(BuildContext context) async {
+  try {
+    final family = await getIt<GetFamilyOverview>()();
+    if (!context.mounted) return;
+    final selectedId = await showBebeBottomSheet<String>(
+      context: context,
+      useRootNavigator: true,
+      variant: BebeBottomSheetVariant.dynamic,
+      semanticLabel: 'Seleccionar bebé activo',
+      headerBuilder: (_) => const BebeTitleSection(title: 'Cambiar bebé'),
+      bodyBuilder: (sheetContext) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var index = 0; index < family.babies.length; index++) ...[
+            BebeBabySelector(
+              key: ValueKey(
+                'register-baby-choice-${family.babies[index].id}',
+              ),
+              name: family.babies[index].name,
+              ageLabel: _babyAgeLabel(family.babies[index].birthDate),
+              avatar: BebeAvatar.initials(
+                initials: _babyInitials(family.babies[index].name),
+                size: BebeAvatarSize.lg,
+                semanticLabel: 'Avatar de ${family.babies[index].name}',
+              ),
+              contextLabel: family.babies[index].id == family.activeBabyId
+                  ? 'Perfil activo'
+                  : 'Cambiar a este perfil',
+              isSelected: family.babies[index].id == family.activeBabyId,
+              onPressed: () => Navigator.of(
+                sheetContext,
+              ).pop(family.babies[index].id),
+            ),
+            if (index != family.babies.length - 1)
+              SizedBox(height: context.theme.spacing.spacingM),
+          ],
+        ],
+      ),
+    );
+    if (selectedId == null || selectedId == family.activeBabyId) return;
+    await getIt<SetActiveFamilyBaby>()(selectedId);
+  } on Object {
+    if (context.mounted) {
+      BebeInAppSnackbar.show(
+        context,
+        title: 'No pudimos cambiar de bebé',
+        message: 'Intenta nuevamente. No se modificó ningún registro.',
+        variant: BebeInAppSnackbarVariant.error,
+      );
+    }
+  }
+}
+
+String _babyInitials(String name) => name
+    .trim()
+    .split(RegExp(r'\s+'))
+    .where((part) => part.isNotEmpty)
+    .take(2)
+    .map((part) => part[0].toUpperCase())
+    .join();
+
+String _babyAgeLabel(DateTime birthDate) {
+  final now = DateTime.now();
+  final local = birthDate.toLocal();
+  var months = (now.year - local.year) * 12 + now.month - local.month;
+  if (now.day < local.day) months -= 1;
+  if (months <= 0) return 'Menos de un mes';
+  return months == 1 ? '1 mes' : '$months meses';
+}
+
 Future<void> _addFamilyBaby(BuildContext context) async {
   final draft = await context.push<FamilyBabyDraftResult>(
     FamilySubpage.addBabyPath,
@@ -641,13 +717,17 @@ Future<void> _addFamilyBaby(BuildContext context) async {
     );
     if (!context.mounted) return;
     context.read<FamilyBloc>().add(const FamilyEvent.retried());
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Perfil de ${draft.name} creado.')),
+    BebeInAppSnackbar.show(
+      context,
+      message: 'Perfil de ${draft.name} creado.',
+      variant: BebeInAppSnackbarVariant.success,
     );
   } on Object catch (error) {
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('No pudimos crear el perfil: $error')),
+    BebeInAppSnackbar.show(
+      context,
+      message: 'No pudimos crear el perfil: $error',
+      variant: BebeInAppSnackbarVariant.error,
     );
   }
 }
@@ -714,8 +794,10 @@ Future<void> _signOutAndOpenLogin(
     await getIt<AuthService>().signOut();
   } on Object catch (error) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No pudimos cerrar la sesión: $error')),
+      BebeInAppSnackbar.show(
+        context,
+        message: 'No pudimos cerrar la sesión: $error',
+        variant: BebeInAppSnackbarVariant.error,
       );
     }
     return;

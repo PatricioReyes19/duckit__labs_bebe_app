@@ -104,10 +104,12 @@ class AgendaOverviewVm {
 
   List<AgendaEventVm> upcomingAfter(DateTime day) {
     final endOfDay = DateTime(day.year, day.month, day.day, 23, 59, 59);
-    return events
+    final result = events
         .where((event) => event.startsAt.isAfter(endOfDay))
         .where(_matchesSelectedCategory)
-        .toList(growable: false);
+        .toList();
+    result.sort((first, second) => first.startsAt.compareTo(second.startsAt));
+    return result;
   }
 
   List<AgendaRegisterEventVm> recordsFor(DateTime day) => registerEvents
@@ -196,6 +198,7 @@ class AgendaRegisterEventVm {
   }
 
   static String _durationDescription(Map<String, Object?> details) {
+    if (details['sleep_status'] == 'ongoing') return 'En curso';
     final duration = details['duration_minutes'];
     return duration == null ? 'Registrado' : '$duration min';
   }
@@ -220,6 +223,7 @@ class AgendaEventVm {
     required this.startsAt,
     required this.caregiver,
     this.syncStatus = AgendaSyncStatus.synced,
+    this.sourceRegisterEventId,
   });
 
   final String id;
@@ -229,6 +233,9 @@ class AgendaEventVm {
   final DateTime startsAt;
   final AgendaCaregiverVm? caregiver;
   final AgendaSyncStatus syncStatus;
+  final String? sourceRegisterEventId;
+
+  bool get isRecurring => sourceRegisterEventId?.trim().isNotEmpty == true;
 
   factory AgendaEventVm.fromEntity(AgendaEventEntity entity) => AgendaEventVm(
     id: entity.id,
@@ -244,6 +251,7 @@ class AgendaEventVm {
             initials: _initials(entity.caregiver!.name),
           ),
     syncStatus: entity.syncStatus,
+    sourceRegisterEventId: entity.sourceRegisterEventId,
   );
 
   static String _initials(String value) => value

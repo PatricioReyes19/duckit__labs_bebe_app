@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
 import 'notification_message.dart';
@@ -68,10 +69,10 @@ class _NotificationsPageState extends State<NotificationsPage> {
       }
     } on Object {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No pudimos activar las notificaciones.'),
-          ),
+        BebeInAppSnackbar.show(
+          context,
+          message: 'No pudimos activar las notificaciones.',
+          variant: BebeInAppSnackbarVariant.error,
         );
       }
     } finally {

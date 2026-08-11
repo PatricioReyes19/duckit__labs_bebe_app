@@ -116,6 +116,36 @@ void main() {
     },
   );
 
+  test(
+    'active baby changes by id and health and agenda stay isolated',
+    () async {
+      final original = await families.getCurrent();
+      final originalAgenda = await agenda.getOverview(original.activeBabyId);
+      final originalHealth = await health.getOverview(original.activeBabyId);
+      final secondBaby = await families.createBaby(
+        BabyDraft(
+          familyId: original.id,
+          name: 'Emilia Reyes',
+          birthDate: DateTime.utc(2026, 5, 8),
+        ),
+      );
+      final changedBaby = families.activeBabyChanges.first;
+
+      await families.setActiveBaby(secondBaby.id);
+
+      expect(await changedBaby, secondBaby.id);
+      final updated = await families.getCurrent();
+      final secondAgenda = await agenda.getOverview(updated.activeBabyId);
+      final secondHealth = await health.getOverview(updated.activeBabyId);
+      expect(updated.activeBabyId, secondBaby.id);
+      expect(updated.activeBaby.name, 'Emilia Reyes');
+      expect(originalAgenda.events, isNotEmpty);
+      expect(originalHealth.events, isNotEmpty);
+      expect(secondAgenda.events, isEmpty);
+      expect(secondHealth.events, isEmpty);
+    },
+  );
+
   test('persists, resends and cancels caregiver invitations', () async {
     final family = await families.getCurrent();
     final invitation = await families.sendInvitation(
@@ -237,6 +267,122 @@ void main() {
       isFalse,
     );
   });
+
+  test(
+    'home resolves upcoming care reminders from register and agenda',
+    () async {
+      final now = DateTime.utc(2026, 8, 11, 12);
+      var registerId = 0;
+      final registerRepository = SqliteRegisterEventRepository(
+        database: database,
+        idGenerator: () => 'home-reminder-${registerId++}',
+        clock: () => now,
+      );
+      addTearDown(registerRepository.close);
+
+      await registerRepository.save(
+        RegisterEventDraft(
+          babyId: BebeSeedData.activeBabyId,
+          type: RegisterEventType.feeding,
+          occurredAt: now.subtract(const Duration(hours: 3, minutes: 50)),
+          details: const {
+            'subtype': 'formula',
+            'schedule_next_feeding': true,
+            'reminder_interval_hours': 4,
+          },
+        ),
+      );
+      await registerRepository.save(
+        RegisterEventDraft(
+          babyId: BebeSeedData.activeBabyId,
+          type: RegisterEventType.diaper,
+          occurredAt: now.subtract(const Duration(hours: 2, minutes: 55)),
+          details: const {
+            'subtype': 'wet',
+            'schedule_reminder': true,
+            'reminder_interval_hours': 3,
+          },
+        ),
+      );
+      final medicine = await agenda.create(
+        AgendaEventDraft(
+          babyId: BebeSeedData.activeBabyId,
+          category: AgendaCategory.medication,
+          title: 'Próxima dosis: Vitamina D',
+          description: '5 gotas',
+          startsAt: now.add(const Duration(minutes: 8)),
+        ),
+      );
+
+      final overview = await GetHomeOverview(
+        families,
+        registerRepository,
+        health,
+        agendaRepository: agenda,
+        clock: () => now,
+      )();
+
+      expect(
+        overview.careReminders.map((reminder) => reminder.type),
+        containsAllInOrder([
+          HomeCareReminderType.diaper,
+          HomeCareReminderType.medication,
+          HomeCareReminderType.feeding,
+        ]),
+      );
+      expect(
+        overview.careReminders
+            .firstWhere((reminder) => reminder.id == medicine.id)
+            .startsAt,
+        now.add(const Duration(minutes: 8)),
+      );
+    },
+  );
+
+  test(
+    'home keeps an overnight sleep in progress without adding duration',
+    () async {
+      final now = DateTime.utc(2026, 8, 11, 8);
+      final registerRepository = SqliteRegisterEventRepository(
+        database: database,
+        idGenerator: () => 'ongoing-sleep',
+        clock: () => now,
+      );
+      addTearDown(registerRepository.close);
+      final getOverview = GetHomeOverview(
+        families,
+        registerRepository,
+        health,
+        agendaRepository: agenda,
+        clock: () => now,
+      );
+      final baseline = await getOverview();
+      final baselineSleep = baseline.metrics.firstWhere(
+        (metric) => metric.type == HomeMetricType.sleep,
+      );
+
+      await registerRepository.save(
+        RegisterEventDraft(
+          babyId: BebeSeedData.activeBabyId,
+          type: RegisterEventType.sleep,
+          occurredAt: now.subtract(const Duration(hours: 9)),
+          details: const {
+            'subtype': 'night',
+            'sleep_status': 'ongoing',
+            'duration_minutes': 60,
+          },
+        ),
+      );
+      final overview = await getOverview();
+      final sleep = overview.metrics.firstWhere(
+        (metric) => metric.type == HomeMetricType.sleep,
+      );
+
+      expect(sleep.count, baselineSleep.count + 1);
+      expect(sleep.ongoingCount, baselineSleep.ongoingCount + 1);
+      expect(sleep.totalMinutes, baselineSleep.totalMinutes);
+    },
+  );
 
   test('supports POST and PATCH semantics for health events', () async {
     final created = await health.createEvent(

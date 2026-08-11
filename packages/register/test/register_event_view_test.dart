@@ -52,6 +52,38 @@ void main() {
     }
   });
 
+  testWidgets('ongoing sleep asks only for its start time', (tester) async {
+    await tester.pumpWidget(
+      _FormTestApp(
+        theme: bebeTheme.lightTheme(),
+        child: const SleepRegisterForm(),
+      ),
+    );
+
+    expect(find.text('Se durmió ahora'), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('sleep-ongoing-guidance')), findsOneWidget);
+    expect(find.text('Hora de inicio'), findsOneWidget);
+    expect(find.text('Duración'), findsNothing);
+    expect(find.text('Hora de despertar'), findsNothing);
+    expect(find.text('Estado de ánimo al despertar'), findsNothing);
+  });
+
+  testWidgets('past sleep exposes completion information', (tester) async {
+    await tester.pumpWidget(
+      _FormTestApp(
+        theme: bebeTheme.lightTheme(),
+        child: const SleepRegisterForm(mode: 'completed'),
+      ),
+    );
+
+    expect(find.text('Sueño pasado'), findsOneWidget);
+    expect(find.text('Duración'), findsOneWidget);
+    expect(find.text('Hora de despertar'), findsOneWidget);
+    expect(find.text('Estado de ánimo al despertar'), findsOneWidget);
+    expect(find.byKey(const ValueKey('sleep-ongoing-guidance')), findsNothing);
+  });
+
   testWidgets('category and actions forward callbacks', (tester) async {
     RegisterEventKind? selected;
     var saved = false;
@@ -128,6 +160,30 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('Alimentación'), findsOneWidget);
+  });
+
+  testWidgets('mood labels with icons stay on one line at narrow width', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 932);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      _FormTestApp(
+        theme: bebeTheme.lightTheme(),
+        child: FeedingRegisterForm(onMoodChanged: (_) {}),
+      ),
+    );
+
+    for (final label in const ['Tranquilo', 'Dormido', 'Irritable']) {
+      final text = tester.widget<Text>(find.text(label));
+      expect(text.maxLines, 1, reason: label);
+      expect(text.softWrap, isFalse, reason: label);
+      expect(text.overflow, TextOverflow.ellipsis, reason: label);
+    }
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('category carousel scrolls across the full screen width',

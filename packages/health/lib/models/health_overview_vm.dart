@@ -75,9 +75,15 @@ class HealthOverviewVm {
     HealthOverviewEntity entity, {
     List<RegisteredEvent> registerEvents = const [],
   }) {
+    final now = DateTime.now();
+    final startOfToday = DateTime(now.year, now.month, now.day);
     final scheduled =
         entity.events
-            .where((event) => event.status == HealthEventStatus.scheduled)
+            .where(
+              (event) =>
+                  event.status == HealthEventStatus.scheduled &&
+                  !event.startsAt.isBefore(startOfToday),
+            )
             .toList(growable: false)
           ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
     final weights = _measurementValues(
@@ -126,7 +132,7 @@ class HealthOverviewVm {
       growthSummary: HealthGrowthSummaryVm(
         weightKg: weights.isEmpty ? null : weights.first.$1,
         heightCm: heights.isEmpty ? null : heights.first.$1,
-        recordedAtLabel: weights.isEmpty ? null : 'Último registro disponible',
+        recordedAtLabel: weights.isEmpty ? null : _dateLabel(weights.first.$2),
       ),
     );
   }

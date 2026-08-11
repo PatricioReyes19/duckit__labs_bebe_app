@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:core/core.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
@@ -17,12 +19,18 @@ class HealthBloc extends Bloc<HealthEvent, HealthState> {
     _getFamilyOverview = getFamilyOverview;
     on<_Started>(_onLoad);
     on<_Retried>(_onLoad);
+    _familyChangesSubscription = getFamilyOverview?.activeBabyChanges.listen((
+      _,
+    ) {
+      if (!isClosed) add(const HealthEvent.started());
+    });
   }
 
   final GetHealthOverview _getHealthOverview;
   final GetRegisterEvents _getRegisterEvents;
   late final GetFamilyOverview? _getFamilyOverview;
   final String? babyId;
+  StreamSubscription<String>? _familyChangesSubscription;
 
   Future<void> _onLoad(HealthEvent event, Emitter<HealthState> emit) async {
     emit(const HealthState.loading());
@@ -51,5 +59,11 @@ class HealthBloc extends Bloc<HealthEvent, HealthState> {
         ),
       );
     }
+  }
+
+  @override
+  Future<void> close() async {
+    await _familyChangesSubscription?.cancel();
+    return super.close();
   }
 }

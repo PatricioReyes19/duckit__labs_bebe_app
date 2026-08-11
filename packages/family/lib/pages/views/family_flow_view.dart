@@ -135,12 +135,21 @@ class _BabySelectorView extends StatelessWidget {
               'El perfil activo organiza Inicio, Agenda, Salud y los nuevos registros.',
           children: [
             for (var index = 0; index < family.babies.length; index++) ...[
-              _BabyChoiceCard(
+              BebeBabySelector(
+                key: ValueKey(
+                  'family-baby-choice-${family.babies[index].id}',
+                ),
                 name: family.babies[index].name,
-                age: _familyBabyAge(family.babies[index].birthDate),
-                initials: _initials(family.babies[index].name),
-                selected: selectedId == family.babies[index].id,
-                accent: index.isOdd,
+                ageLabel: _familyBabyAge(family.babies[index].birthDate),
+                avatar: _InitialAvatar(
+                  initials: _initials(family.babies[index].name),
+                  accent: index.isOdd,
+                  size: 56,
+                ),
+                contextLabel: selectedId == family.babies[index].id
+                    ? 'Perfil seleccionado'
+                    : 'Toca para seleccionar este perfil',
+                isSelected: selectedId == family.babies[index].id,
                 onPressed: () =>
                     bloc.add(FamilyFlowBabySelected(family.babies[index].id)),
               ),
@@ -171,90 +180,6 @@ class _BabySelectorView extends StatelessWidget {
           ],
         );
       },
-    );
-  }
-}
-
-class _BabyChoiceCard extends StatelessWidget {
-  const _BabyChoiceCard({
-    required this.name,
-    required this.age,
-    required this.initials,
-    required this.selected,
-    required this.onPressed,
-    this.accent = false,
-  });
-
-  final String name;
-  final String age;
-  final String initials;
-  final bool selected;
-  final VoidCallback onPressed;
-  final bool accent;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = context.theme;
-    return Material(
-      color: selected
-          ? theme.colors.background.brandSurface
-          : theme.colors.background.neutralsSurface,
-      shape: RoundedRectangleBorder(
-        borderRadius: theme.borderRadius.x3l,
-        side: BorderSide(
-          color: selected
-              ? theme.colors.border.brandAlternative
-              : theme.colors.border.neutralDefault,
-          width: selected ? 2 : 1,
-        ),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onPressed,
-        child: Padding(
-          padding: EdgeInsets.all(theme.spacing.spacingL),
-          child: Row(
-            children: [
-              _InitialAvatar(initials: initials, accent: accent, size: 64),
-              SizedBox(width: theme.spacing.spacingL),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      style: theme.typography.styles.title.md.semibold.copyWith(
-                        color: theme.colors.text.neutralTitle,
-                      ),
-                    ),
-                    SizedBox(height: theme.spacing.spacingXs),
-                    Text(
-                      age,
-                      style: theme.typography.styles.body.sm.regular.copyWith(
-                        color: theme.colors.text.neutralBody,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 180),
-                child: selected
-                    ? Icon(
-                        Icons.check_circle_rounded,
-                        key: const ValueKey('selected'),
-                        color: theme.colors.icons.brandDefault,
-                      )
-                    : Icon(
-                        Icons.radio_button_unchecked_rounded,
-                        key: const ValueKey('unselected'),
-                        color: theme.colors.icons.neutralAlternative,
-                      ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
@@ -378,7 +303,11 @@ class _AddBabyViewState extends State<_AddBabyView> {
       return;
     }
     if (_birthDate == null) {
-      _showMessage(context, 'Selecciona la fecha de nacimiento.');
+      _showMessage(
+        context,
+        'Selecciona la fecha de nacimiento.',
+        variant: BebeInAppSnackbarVariant.warning,
+      );
       return;
     }
     widget.onCreated(FamilyBabyDraftResult(name: name, birthDate: _birthDate!));
@@ -617,9 +546,21 @@ class _CareCircleViewState extends State<_CareCircleView> {
     try {
       await widget.repository.resendInvitation(member.id);
       await _reload();
-      if (mounted) _showMessage(context, 'Invitación reenviada por 7 días.');
+      if (mounted) {
+        _showMessage(
+          context,
+          'Invitación reenviada por 7 días.',
+          variant: BebeInAppSnackbarVariant.success,
+        );
+      }
     } on Object {
-      if (mounted) _showMessage(context, 'No pudimos reenviar la invitación.');
+      if (mounted) {
+        _showMessage(
+          context,
+          'No pudimos reenviar la invitación.',
+          variant: BebeInAppSnackbarVariant.error,
+        );
+      }
     } finally {
       if (mounted) setState(() => _busyMemberId = null);
     }
@@ -650,9 +591,21 @@ class _CareCircleViewState extends State<_CareCircleView> {
     try {
       await widget.repository.cancelInvitation(member.id);
       await _reload();
-      if (mounted) _showMessage(context, 'Invitación cancelada.');
+      if (mounted) {
+        _showMessage(
+          context,
+          'Invitación cancelada.',
+          variant: BebeInAppSnackbarVariant.success,
+        );
+      }
     } on Object {
-      if (mounted) _showMessage(context, 'No pudimos cancelar la invitación.');
+      if (mounted) {
+        _showMessage(
+          context,
+          'No pudimos cancelar la invitación.',
+          variant: BebeInAppSnackbarVariant.error,
+        );
+      }
     } finally {
       if (mounted) setState(() => _busyMemberId = null);
     }
@@ -1107,7 +1060,11 @@ class _MemberDetailView extends StatelessWidget {
             BebeButton(
               label: 'Guardar cambios de acceso',
               leading: const Icon(Icons.admin_panel_settings_outlined),
-              onPressed: () => _showMessage(context, 'Permisos actualizados.'),
+              onPressed: () => _showMessage(
+                context,
+                'Permisos actualizados.',
+                variant: BebeInAppSnackbarVariant.success,
+              ),
             ),
             if (member.role != 'Administrador/a') ...[
               SizedBox(height: theme.spacing.spacingM),
@@ -1231,8 +1188,11 @@ class _FamilyConfigurationView extends StatelessWidget {
             BebeButton(
               label: 'Guardar configuración familiar',
               leading: const Icon(Icons.check_rounded),
-              onPressed: () =>
-                  _showMessage(context, 'Configuración familiar guardada.'),
+              onPressed: () => _showMessage(
+                context,
+                'Configuración familiar guardada.',
+                variant: BebeInAppSnackbarVariant.success,
+              ),
             ),
           ],
         );
@@ -1418,7 +1378,11 @@ Future<void> _copyMemberInvitation(
 ) async {
   final code = member.invitationCode;
   if (code == null) {
-    _showMessage(context, 'Esta invitación no tiene un código disponible.');
+    _showMessage(
+      context,
+      'Esta invitación no tiene un código disponible.',
+      variant: BebeInAppSnackbarVariant.warning,
+    );
     return;
   }
   await _copyCodeInvitation(context, code);
@@ -1430,7 +1394,13 @@ Future<void> _copyCodeInvitation(BuildContext context, String code) async {
       text: 'Código: $code\nhttps://bebe.app/invitation?code=$code',
     ),
   );
-  if (context.mounted) _showMessage(context, 'Código y enlace copiados.');
+  if (context.mounted) {
+    _showMessage(
+      context,
+      'Código y enlace copiados.',
+      variant: BebeInAppSnackbarVariant.success,
+    );
+  }
 }
 
 String _invitationExpiryLabel(FamilyMemberEntity member) {
@@ -1444,8 +1414,8 @@ String _shortDate(DateTime value) =>
     '${value.day.toString().padLeft(2, '0')}/'
     '${value.month.toString().padLeft(2, '0')}/${value.year}';
 
-void _showMessage(BuildContext context, String message) {
-  ScaffoldMessenger.of(context)
-    ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(content: Text(message)));
-}
+void _showMessage(
+  BuildContext context,
+  String message, {
+  BebeInAppSnackbarVariant variant = BebeInAppSnackbarVariant.information,
+}) => BebeInAppSnackbar.show(context, message: message, variant: variant);

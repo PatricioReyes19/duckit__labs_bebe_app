@@ -268,6 +268,82 @@ void main() {
     expect(rating, 4);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('in-app snackbar uses semantic icons for every variant', (
+    tester,
+  ) async {
+    const cases = <BebeInAppSnackbarVariant, IconData>{
+      BebeInAppSnackbarVariant.information: Icons.info_outline_rounded,
+      BebeInAppSnackbarVariant.syncing: Icons.sync_rounded,
+      BebeInAppSnackbarVariant.success: Icons.check_circle_outline_rounded,
+      BebeInAppSnackbarVariant.warning: Icons.warning_amber_rounded,
+      BebeInAppSnackbarVariant.error: Icons.error_outline_rounded,
+      BebeInAppSnackbarVariant.offline: Icons.cloud_off_outlined,
+      BebeInAppSnackbarVariant.neutral: Icons.notifications_none_rounded,
+    };
+
+    for (final entry in cases.entries) {
+      await tester.pumpWidget(
+        _TestApp(
+          theme: bebeTheme.lightTheme(),
+          child: SizedBox(
+            width: 320,
+            child: BebeInAppSnackbar(
+              message: 'Mensaje de ${entry.key.name}',
+              variant: entry.key,
+            ),
+          ),
+        ),
+      );
+      expect(find.byIcon(entry.value), findsOneWidget);
+      expect(
+        find.byKey(const Key('bebe-in-app-snackbar-surface')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    }
+  });
+
+  testWidgets('in-app snackbar is floating, translucent and supports actions', (
+    tester,
+  ) async {
+    var actionPressed = false;
+    await tester.binding.setSurfaceSize(const Size(360, 760));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _TestApp(
+        theme: bebeTheme.lightTheme(),
+        textScaler: const TextScaler.linear(2),
+        child: Builder(
+          builder: (context) => FilledButton(
+            onPressed: () => BebeInAppSnackbar.show(
+              context,
+              title: 'Sincronización lista',
+              message:
+                  'Los cambios del bebé se sincronizaron y están disponibles para toda la familia.',
+              variant: BebeInAppSnackbarVariant.syncing,
+              actionLabel: 'Ver estado',
+              onActionPressed: () => actionPressed = true,
+            ),
+            child: const Text('Mostrar alerta'),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Mostrar alerta'));
+    await tester.pumpAndSettle();
+
+    final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
+    expect(snackBar.behavior, SnackBarBehavior.floating);
+    expect(snackBar.backgroundColor, Colors.transparent);
+    expect(find.byIcon(Icons.sync_rounded), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.text('Ver estado'));
+    await tester.pumpAndSettle();
+    expect(actionPressed, isTrue);
+  });
 }
 
 const _metrics = <BebeTodayMetricData>[

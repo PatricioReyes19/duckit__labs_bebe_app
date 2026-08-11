@@ -4,7 +4,11 @@ enum AuthFailureCode {
   network,
   tooManyRequests,
   unavailable,
-  unknown, invalidEmail, userDisabled, weakPassword, operationNotAllowed,
+  unknown,
+  invalidEmail,
+  userDisabled,
+  weakPassword,
+  operationNotAllowed,
 }
 
 class AuthFailure implements Exception {

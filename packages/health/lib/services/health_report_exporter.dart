@@ -277,7 +277,7 @@ class HealthReportExporter {
       HealthReportRange.month => 30,
     };
     final after = DateTime.now().subtract(Duration(days: days));
-    return controller.records
+    return controller.reportableRecords
         .where((event) => event.occurredAt.isAfter(after))
         .toList(growable: false);
   }

@@ -53,17 +53,19 @@ class _AppWrappersState extends State<AppWrappers> {
     if (wasSyncing && !_isSyncing) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final failed = _hasSyncFailure;
-        appScaffoldMessengerKey.currentState
-          ?..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(
-                failed
-                    ? 'Algunos datos no pudieron sincronizarse. Se reintentará automáticamente.'
-                    : 'Datos sincronizados y actualizados.',
-              ),
-            ),
+        final messenger = appScaffoldMessengerKey.currentState;
+        if (messenger != null) {
+          BebeInAppSnackbar.showOn(
+            messenger,
+            title: failed ? 'Error de sincronización' : 'Sincronización lista',
+            message: failed
+                ? 'Algunos datos no pudieron sincronizarse. Se reintentará automáticamente.'
+                : 'Datos sincronizados y actualizados.',
+            variant: failed
+                ? BebeInAppSnackbarVariant.error
+                : BebeInAppSnackbarVariant.syncing,
           );
+        }
       });
     }
   }

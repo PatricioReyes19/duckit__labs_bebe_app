@@ -144,11 +144,12 @@ class HomeDailyHistoryView extends StatelessWidget {
               semanticLabel: 'Detalle del registro',
               items: [
                 for (final detail in event.details.entries)
-                  BebeDetailSummaryItem(
-                    icon: const Icon(Icons.info_outline_rounded),
-                    label: _detailLabel(detail.key),
-                    value: _detailValue(detail.value),
-                  ),
+                  if (_hasDetailValue(detail.value))
+                    BebeDetailSummaryItem(
+                      icon: const Icon(Icons.info_outline_rounded),
+                      label: _detailLabel(detail.key),
+                      value: _detailValue(detail.key, detail.value),
+                    ),
               ],
             ),
             if (event.notes?.trim().isNotEmpty ?? false) ...[
@@ -167,6 +168,15 @@ class HomeDailyHistoryView extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (_isOngoingSleep(event)) ...[
+              BebeButton(
+                key: ValueKey('finish-sleep-${event.id}'),
+                label: 'Registrar despertar',
+                onPressed: () => _finishSleep(sheetContext, event),
+                leading: const Icon(Icons.wb_sunny_outlined),
+              ),
+              SizedBox(height: spacing.spacingM),
+            ],
             BebeButton(
               label: 'Eliminar registro',
               onPressed: () => _confirmDelete(sheetContext, event),
@@ -183,6 +193,68 @@ class HomeDailyHistoryView extends StatelessWidget {
         );
       },
     );
+  }
+
+  Future<void> _finishSleep(
+    BuildContext context,
+    RegisteredEvent event,
+  ) async {
+    final now = DateTime.now();
+    final selected = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(now),
+      helpText: 'Hora de despertar',
+      cancelText: 'Cancelar',
+      confirmText: 'Registrar',
+    );
+    if (selected == null || !context.mounted) return;
+    final endedAt = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      selected.hour,
+      selected.minute,
+    );
+    if (!endedAt.isAfter(event.occurredAt.toLocal())) {
+      BebeInAppSnackbar.show(
+        context,
+        title: 'Hora no válida',
+        message: 'El despertar debe ser posterior al inicio del sueño.',
+        variant: BebeInAppSnackbarVariant.error,
+      );
+      return;
+    }
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final completed = await context
+          .read<HomeDailyHistoryCubit>()
+          .finishSleep(event, endedAt);
+      if (!context.mounted) return;
+      if (!completed) {
+        BebeInAppSnackbar.show(
+          context,
+          title: 'No se pudo finalizar',
+          message: 'Este registro ya no está marcado como sueño en curso.',
+          variant: BebeInAppSnackbarVariant.warning,
+        );
+        return;
+      }
+      Navigator.of(context).pop();
+      BebeInAppSnackbar.showOn(
+        messenger,
+        title: 'Sueño finalizado',
+        message: 'La hora de despertar y la duración quedaron registradas.',
+        variant: BebeInAppSnackbarVariant.success,
+      );
+    } on Object {
+      if (!context.mounted) return;
+      BebeInAppSnackbar.show(
+        context,
+        title: 'No se pudo guardar',
+        message: 'Inténtalo nuevamente. El sueño continúa marcado en curso.',
+        variant: BebeInAppSnackbarVariant.error,
+      );
+    }
   }
 
   Future<void> _confirmDelete(
@@ -287,7 +359,8 @@ class HomeDailyHistoryView extends StatelessWidget {
       'subtype': 'Tipo',
       'side': 'Lado',
       'duration_minutes': 'Duración',
-      'end_at': 'Hora de término',
+      'end_at': 'Hora de despertar',
+      'sleep_status': 'Estado del sueño',
       'mood': 'Estado',
       'symptoms': 'Síntomas',
       'place': 'Lugar',
@@ -318,8 +391,26 @@ class HomeDailyHistoryView extends StatelessWidget {
             .join(' ');
   }
 
-  static String _detailValue(Object? value) {
+  static bool _hasDetailValue(Object? value) =>
+      value != null && value != '' && (value is! List || value.isNotEmpty);
+
+  static String _detailValue(String key, Object? value) {
     if (value == null || value == '') return 'Sin información';
+    if (key == 'sleep_status') {
+      return value == 'ongoing' ? 'En curso' : 'Finalizado';
+    }
+    if (key == 'subtype') {
+      return switch (value) {
+        'nap' => 'Siesta',
+        'night' => 'Sueño nocturno',
+        _ => '$value',
+      };
+    }
+    if (key == 'duration_minutes') return '$value min';
+    if (key == 'end_at') {
+      final parsed = DateTime.tryParse('$value');
+      if (parsed != null) return _timeLabel(parsed);
+    }
     if (value is bool) return value ? 'Sí' : 'No';
     if (value is List<Object?>) {
       return value.isEmpty ? 'Sin información' : value.join(', ');
@@ -351,6 +442,10 @@ class HomeDailyHistoryView extends StatelessWidget {
     final local = value.toLocal();
     return '${local.day} de ${months[local.month - 1]} de ${local.year}';
   }
+
+  static bool _isOngoingSleep(RegisteredEvent event) =>
+      event.type == RegisterEventType.sleep &&
+      event.details['sleep_status'] == 'ongoing';
 }
 
 class _HistoryFilters extends StatelessWidget {
@@ -424,8 +519,9 @@ class _EventPresentation {
         ),
       RegisterEventType.sleep => _EventPresentation(
           title: 'Sueño',
-          description:
-              '${_text(details['subtype'], 'Descanso')} · ${_minutes(details['duration_minutes'])}',
+          description: details['sleep_status'] == 'ongoing'
+              ? '${_sleepSubtype(details['subtype'])} · En curso'
+              : '${_sleepSubtype(details['subtype'])} · ${_minutes(details['duration_minutes'])}',
           icon: Icons.bedtime_outlined,
           variant: BebeLeadingIconVariant.accent,
         ),
@@ -465,6 +561,12 @@ class _EventPresentation {
     final text = value?.toString().trim();
     return text == null || text.isEmpty ? fallback : text;
   }
+
+  static String _sleepSubtype(Object? value) => switch (value) {
+        'nap' => 'Siesta',
+        'night' => 'Sueño nocturno',
+        _ => _text(value, 'Descanso'),
+      };
 
   static String _minutes(Object? value) {
     final minutes = value is num ? value.toInt() : int.tryParse('$value');

@@ -28,7 +28,7 @@ class HealthFlowState {
 /// BLoC transforma sus cambios en estados consumibles por las vistas.
 class HealthFlowBloc extends Cubit<HealthFlowState> {
   HealthFlowBloc(this.controller)
-      : super(HealthFlowState.fromController(controller)) {
+    : super(HealthFlowState.fromController(controller)) {
     controller.addListener(_controllerChanged);
   }
 
@@ -37,11 +37,8 @@ class HealthFlowBloc extends Cubit<HealthFlowState> {
   Future<void> load({bool force = false}) => controller.load(force: force);
 
   void _controllerChanged() => emit(
-        HealthFlowState.fromController(
-          controller,
-          revision: state.revision + 1,
-        ),
-      );
+    HealthFlowState.fromController(controller, revision: state.revision + 1),
+  );
 
   @override
   Future<void> close() {

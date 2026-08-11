@@ -32,11 +32,7 @@ class _VaccinesSectionViewState extends State<VaccinesSectionView> {
     return HealthFlowBody(
       controller: widget.controller,
       builder: (context) {
-        final all =
-            widget.controller.overview?.events
-                .where((event) => event.type == HealthEventType.vaccine)
-                .toList(growable: false) ??
-            const <HealthEventEntity>[];
+        final all = widget.controller.vaccines;
         final visible = switch (filter) {
           1 =>
             all
@@ -66,18 +62,11 @@ class _VaccinesSectionViewState extends State<VaccinesSectionView> {
           ),
           const SizedBox(height: 14),
           if (visible.isEmpty)
-            HealthSurface(
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.vaccines_outlined,
-                    size: 52,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(height: 12),
-                  const Text('No hay vacunas en esta categoría.'),
-                ],
-              ),
+            const HealthEmptyState(
+              title: 'No hay vacunas en esta categoría',
+              description:
+                  'Las vacunas registradas o programadas aparecerán aquí.',
+              icon: Icons.vaccines_outlined,
             )
           else
             for (final event in visible) ...[
@@ -89,7 +78,10 @@ class _VaccinesSectionViewState extends State<VaccinesSectionView> {
                 subtitle:
                     '${event.description} · ${healthDateLabel(event.startsAt)}',
                 trailing: _HealthEventStatus(event.status),
-                onTap: () => widget.openFlow(HealthFlowAction.detail),
+                onTap: () {
+                  widget.controller.selectHealthEvent(event);
+                  widget.openFlow(HealthFlowAction.detail);
+                },
               ),
               const SizedBox(height: 12),
             ],
@@ -127,42 +119,37 @@ class ControlsSectionView extends StatelessWidget {
     return HealthFlowBody(
       controller: controller,
       builder: (context) {
-        final controls =
-            controller.overview?.events
-                .where(
-                  (event) => event.type == HealthEventType.pediatricControl,
-                )
-                .toList(growable: false) ??
-            const <HealthEventEntity>[];
+        final controls = controller.controls;
         return [
           const HealthSectionHeading(
-            title: 'Próximos controles',
+            title: 'Controles de salud',
             subtitle: 'Seguimiento del desarrollo y la salud del bebé',
           ),
           const SizedBox(height: 14),
           if (controls.isEmpty)
-            const HealthActionRow(
+            const HealthEmptyState(
               icon: Icons.medical_services_outlined,
-              title: 'Control de 4 meses',
-              subtitle: 'Pediatría · Fecha por programar',
+              title: 'Aún no hay controles',
+              description:
+                  'Los controles pediátricos o de crecimiento aparecerán aquí.',
             )
           else
             for (final event in controls) ...[
               HealthActionRow(
-                icon: Icons.medical_services_outlined,
+                icon: event.type == HealthEventType.growthControl
+                    ? Icons.monitor_weight_outlined
+                    : Icons.medical_services_outlined,
                 title: event.title,
                 subtitle:
                     '${event.description} · ${healthDateLabel(event.startsAt)} ${healthTimeLabel(event.startsAt)}',
-                onTap: () => openFlow(HealthFlowAction.detail),
+                trailing: _HealthEventStatus(event.status),
+                onTap: () {
+                  controller.selectHealthEvent(event);
+                  openFlow(HealthFlowAction.detail);
+                },
               ),
               const SizedBox(height: 12),
             ],
-          if (controls.isEmpty) const SizedBox(height: 12),
-          const HealthActionRow(
-            icon: Icons.restaurant_outlined,
-            title: 'Control de crecimiento',
-            subtitle: 'Nutrición · Seguimiento recomendado',
-          ),
           const SizedBox(height: 12),
           HealthActionRow(
             icon: Icons.history_rounded,
@@ -204,9 +191,11 @@ class _GrowthSectionViewState extends State<GrowthSectionView> {
     return HealthFlowBody(
       controller: widget.controller,
       builder: (context) {
-        final measurements = _measurements(widget.controller, type);
+        final measurements = widget.controller.measurements
+            .where((measurement) => measurement.type == type)
+            .toList(growable: false);
         final latest = measurements.isEmpty ? null : measurements.first;
-        final value = latest?.$1;
+        final value = latest?.value;
         final unit = type == HealthMeasurementType.weight ? 'kg' : 'cm';
         final color = Theme.of(context).colorScheme.primary;
         return [
@@ -227,51 +216,61 @@ class _GrowthSectionViewState extends State<GrowthSectionView> {
             onSelectionChanged: (value) => setState(() => type = value.first),
           ),
           const SizedBox(height: 18),
-          HealthSurface(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 54,
-                      height: 54,
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.10),
-                        shape: BoxShape.circle,
+          if (measurements.isEmpty)
+            HealthEmptyState(
+              title:
+                  'Sin mediciones de ${type == HealthMeasurementType.weight ? 'peso' : 'talla'}',
+              description:
+                  'Registra la primera medición para comenzar a visualizar la evolución.',
+              icon: type == HealthMeasurementType.weight
+                  ? Icons.monitor_weight_outlined
+                  : Icons.straighten_rounded,
+            )
+          else
+            HealthSurface(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 54,
+                        height: 54,
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.10),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          type == HealthMeasurementType.weight
+                              ? Icons.monitor_weight_outlined
+                              : Icons.straighten_rounded,
+                          color: color,
+                        ),
                       ),
-                      child: Icon(
-                        type == HealthMeasurementType.weight
-                            ? Icons.monitor_weight_outlined
-                            : Icons.straighten_rounded,
-                        color: color,
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              type == HealthMeasurementType.weight
+                                  ? 'Peso actual'
+                                  : 'Talla actual',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            Text(
+                              value == null
+                                  ? 'Sin mediciones'
+                                  : '${value.toStringAsFixed(type == HealthMeasurementType.weight ? 2 : 1)} $unit',
+                              style: Theme.of(context).textTheme.headlineMedium
+                                  ?.copyWith(fontWeight: FontWeight.w800),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            type == HealthMeasurementType.weight
-                                ? 'Peso actual'
-                                : 'Talla actual',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          Text(
-                            value == null
-                                ? 'Sin mediciones'
-                                : '${value.toStringAsFixed(type == HealthMeasurementType.weight ? 2 : 1)} $unit',
-                            style: Theme.of(context).textTheme.headlineMedium
-                                ?.copyWith(fontWeight: FontWeight.w800),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (latest != null)
                       Flexible(
                         child: Text(
-                          healthDateLabel(latest.$2),
+                          healthDateLabel(latest!.recordedAt),
                           textAlign: TextAlign.end,
                           style: Theme.of(context).textTheme.labelMedium
                               ?.copyWith(
@@ -281,81 +280,55 @@ class _GrowthSectionViewState extends State<GrowthSectionView> {
                               ),
                         ),
                       ),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                if (measurements.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 32),
-                    child: Center(
-                      child: Text(
-                        'Registra una medición para comenzar la curva de crecimiento.',
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  )
-                else
-                  SizedBox(
-                    height: 190,
-                    width: double.infinity,
-                    child: CustomPaint(
-                      painter: _GrowthChartPainter(
-                        color: color,
-                        unit: unit,
-                        values: measurements.reversed
-                            .map((measurement) => measurement.$1)
-                            .toList(growable: false),
-                      ),
-                    ),
+                    ],
                   ),
-              ],
+                  const SizedBox(height: 18),
+                  _GrowthTrendChart(
+                    color: color,
+                    unit: unit,
+                    measurements: measurements.reversed.toList(growable: false),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 20),
-          const HealthSectionHeading(title: 'Últimas mediciones'),
-          const SizedBox(height: 12),
-          HealthSurface(
-            padding: EdgeInsets.zero,
-            child: Column(
-              children: [
-                if (measurements.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.all(20),
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: Text(
-                        'Todavía no hay mediciones registradas.',
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  )
-                else
+          if (measurements.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            const HealthSectionHeading(title: 'Últimas mediciones'),
+            const SizedBox(height: 12),
+            HealthSurface(
+              padding: EdgeInsets.zero,
+              child: Column(
+                children: [
                   for (final item in measurements)
                     _MeasurementRow(
-                      value: item.$1,
+                      value: item.value,
                       unit: unit,
-                      date: item.$2,
-                      status: item.$3,
-                      onTap: () => widget.openFlow(HealthFlowAction.detail),
+                      date: item.recordedAt,
+                      status: item.syncStatus,
+                      onTap: () {
+                        widget.controller.selectMeasurement(item);
+                        widget.openFlow(HealthFlowAction.detail);
+                      },
                     ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          HealthSurface(
-            color: Theme.of(context).colorScheme.secondaryContainer,
-            child: const Row(
-              children: [
-                Icon(Icons.auto_graph_rounded),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Curva basada en referencias OMS. Lo importante es mantener una tendencia estable.',
+            const SizedBox(height: 16),
+            HealthSurface(
+              color: Theme.of(context).colorScheme.secondaryContainer,
+              child: const Row(
+                children: [
+                  Icon(Icons.auto_graph_rounded),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'La curva muestra únicamente las mediciones registradas para este bebé.',
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
+          ],
           const SizedBox(height: 18),
           HealthPrimaryButton(
             label: 'Registrar medición',
@@ -387,40 +360,57 @@ class ConsultationsSectionView extends StatelessWidget {
     return HealthFlowBody(
       controller: controller,
       builder: (context) {
-        final consultations = controller.clinicalRecords
+        final consultations = controller.consultations;
+        final now = DateTime.now();
+        final upcoming = controller.controls
             .where(
               (event) =>
-                  event.details['observation_type'] == 'medical_consultation',
+                  event.status == HealthEventStatus.scheduled &&
+                  !event.startsAt.isBefore(now),
             )
-            .toList(growable: false);
+            .firstOrNull;
         return [
-          HealthSurface(
-            color: Theme.of(context).colorScheme.primaryContainer,
-            child: Row(
-              children: [
-                Icon(
-                  Icons.event_available_outlined,
-                  size: 38,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(width: 14),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Próxima consulta',
-                        style: TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                      SizedBox(height: 3),
-                      Text('Control pediátrico · 12 jun · 11:30'),
-                    ],
+          if (upcoming != null)
+            HealthSurface(
+              color: Theme.of(context).colorScheme.primaryContainer,
+              onTap: () {
+                controller.selectHealthEvent(upcoming);
+                openFlow(HealthFlowAction.detail);
+              },
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.event_available_outlined,
+                    size: 38,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
-                ),
-                const Icon(Icons.chevron_right_rounded),
-              ],
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Próxima consulta',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          '${upcoming.title} · ${healthDateLabel(upcoming.startsAt)} · ${healthTimeLabel(upcoming.startsAt)}',
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right_rounded),
+                ],
+              ),
+            )
+          else
+            const HealthEmptyState(
+              title: 'Sin próximas consultas',
+              description:
+                  'Cuando programes un control, lo verás destacado aquí.',
+              icon: Icons.event_busy_outlined,
             ),
-          ),
           const SizedBox(height: 24),
           HealthSectionHeading(
             title: 'Historial reciente',
@@ -429,30 +419,28 @@ class ConsultationsSectionView extends StatelessWidget {
                 : '${consultations.length} consultas registradas',
           ),
           const SizedBox(height: 14),
-          if (consultations.isEmpty) ...[
-            HealthActionRow(
+          if (consultations.isEmpty)
+            const HealthEmptyState(
+              title: 'Aún no hay consultas guardadas',
+              description:
+                  'Registra una consulta para conservar sus indicaciones y seguimiento.',
               icon: Icons.medical_information_outlined,
-              title: 'Control pediátrico',
-              subtitle: 'Consulta de ejemplo · Dra. Valeria Ruiz',
-              onTap: () => openFlow(HealthFlowAction.detail),
-            ),
-            const SizedBox(height: 12),
-          ] else
+            )
+          else
             for (final consultation in consultations) ...[
               HealthActionRow(
                 icon: Icons.medical_information_outlined,
-                title: _detailText(
-                  consultation,
-                  'title',
-                  'Consulta pediátrica',
-                ),
+                title: consultation.title,
                 subtitle:
-                    '${healthDateLabel(consultation.occurredAt)} · ${_detailText(consultation, 'pediatrician', 'Pediatra')}',
+                    '${healthDateLabel(consultation.occurredAt)} · ${consultation.pediatrician}',
                 trailing: HealthSyncBadge(
                   status: consultation.syncStatus,
                   compact: true,
                 ),
-                onTap: () => openFlow(HealthFlowAction.detail),
+                onTap: () {
+                  controller.selectConsultation(consultation);
+                  openFlow(HealthFlowAction.detail);
+                },
               ),
               const SizedBox(height: 12),
             ],
@@ -490,93 +478,100 @@ class PediatricCareSectionView extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     return HealthFlowBody(
       controller: controller,
-      builder: (context) => [
-        const HealthSectionHeading(
-          title: 'Mis pediatras',
-          subtitle: 'Profesionales y centros guardados para el bebé',
-        ),
-        const SizedBox(height: 16),
-        HealthSurface(
-          onTap: () => openFlow(HealthFlowAction.detail),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 34,
-                    backgroundColor: colors.primaryContainer,
-                    child: Icon(
-                      Icons.medical_services_outlined,
-                      color: colors.primary,
-                      size: 32,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Dra. Valeria Ruiz',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        Text('Pediatría general'),
-                        SizedBox(height: 5),
-                        Wrap(
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          spacing: 4,
-                          children: [
-                            Icon(Icons.star_rounded, color: Colors.amber),
-                            Text('5.0 · 4 consultas'),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => openFlow(HealthFlowAction.detail),
-                    icon: const Icon(Icons.chevron_right_rounded),
-                  ),
-                ],
-              ),
-              const Divider(height: 28),
-              const Row(
-                children: [
-                  Icon(Icons.location_on_outlined),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text('Clínica infantil · Atención pediátrica'),
-                  ),
-                ],
-              ),
-            ],
+      builder: (context) {
+        final pediatricians = controller.pediatricians;
+        return [
+          HealthSectionHeading(
+            title: 'Mis pediatras',
+            subtitle: pediatricians.isEmpty
+                ? 'No hay profesionales guardados'
+                : '${pediatricians.length} profesionales vinculados al historial',
           ),
-        ),
-        const SizedBox(height: 12),
-        HealthActionRow(
-          icon: Icons.local_hospital_outlined,
-          title: 'Clínica infantil',
-          subtitle: 'Av. del Sol 123 · Atención pediátrica integral',
-          tint: colors.tertiary,
-          onTap: () => openFlow(HealthFlowAction.detail),
-        ),
-        const SizedBox(height: 20),
-        HealthPrimaryButton(
-          label: 'Agregar pediatra',
-          icon: Icons.person_add_alt_1_rounded,
-          onPressed: () => openFlow(HealthFlowAction.register),
-        ),
-        const SizedBox(height: 12),
-        HealthPrimaryButton(
-          label: 'Comparar experiencias',
-          icon: Icons.compare_arrows_rounded,
-          outlined: true,
-          onPressed: () => openFlow(HealthFlowAction.compare),
-        ),
-      ],
+          const SizedBox(height: 16),
+          if (pediatricians.isEmpty)
+            const HealthEmptyState(
+              title: 'Aún no hay pediatras',
+              description:
+                  'Guarda un profesional o registra una consulta para verlo aquí.',
+              icon: Icons.medical_services_outlined,
+            )
+          else
+            for (final pediatrician in pediatricians) ...[
+              HealthSurface(
+                onTap: () {
+                  controller.selectPediatrician(pediatrician);
+                  openFlow(HealthFlowAction.detail);
+                },
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 30,
+                      backgroundColor: colors.primaryContainer,
+                      child: Text(
+                        pediatrician.name.characters.first.toUpperCase(),
+                        style: TextStyle(
+                          color: colors.primary,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            pediatrician.name,
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w800),
+                          ),
+                          Text(
+                            pediatrician.specialty,
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                          const SizedBox(height: 5),
+                          Text(
+                            pediatrician.consultationCount == 0
+                                ? 'Sin consultas asociadas'
+                                : '${pediatrician.consultationCount} ${pediatrician.consultationCount == 1 ? 'consulta' : 'consultas'} · Última ${healthDateLabel(pediatrician.lastConsultationAt!)}',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: colors.onSurfaceVariant),
+                          ),
+                          if (pediatrician.place != null) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              pediatrician.place!,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.chevron_right_rounded),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+          const SizedBox(height: 8),
+          HealthPrimaryButton(
+            label: 'Agregar pediatra',
+            icon: Icons.person_add_alt_1_rounded,
+            onPressed: () => openFlow(HealthFlowAction.register),
+          ),
+          const SizedBox(height: 12),
+          HealthPrimaryButton(
+            label: 'Comparar experiencias',
+            icon: Icons.compare_arrows_rounded,
+            outlined: true,
+            onPressed: pediatricians.isEmpty
+                ? null
+                : () => openFlow(HealthFlowAction.compare),
+          ),
+        ];
+      },
     );
   }
 }
@@ -610,8 +605,12 @@ class ClinicalHistorySectionView extends StatelessWidget {
                 HealthEventType.growthControl => Icons.monitor_weight_outlined,
               },
               color: Theme.of(context).colorScheme.primary,
+              onTap: () {
+                controller.selectHealthEvent(event);
+                openFlow(HealthFlowAction.detail);
+              },
             ),
-          for (final record in controller.records.take(12))
+          for (final record in controller.reportableRecords.take(12))
             _HistoryItem(
               title: _historyTitle(record),
               subtitle: _historySubtitle(record),
@@ -619,6 +618,10 @@ class ClinicalHistorySectionView extends StatelessWidget {
               icon: _historyIcon(record.type),
               color: _historyColor(context, record.type),
               syncStatus: record.syncStatus,
+              onTap: () {
+                controller.selectRecord(record);
+                openFlow(HealthFlowAction.detail);
+              },
             ),
         ]..sort((a, b) => b.occurredAt.compareTo(a.occurredAt));
         return [
@@ -628,10 +631,10 @@ class ClinicalHistorySectionView extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           if (timeline.isEmpty)
-            const HealthActionRow(
+            const HealthEmptyState(
               icon: Icons.folder_open_outlined,
               title: 'Aún no hay historial',
-              subtitle: 'Los registros de salud aparecerán aquí.',
+              description: 'Los registros de salud aparecerán aquí.',
             )
           else
             for (final item in timeline.take(16)) ...[
@@ -644,7 +647,7 @@ class ClinicalHistorySectionView extends StatelessWidget {
                 trailing: item.syncStatus == null
                     ? null
                     : HealthSyncBadge(status: item.syncStatus!, compact: true),
-                onTap: () => openFlow(HealthFlowAction.detail),
+                onTap: item.onTap,
               ),
               const SizedBox(height: 12),
             ],
@@ -682,7 +685,7 @@ class ReportsSectionView extends StatelessWidget {
           HealthReportRange.month => 30,
         };
         final after = DateTime.now().subtract(Duration(days: days));
-        int count(RegisterEventType type) => controller.records
+        int count(RegisterEventType type) => controller.reportableRecords
             .where(
               (event) => event.type == type && event.occurredAt.isAfter(after),
             )
@@ -690,7 +693,10 @@ class ReportsSectionView extends StatelessWidget {
         final feedings = count(RegisterEventType.feeding);
         final sleeps = count(RegisterEventType.sleep);
         final diapers = count(RegisterEventType.diaper);
-        final recordsInRange = controller.records
+        final recordsInRange = controller.reportableRecords
+            .where((event) => event.occurredAt.isAfter(after))
+            .toList(growable: false);
+        final clinicalNotesInRange = controller.clinicalNotes
             .where((event) => event.occurredAt.isAfter(after))
             .toList(growable: false);
         final totalFeedingMl = recordsInRange
@@ -751,6 +757,15 @@ class ReportsSectionView extends StatelessWidget {
                 controller.selectReportRange(value.first),
           ),
           const SizedBox(height: 18),
+          if (recordsInRange.isEmpty) ...[
+            const HealthEmptyState(
+              title: 'Sin actividad en este período',
+              description:
+                  'Cambia el rango o agrega registros para generar tendencias y totales.',
+              icon: Icons.insights_outlined,
+            ),
+            const SizedBox(height: 18),
+          ],
           BebeMetricsOverview(
             minimumItemWidth: 96,
             maximumColumnCount: 3,
@@ -823,14 +838,17 @@ class ReportsSectionView extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          if (controller.clinicalRecords.isEmpty)
-            const HealthActionRow(
+          if (clinicalNotesInRange.isEmpty)
+            HealthEmptyState(
               icon: Icons.note_alt_outlined,
               title: 'Sin observaciones en el período',
-              subtitle: 'Agrega una observación para incluirla en el reporte.',
+              description:
+                  'Agrega una observación para incluirla en el reporte.',
+              actionLabel: 'Nueva observación',
+              onActionPressed: () => openFlow(HealthFlowAction.observation),
             )
           else
-            for (final event in controller.clinicalRecords.take(3)) ...[
+            for (final event in clinicalNotesInRange.take(3)) ...[
               HealthActionRow(
                 icon: Icons.note_alt_outlined,
                 title: _detailText(event, 'title', 'Observación clínica'),
@@ -843,7 +861,10 @@ class ReportsSectionView extends StatelessWidget {
                   status: event.syncStatus,
                   compact: true,
                 ),
-                onTap: () => openFlow(HealthFlowAction.detail),
+                onTap: () {
+                  controller.selectRecord(event);
+                  openFlow(HealthFlowAction.detail);
+                },
               ),
               const SizedBox(height: 10),
             ],
@@ -1078,6 +1099,7 @@ class _HistoryItem {
     required this.icon,
     required this.color,
     this.syncStatus,
+    this.onTap,
   });
 
   final String title;
@@ -1086,31 +1108,7 @@ class _HistoryItem {
   final IconData icon;
   final Color color;
   final RegisterSyncStatus? syncStatus;
-}
-
-List<(double, DateTime, RegisterSyncStatus)> _measurements(
-  HealthFlowController controller,
-  HealthMeasurementType type,
-) {
-  final result = <(double, DateTime, RegisterSyncStatus)>[];
-  for (final event in controller.measurementRecords) {
-    if (event.details['measurement_type'] != type.name) continue;
-    final value = event.details['value'];
-    if (value is num) {
-      result.add((value.toDouble(), event.occurredAt, event.syncStatus));
-    }
-  }
-  for (final measurement in controller.overview?.measurements ?? const []) {
-    if (measurement.type == type) {
-      result.add((
-        measurement.value,
-        measurement.recordedAt,
-        RegisterSyncStatus.synced,
-      ));
-    }
-  }
-  result.sort((a, b) => b.$2.compareTo(a.$2));
-  return result;
+  final VoidCallback? onTap;
 }
 
 String _detailText(RegisteredEvent event, String key, String fallback) {
@@ -1210,162 +1208,139 @@ Color _historyColor(BuildContext context, RegisterEventType type) {
   };
 }
 
-class _GrowthChartPainter extends CustomPainter {
-  const _GrowthChartPainter({
+class _GrowthTrendChart extends StatelessWidget {
+  const _GrowthTrendChart({
     required this.color,
-    required this.values,
     required this.unit,
+    required this.measurements,
   });
 
   final Color color;
-  final List<double> values;
   final String unit;
+  final List<HealthMeasurementRecord> measurements;
 
   @override
-  void paint(Canvas canvas, Size size) {
-    final chart = Rect.fromLTRB(30, 8, size.width - 34, size.height - 28);
-    final grid = Paint()
-      ..color = color.withValues(alpha: 0.14)
-      ..strokeWidth = 1;
-    for (var i = 0; i <= 4; i++) {
-      final y = chart.top + chart.height * i / 4;
-      canvas.drawLine(Offset(chart.left, y), Offset(chart.right, y), grid);
-      _paintLabel(
-        canvas,
-        '${(4 - i) * (unit == 'kg' ? 2.5 : 10)}',
-        Offset(0, y - 7),
-        color.withValues(alpha: .7),
-      );
-    }
-    final percentile = Paint()
-      ..color = color.withValues(alpha: 0.28)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.3;
-    for (var line = 0; line < 3; line++) {
-      final path = Path();
-      for (var i = 0; i <= 6; i++) {
-        final x = chart.left + chart.width * i / 6;
-        final progress = i / 6;
-        final y =
-            chart.bottom -
-            chart.height * (.12 + line * .22 + progress * (.24 - line * .03));
-        if (i == 0) {
-          path.moveTo(x, y);
-        } else {
-          path.lineTo(x, y);
-        }
-      }
-      _drawDashedPath(canvas, path, percentile);
-      _paintLabel(
-        canvas,
-        const ['P3', 'P50', 'P97'][line],
-        Offset(
-          chart.right + 5,
-          chart.bottom - chart.height * (.36 + line * .19),
-        ),
-        color.withValues(alpha: line == 1 ? 1 : .65),
-      );
-    }
+  Widget build(BuildContext context) {
+    final values = measurements.map((item) => item.value).toList();
+    final minimum = values.reduce(math.min);
+    final maximum = values.reduce(math.max);
+    final spread = math
+        .max(maximum - minimum, unit == 'kg' ? 0.5 : 2.0)
+        .toDouble();
+    final minY = math.max(0, minimum - spread * 0.35).toDouble();
+    final maxY = maximum + spread * 0.35;
+    final interval = math.max((maxY - minY) / 4, unit == 'kg' ? 0.1 : 1.0);
+    final colors = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final labelStep = measurements.length <= 5
+        ? 1
+        : math.max(1, ((measurements.length - 1) / 4).ceil());
 
-    for (var i = 0; i <= 6; i++) {
-      _paintLabel(
-        canvas,
-        '$i',
-        Offset(chart.left + chart.width * i / 6 - 3, chart.bottom + 6),
-        color.withValues(alpha: .7),
-      );
-    }
-
-    final effectiveValues = values.isEmpty ? const [0.0] : values;
-    final maximum = effectiveValues.fold<double>(
-      unit == 'kg' ? 10 : 80,
-      (current, value) => value > current ? value : current,
-    );
-    final minimum = unit == 'kg' ? 0.0 : 40.0;
-    Offset pointFor(int index) {
-      final denominator = effectiveValues.length <= 1
-          ? 1
-          : effectiveValues.length - 1;
-      final x = chart.left + chart.width * index / denominator;
-      final normalized =
-          ((effectiveValues[index] - minimum) / (maximum - minimum))
-              .clamp(0, 1)
-              .toDouble();
-      return Offset(x, chart.bottom - chart.height * normalized);
-    }
-
-    final actual = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3
-      ..strokeCap = StrokeCap.round;
-    final first = pointFor(0);
-    final path = Path()..moveTo(first.dx, first.dy);
-    for (var index = 1; index < effectiveValues.length; index++) {
-      final point = pointFor(index);
-      path.lineTo(point.dx, point.dy);
-    }
-    final area = Path.from(path)
-      ..lineTo(pointFor(effectiveValues.length - 1).dx, chart.bottom)
-      ..lineTo(first.dx, chart.bottom)
-      ..close();
-    canvas.drawPath(
-      area,
-      Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [color.withValues(alpha: .18), color.withValues(alpha: .01)],
-        ).createShader(chart),
-    );
-    canvas.drawPath(path, actual);
-    final point = Paint()..color = color;
-    for (var index = 0; index < effectiveValues.length; index++) {
-      canvas.drawCircle(pointFor(index), 5, point);
-    }
-  }
-
-  static void _drawDashedPath(Canvas canvas, Path path, Paint paint) {
-    for (final metric in path.computeMetrics()) {
-      var distance = 0.0;
-      while (distance < metric.length) {
-        canvas.drawPath(
-          metric.extractPath(
-            distance,
-            (distance + 6).clamp(0, metric.length).toDouble(),
+    return SizedBox(
+      height: 220,
+      width: double.infinity,
+      child: LineChart(
+        LineChartData(
+          minX: 0,
+          maxX: math.max(1, measurements.length - 1).toDouble(),
+          minY: minY,
+          maxY: maxY,
+          borderData: FlBorderData(show: false),
+          gridData: FlGridData(
+            drawVerticalLine: false,
+            horizontalInterval: interval,
+            getDrawingHorizontalLine: (_) =>
+                FlLine(color: colors.outlineVariant.withValues(alpha: 0.5)),
           ),
-          paint,
-        );
-        distance += 10;
-      }
-    }
-  }
-
-  static void _paintLabel(
-    Canvas canvas,
-    String value,
-    Offset offset,
-    Color color,
-  ) {
-    final painter = TextPainter(
-      text: TextSpan(
-        text: value,
-        style: TextStyle(
-          color: color,
-          fontSize: 10,
-          fontWeight: FontWeight.w600,
+          titlesData: FlTitlesData(
+            topTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            rightTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            leftTitles: AxisTitles(
+              axisNameWidget: Text(unit, style: textTheme.labelSmall),
+              axisNameSize: 20,
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 38,
+                interval: interval,
+                getTitlesWidget: (value, meta) => Text(
+                  value.toStringAsFixed(unit == 'kg' ? 1 : 0),
+                  style: textTheme.labelSmall?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ),
+            bottomTitles: AxisTitles(
+              axisNameWidget: Text('Fecha', style: textTheme.labelSmall),
+              axisNameSize: 20,
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 32,
+                interval: 1,
+                getTitlesWidget: (value, meta) {
+                  final index = value.round();
+                  if (value != index ||
+                      index >= measurements.length ||
+                      (index % labelStep != 0 &&
+                          index != measurements.length - 1)) {
+                    return const SizedBox.shrink();
+                  }
+                  final date = measurements[index].recordedAt.toLocal();
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(
+                      '${date.day}/${date.month}',
+                      style: textTheme.labelSmall?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+          lineTouchData: LineTouchData(
+            touchTooltipData: LineTouchTooltipData(
+              getTooltipColor: (_) => colors.surfaceContainerHighest,
+              getTooltipItems: (spots) => spots
+                  .map((spot) {
+                    final measurement = measurements[spot.x.round()];
+                    return LineTooltipItem(
+                      '${measurement.value.toStringAsFixed(unit == 'kg' ? 2 : 1)} $unit\n${healthDateLabel(measurement.recordedAt)}',
+                      textTheme.labelSmall!.copyWith(
+                        color: colors.onSurface,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    );
+                  })
+                  .toList(growable: false),
+            ),
+          ),
+          lineBarsData: [
+            LineChartBarData(
+              spots: [
+                for (var index = 0; index < measurements.length; index++)
+                  FlSpot(index.toDouble(), measurements[index].value),
+              ],
+              isCurved: measurements.length > 2,
+              preventCurveOverShooting: true,
+              color: color,
+              barWidth: 3,
+              dotData: const FlDotData(show: true),
+              belowBarData: BarAreaData(
+                show: true,
+                color: color.withValues(alpha: 0.09),
+              ),
+            ),
+          ],
         ),
       ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    painter.paint(canvas, offset);
+    );
   }
-
-  @override
-  bool shouldRepaint(covariant _GrowthChartPainter oldDelegate) =>
-      oldDelegate.color != color ||
-      oldDelegate.values != values ||
-      oldDelegate.unit != unit;
 }
 
 class _ReportsTrendChart extends StatelessWidget {

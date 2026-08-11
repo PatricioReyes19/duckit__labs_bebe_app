@@ -5,6 +5,7 @@ export 'picker_field/picker_field.dart';
 export 'notes_field/notes_field.dart';
 export 'photo_picker/photo_picker.dart';
 export 'status_banner/bebe_status_banner.dart';
+export 'in_app_snackbar/bebe_in_app_snackbar.dart';
 export 'baby_selector/bebe_baby_selector.dart';
 export 'title_section.dart';
 export 'metric_card/bebe_metric_card.dart';

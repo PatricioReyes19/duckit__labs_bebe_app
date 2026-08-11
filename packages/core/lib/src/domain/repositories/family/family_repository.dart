@@ -1,6 +1,8 @@
 import '../../entities/family/family.dart';
 
 abstract interface class FamilyRepository {
+  Stream<String> get activeBabyChanges;
+
   Future<FamilyOverviewEntity> getCurrent();
 
   Future<FamilyOverviewEntity> setActiveBaby(String babyId);

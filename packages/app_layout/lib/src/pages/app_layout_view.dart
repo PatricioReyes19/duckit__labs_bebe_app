@@ -135,9 +135,5 @@ class _AppLayoutViewState extends State<AppLayoutView> {
   }
 
   static const _branchRoots = {'/home', '/agenda', '/health', '/family'};
-  static const _familySectionParents = {
-    'babies',
-    'care-circle',
-    'settings',
-  };
+  static const _familySectionParents = {'babies', 'care-circle', 'settings'};
 }

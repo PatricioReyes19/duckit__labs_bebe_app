@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:core/core.dart';
-import 'package:flutter/material.dart';
+import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -582,10 +582,10 @@ class _AgendaSubpageViewState extends State<_AgendaSubpageView> {
                         }
                         if (mounted) {
                           setState(() {});
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Recordatorio actualizado.'),
-                            ),
+                          BebeInAppSnackbar.show(
+                            context,
+                            message: 'Recordatorio actualizado.',
+                            variant: BebeInAppSnackbarVariant.success,
                           );
                         }
                       } on Object {

@@ -11,6 +11,9 @@ typedef HomeDailyHistoryAction = void Function(BuildContext context);
 typedef DeleteRegisterEventFactory = DeleteRegisterEvent Function(
   BuildContext context,
 );
+typedef UpdateRegisterEventFactory = UpdateRegisterEvent Function(
+  BuildContext context,
+);
 typedef RegisterEventSyncServiceFactory = RegisterEventSyncService Function(
   BuildContext context,
 );
@@ -23,6 +26,7 @@ class HomeDailyHistoryPage extends GoRoute {
     required GetRegisterEventsFactory getRegisterEvents,
     required HomeDailyHistoryAction onRegisterPressed,
     this.deleteRegisterEvent,
+    this.updateRegisterEvent,
     this.syncService,
     this.getFamilyOverview,
     this.babyId = 'baby-preview',
@@ -41,6 +45,7 @@ class HomeDailyHistoryPage extends GoRoute {
                       context: context,
                       getRegisterEvents: getRegisterEvents,
                       deleteRegisterEvent: deleteRegisterEvent,
+                      updateRegisterEvent: updateRegisterEvent,
                       syncService: syncService,
                       babyId: babyId,
                       babyName: babyName,
@@ -59,6 +64,7 @@ class HomeDailyHistoryPage extends GoRoute {
                           context: context,
                           getRegisterEvents: getRegisterEvents,
                           deleteRegisterEvent: deleteRegisterEvent,
+                          updateRegisterEvent: updateRegisterEvent,
                           syncService: syncService,
                           babyId: baby.id,
                           babyName: baby.name,
@@ -73,6 +79,7 @@ class HomeDailyHistoryPage extends GoRoute {
   final String babyId;
   final String babyName;
   final DeleteRegisterEventFactory? deleteRegisterEvent;
+  final UpdateRegisterEventFactory? updateRegisterEvent;
   final RegisterEventSyncServiceFactory? syncService;
   final HomeFamilyOverviewFactory? getFamilyOverview;
 
@@ -85,6 +92,7 @@ Widget _historyContent({
   required BuildContext context,
   required GetRegisterEventsFactory getRegisterEvents,
   required DeleteRegisterEventFactory? deleteRegisterEvent,
+  required UpdateRegisterEventFactory? updateRegisterEvent,
   required RegisterEventSyncServiceFactory? syncService,
   required String babyId,
   required String babyName,
@@ -94,6 +102,7 @@ Widget _historyContent({
       create: (_) => HomeDailyHistoryCubit(
         getRegisterEvents: getRegisterEvents(context),
         deleteRegisterEvent: deleteRegisterEvent?.call(context),
+        updateRegisterEvent: updateRegisterEvent?.call(context),
         syncService: syncService?.call(context),
         babyId: babyId,
       )..load(),

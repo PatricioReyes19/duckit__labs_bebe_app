@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:design_system/design_system.dart';
@@ -7,12 +8,16 @@ import 'package:home/home.dart';
 import 'package:home/models/home_overview_vm.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+typedef HomeViewClock = DateTime Function();
+
 class HomeView extends StatelessWidget {
   const HomeView({
     required this.openRegister,
     required this.openAgenda,
     required this.openHealth,
     required this.openTodayHistory,
+    required this.switchBaby,
+    this.clock,
     super.key,
   });
 
@@ -20,6 +25,8 @@ class HomeView extends StatelessWidget {
   final void Function(BuildContext context) openAgenda;
   final void Function(BuildContext context) openHealth;
   final void Function(BuildContext context) openTodayHistory;
+  final HomeBabySwitcher switchBaby;
+  final HomeViewClock? clock;
 
   @override
   Widget build(BuildContext context) {
@@ -51,6 +58,8 @@ class HomeView extends StatelessWidget {
               openAgenda: openAgenda,
               openHealth: openHealth,
               openTodayHistory: openTodayHistory,
+              switchBaby: switchBaby,
+              clock: clock ?? DateTime.now,
             ),
         };
       },
@@ -58,13 +67,15 @@ class HomeView extends StatelessWidget {
   }
 }
 
-class _LoadedHome extends StatelessWidget {
+class _LoadedHome extends StatefulWidget {
   const _LoadedHome({
     required this.overview,
     required this.openRegister,
     required this.openAgenda,
     required this.openHealth,
     required this.openTodayHistory,
+    required this.switchBaby,
+    required this.clock,
   });
 
   final HomeOverviewVm overview;
@@ -72,6 +83,73 @@ class _LoadedHome extends StatelessWidget {
   final void Function(BuildContext context) openAgenda;
   final void Function(BuildContext context) openHealth;
   final void Function(BuildContext context) openTodayHistory;
+  final HomeBabySwitcher switchBaby;
+  final HomeViewClock clock;
+
+  @override
+  State<_LoadedHome> createState() => _LoadedHomeState();
+}
+
+class _LoadedHomeState extends State<_LoadedHome> {
+  Timer? _reminderTimer;
+  HomeVisualReminderVm? _activeReminder;
+  String? _switchingBabyId;
+
+  HomeOverviewVm get overview => widget.overview;
+  void Function(BuildContext, String) get openRegister => widget.openRegister;
+  void Function(BuildContext) get openAgenda => widget.openAgenda;
+  void Function(BuildContext) get openHealth => widget.openHealth;
+  void Function(BuildContext) get openTodayHistory => widget.openTodayHistory;
+
+  @override
+  void initState() {
+    super.initState();
+    _activeReminder = HomeVisualReminderVm.activeAt(
+      overview.visualReminders,
+      widget.clock(),
+    );
+    _armReminderTimer();
+  }
+
+  @override
+  void didUpdateWidget(covariant _LoadedHome oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_switchingBabyId == overview.activeBaby.id) {
+      _switchingBabyId = null;
+    }
+    _activeReminder = HomeVisualReminderVm.activeAt(
+      overview.visualReminders,
+      widget.clock(),
+    );
+    _armReminderTimer();
+  }
+
+  void _armReminderTimer() {
+    _reminderTimer?.cancel();
+    final now = widget.clock();
+    final transition = HomeVisualReminderVm.nextTransitionAt(
+      overview.visualReminders,
+      now,
+    );
+    if (transition == null) return;
+    final delay = transition.difference(now) + const Duration(milliseconds: 50);
+    _reminderTimer = Timer(delay, () {
+      if (!mounted) return;
+      setState(() {
+        _activeReminder = HomeVisualReminderVm.activeAt(
+          overview.visualReminders,
+          widget.clock(),
+        );
+      });
+      _armReminderTimer();
+    });
+  }
+
+  @override
+  void dispose() {
+    _reminderTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -83,14 +161,13 @@ class _LoadedHome extends StatelessWidget {
     );
 
     return BebeHomeTemplate(
-      onRefresh: () async {
-        final bloc = context.read<HomeBloc>();
-        final completed = bloc.stream.firstWhere(
-          (state) => state is HomeLoaded || state is HomeFailure,
-        );
-        bloc.add(const HomeEvent.refreshed());
-        await completed;
-      },
+      onRefresh: context.read<HomeBloc>().refreshFromRemote,
+      visualReminder: _activeReminder == null
+          ? null
+          : _HomeVisualReminderBanner(
+              reminder: _activeReminder!,
+              onPressed: () => _openReminder(context, _activeReminder!),
+            ),
       isEmpty: !overview.hasCareData,
       emptyState: _HomeFirstSteps(
         babyName: baby.name,
@@ -101,15 +178,22 @@ class _LoadedHome extends StatelessWidget {
         ageLabel: baby.ageLabel,
         avatar: _babyImage(baby.avatarAssetPath),
         familyContextLabel: baby.familyContextLabel,
-        siblings: baby.sibling == null
-            ? []
-            : [
-                BebeSiblingSummaryData(
-                  name: baby.sibling!.name,
-                  ageLabel: baby.sibling!.ageLabel,
-                  avatar: _babyImage(baby.sibling!.avatarAssetPath),
-                )
-              ],
+        siblings: baby.siblings
+            .map(
+              (sibling) => BebeSiblingSummaryData(
+                id: sibling.id,
+                name: sibling.name,
+                ageLabel: sibling.ageLabel,
+                avatar: _babyImage(sibling.avatarAssetPath),
+              ),
+            )
+            .toList(growable: false),
+        switchingBabyId: _switchingBabyId,
+        onBabyPressed:
+            _switchingBabyId == null ? () => _openBabyPicker(context) : null,
+        onSiblingPressed: _switchingBabyId == null
+            ? (sibling) => _switchBaby(context, sibling.id)
+            : null,
       ),
       todaySummary: BebeTodaySummary(
         title: 'Actividad del día',
@@ -171,6 +255,87 @@ class _LoadedHome extends StatelessWidget {
     );
   }
 
+  Future<void> _openBabyPicker(BuildContext context) async {
+    final active = overview.activeBaby;
+    final choices = <_HomeBabyChoice>[
+      _HomeBabyChoice(
+        id: active.id,
+        name: active.name,
+        ageLabel: active.ageLabel,
+        avatarAssetPath: active.avatarAssetPath,
+      ),
+      for (final sibling in active.siblings)
+        _HomeBabyChoice(
+          id: sibling.id,
+          name: sibling.name,
+          ageLabel: sibling.ageLabel,
+          avatarAssetPath: sibling.avatarAssetPath,
+        ),
+    ];
+    final selectedId = await showBebeBottomSheet<String>(
+      context: context,
+      useRootNavigator: true,
+      variant: BebeBottomSheetVariant.dynamic,
+      semanticLabel: 'Seleccionar bebé activo',
+      headerBuilder: (_) => const BebeTitleSection(title: 'Cambiar bebé'),
+      bodyBuilder: (sheetContext) => _HomeBabyPicker(
+        choices: choices,
+        activeBabyId: active.id,
+        onSelected: (babyId) => Navigator.of(sheetContext).pop(babyId),
+      ),
+    );
+    if (!mounted || selectedId == null || selectedId == active.id) return;
+    await _switchBaby(context, selectedId);
+  }
+
+  Future<void> _switchBaby(BuildContext context, String babyId) async {
+    if (_switchingBabyId != null || babyId == overview.activeBaby.id) return;
+    setState(() => _switchingBabyId = babyId);
+    try {
+      await widget.switchBaby(babyId);
+      if (!mounted) return;
+      final bloc = context.read<HomeBloc>();
+      final current = bloc.state;
+      if (current is! HomeLoaded || current.overview.activeBaby.id != babyId) {
+        await bloc.stream
+            .firstWhere(
+              (state) =>
+                  state is HomeFailure ||
+                  state is HomeLoaded && state.overview.activeBaby.id == babyId,
+            )
+            .timeout(const Duration(seconds: 5));
+      }
+      if (!mounted || context.read<HomeBloc>().state is! HomeFailure) return;
+      throw StateError('No se pudieron cargar los datos del bebé.');
+    } on Object {
+      if (mounted) {
+        BebeInAppSnackbar.show(
+          context,
+          title: 'No pudimos cambiar de bebé',
+          message: 'Intenta nuevamente. Tus datos actuales siguen seguros.',
+          variant: BebeInAppSnackbarVariant.error,
+        );
+      }
+    } finally {
+      if (mounted && _switchingBabyId != null) {
+        setState(() => _switchingBabyId = null);
+      }
+    }
+  }
+
+  void _openReminder(BuildContext context, HomeVisualReminderVm reminder) {
+    switch (reminder.kind) {
+      case HomeVisualReminderKind.feeding:
+      case HomeVisualReminderKind.bottle:
+      case HomeVisualReminderKind.formula:
+        openRegister(context, 'feeding');
+      case HomeVisualReminderKind.diaper:
+        openRegister(context, 'diaper');
+      case HomeVisualReminderKind.medication:
+        openAgenda(context);
+    }
+  }
+
   BebeTodayMetricData _metric(HomeTodayMetricVm metric) {
     return BebeTodayMetricData(
       variant: switch (metric.type) {
@@ -209,6 +374,97 @@ class _LoadedHome extends StatelessWidget {
         HomeQuickActionKind.observation => const Icon(Icons.edit_outlined),
         HomeQuickActionKind.medicine => const Icon(Icons.medication_outlined),
       },
+    );
+  }
+}
+
+class _HomeBabyChoice {
+  const _HomeBabyChoice({
+    required this.id,
+    required this.name,
+    required this.ageLabel,
+    required this.avatarAssetPath,
+  });
+
+  final String id;
+  final String name;
+  final String ageLabel;
+  final String? avatarAssetPath;
+}
+
+class _HomeBabyPicker extends StatelessWidget {
+  const _HomeBabyPicker({
+    required this.choices,
+    required this.activeBabyId,
+    required this.onSelected,
+  });
+
+  final List<_HomeBabyChoice> choices;
+  final String activeBabyId;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final spacing = context.theme.spacing;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var index = 0; index < choices.length; index++) ...[
+          BebeBabySelector(
+            key: ValueKey('home-baby-choice-${choices[index].id}'),
+            name: choices[index].name,
+            ageLabel: choices[index].ageLabel,
+            avatar: BebeAvatar.image(
+              image: _babyImage(choices[index].avatarAssetPath),
+              size: BebeAvatarSize.lg,
+              semanticLabel: 'Foto de ${choices[index].name}',
+            ),
+            contextLabel: choices[index].id == activeBabyId
+                ? 'Perfil activo'
+                : 'Cambiar a este perfil',
+            isSelected: choices[index].id == activeBabyId,
+            onPressed: () => onSelected(choices[index].id),
+          ),
+          if (index != choices.length - 1) SizedBox(height: spacing.spacingM),
+        ],
+      ],
+    );
+  }
+}
+
+class _HomeVisualReminderBanner extends StatelessWidget {
+  const _HomeVisualReminderBanner({
+    required this.reminder,
+    required this.onPressed,
+  });
+
+  final HomeVisualReminderVm reminder;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final time = reminder.startsAt;
+    final timeLabel = '${time.hour.toString().padLeft(2, '0')}:'
+        '${time.minute.toString().padLeft(2, '0')}';
+    return BebeStatusBanner(
+      key: const ValueKey('home-visual-reminder'),
+      title: reminder.title,
+      description: '${reminder.detail} · Programado a las $timeLabel',
+      type: BebeStatusBannerType.warning,
+      leading: Icon(
+        switch (reminder.kind) {
+          HomeVisualReminderKind.feeding ||
+          HomeVisualReminderKind.bottle ||
+          HomeVisualReminderKind.formula =>
+            LucideIcons.milk,
+          HomeVisualReminderKind.diaper => LucideIcons.baby,
+          HomeVisualReminderKind.medication => Icons.medication_outlined,
+        },
+      ),
+      trailing: const Icon(Icons.chevron_right_rounded),
+      onPressed: onPressed,
+      semanticLabel: '${reminder.title}. ${reminder.detail}. '
+          'Programado a las $timeLabel.',
     );
   }
 }

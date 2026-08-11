@@ -32,6 +32,7 @@ class RegisterEventView extends StatelessWidget {
     this.showEventContext = true,
     this.useFormSurface = true,
     this.isSaving = false,
+    this.saveLabel = 'Guardar registro',
     this.errorMessage,
     this.scrollController,
     super.key,
@@ -64,6 +65,7 @@ class RegisterEventView extends StatelessWidget {
   final bool showEventContext;
   final bool useFormSurface;
   final bool isSaving;
+  final String saveLabel;
   final String? errorMessage;
   final ScrollController? scrollController;
 
@@ -87,6 +89,7 @@ class RegisterEventView extends StatelessWidget {
           onSavePressed: onSavePressed,
           onCancelPressed: onCancelPressed,
           isSaving: isSaving,
+          saveLabel: saveLabel,
         ),
       ],
     );
