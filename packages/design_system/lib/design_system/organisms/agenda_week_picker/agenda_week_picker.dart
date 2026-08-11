@@ -1,5 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 class BebeAgendaWeekPicker extends StatelessWidget {
@@ -13,6 +14,7 @@ class BebeAgendaWeekPicker extends StatelessWidget {
     required this.onNextWeekPressed,
     this.markersForDay,
     this.onPageChanged,
+    this.onTodayPressed,
     this.locale = 'es_CL',
     this.semanticLabel,
     super.key,
@@ -31,6 +33,7 @@ class BebeAgendaWeekPicker extends StatelessWidget {
   final List<BebeCalendarMarkerData> Function(DateTime day)? markersForDay;
 
   final ValueChanged<DateTime>? onPageChanged;
+  final VoidCallback? onTodayPressed;
   final String locale;
   final String? semanticLabel;
 
@@ -39,24 +42,55 @@ class BebeAgendaWeekPicker extends StatelessWidget {
     return Semantics(
       container: true,
       label: semanticLabel ?? 'Agenda semanal',
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(
-            child: BebeWeekCalendar(
-              firstDay: firstDay,
-              lastDay: lastDay,
-              focusedDay: focusedDay,
-              selectedDay: selectedDay,
-              locale: locale,
-              markersForDay: markersForDay,
-              onDaySelected: onDaySelected,
-              onPageChanged: onPageChanged,
-              startingDayOfWeek: StartingDayOfWeek.monday,
+          Padding(
+            padding: EdgeInsets.only(
+              left: context.theme.spacing.spacingS,
+              right: context.theme.spacing.spacingXs,
             ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _monthLabel(focusedDay),
+                    style: context.theme.typography.styles.title.sm.semibold
+                        .copyWith(
+                          color: context.theme.colors.text.neutralTitle,
+                        ),
+                  ),
+                ),
+                if (onTodayPressed != null)
+                  TextButton.icon(
+                    onPressed: onTodayPressed,
+                    icon: const Icon(Icons.today_outlined, size: 18),
+                    label: const Text('Hoy'),
+                  ),
+              ],
+            ),
+          ),
+          SizedBox(height: context.theme.spacing.spacingS),
+          BebeWeekCalendar(
+            firstDay: firstDay,
+            lastDay: lastDay,
+            focusedDay: focusedDay,
+            selectedDay: selectedDay,
+            locale: locale,
+            markersForDay: markersForDay,
+            onDaySelected: onDaySelected,
+            onPageChanged: onPageChanged,
+            startingDayOfWeek: StartingDayOfWeek.monday,
           ),
         ],
       ),
     );
+  }
+
+  String _monthLabel(DateTime value) {
+    final label = DateFormat.yMMMM(locale).format(value);
+    return label.isEmpty
+        ? ''
+        : '${label[0].toUpperCase()}${label.substring(1)}';
   }
 }

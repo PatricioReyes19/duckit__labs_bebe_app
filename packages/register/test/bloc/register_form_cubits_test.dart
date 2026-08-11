@@ -119,6 +119,23 @@ void main() {
     expect(repository.drafts, isEmpty);
   });
 
+  test('bottle feeding persists the next alarm interval', () async {
+    final cubit = FeedingRegisterCubit(
+      saveRegisterEvent: saveRegisterEvent,
+      babyId: 'baby-1',
+    )
+      ..subtypeChanged('formula')
+      ..amountMlChanged('120')
+      ..scheduleNextFeedingChanged(true)
+      ..reminderHoursChanged(3);
+    addTearDown(cubit.close);
+
+    await cubit.submit();
+
+    expect(repository.drafts.single.details['schedule_next_feeding'], isTrue);
+    expect(repository.drafts.single.details['reminder_interval_hours'], 3);
+  });
+
   test('wet diaper persists urine data without stool characteristics',
       () async {
     final cubit = DiaperRegisterCubit(
@@ -153,6 +170,21 @@ void main() {
     expect(details.containsKey('urine_amount'), isTrue);
     expect(details.containsKey('appearance'), isTrue);
     expect(details.containsKey('amount'), isTrue);
+  });
+
+  test('diaper change persists the requested reminder interval', () async {
+    final cubit = DiaperRegisterCubit(
+      saveRegisterEvent: saveRegisterEvent,
+      babyId: 'baby-1',
+    )
+      ..scheduleReminderChanged(true)
+      ..reminderHoursChanged(4);
+    addTearDown(cubit.close);
+
+    await cubit.submit();
+
+    expect(repository.drafts.single.details['schedule_reminder'], isTrue);
+    expect(repository.drafts.single.details['reminder_interval_hours'], 4);
   });
 
   test('measurement normalizes decimal comma before persistence', () async {

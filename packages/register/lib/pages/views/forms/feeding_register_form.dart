@@ -10,6 +10,8 @@ class FeedingRegisterForm extends StatelessWidget {
     this.startTime = '09:30 AM',
     this.duration = '15 min',
     this.endTime = '',
+    this.scheduleNextFeeding = false,
+    this.reminderLabel = 'En 4 horas',
     this.mood = 'calm',
     this.notesController,
     this.symptomsController,
@@ -18,6 +20,8 @@ class FeedingRegisterForm extends StatelessWidget {
     this.onStartTimePressed,
     this.onDurationPressed,
     this.onEndTimePressed,
+    this.onScheduleNextFeedingChanged,
+    this.onReminderPressed,
     this.onMoodChanged,
     this.onNotesChanged,
     this.onSymptomsChanged,
@@ -30,6 +34,8 @@ class FeedingRegisterForm extends StatelessWidget {
   final String startTime;
   final String duration;
   final String endTime;
+  final bool scheduleNextFeeding;
+  final String reminderLabel;
   final String mood;
   final TextEditingController? notesController;
   final TextEditingController? symptomsController;
@@ -38,6 +44,8 @@ class FeedingRegisterForm extends StatelessWidget {
   final VoidCallback? onStartTimePressed;
   final VoidCallback? onDurationPressed;
   final VoidCallback? onEndTimePressed;
+  final ValueChanged<bool>? onScheduleNextFeedingChanged;
+  final VoidCallback? onReminderPressed;
   final ValueChanged<String>? onMoodChanged;
   final ValueChanged<String>? onNotesChanged;
   final ValueChanged<String>? onSymptomsChanged;
@@ -104,6 +112,26 @@ class FeedingRegisterForm extends StatelessWidget {
             ),
           ],
         ),
+        if (!isBreastfeeding) ...[
+          SizedBox(height: spacing.spacingXl),
+          BebeSettingsSwitchTile(
+            title: 'Programar próxima toma',
+            description:
+                'Activa una alarma para la próxima mamadera o fórmula.',
+            value: scheduleNextFeeding,
+            onChanged: onScheduleNextFeedingChanged,
+          ),
+          if (scheduleNextFeeding) ...[
+            SizedBox(height: spacing.spacingL),
+            BebePickerField(
+              compact: true,
+              label: 'Recordar próxima toma',
+              value: reminderLabel,
+              kind: BebePickerFieldKind.selection,
+              onPressed: onReminderPressed,
+            ),
+          ],
+        ],
         SizedBox(height: spacing.spacingXl),
         BebeSegmentedFormField<String>(
           label: 'Estado de ánimo del bebé',

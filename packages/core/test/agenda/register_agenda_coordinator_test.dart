@@ -73,6 +73,13 @@ void main() {
 
     expect(firstPass, isNotEmpty);
     expect(firstPass.first.startsAt, now.add(const Duration(hours: 8)));
+    expect(
+      firstPass.last.startsAt.isAfter(now.add(const Duration(days: 80))),
+      isTrue,
+      reason:
+          'Una pauta sin fecha de término debe mantener una ventana móvil '
+          'amplia, no cortarse después de dos semanas.',
+    );
     expect(firstPass.first.title, 'Próxima dosis: Paracetamol');
     expect(
       secondPass.map((event) => event.id).toSet(),

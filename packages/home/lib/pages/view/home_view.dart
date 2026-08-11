@@ -80,6 +80,14 @@ class _LoadedHome extends StatelessWidget {
     final recent = overview.recentInformation;
 
     return BebeHomeTemplate(
+      onRefresh: () async {
+        final bloc = context.read<HomeBloc>();
+        final completed = bloc.stream.firstWhere(
+          (state) => state is HomeLoaded || state is HomeFailure,
+        );
+        bloc.add(const HomeEvent.refreshed());
+        await completed;
+      },
       isEmpty: !overview.hasCareData,
       emptyState: _HomeFirstSteps(
         babyName: baby.name,

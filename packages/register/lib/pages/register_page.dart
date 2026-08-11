@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -154,7 +154,7 @@ Page<void> _buildPage({
   required GetFamilyOverviewFactory? getFamilyOverview,
 }) {
   final save = saveRegisterEvent(context);
-  return CupertinoPage<void>(
+  return MaterialPage<void>(
     key: ValueKey('register-${kind.routeValue}'),
     name: pageName,
     child: getFamilyOverview == null

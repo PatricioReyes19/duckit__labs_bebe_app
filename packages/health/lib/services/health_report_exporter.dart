@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:core/core.dart';
 import 'package:flutter/services.dart';
@@ -145,45 +144,60 @@ class HealthReportExporter {
   static pw.Widget _summary(List<RegisteredEvent> records) {
     int count(RegisterEventType type) =>
         records.where((event) => event.type == type).length;
-    return pw.Row(
+    final totalMl = records
+        .where((event) => event.type == RegisterEventType.feeding)
+        .map((event) => (event.details['amount_ml'] as num?)?.toDouble() ?? 0)
+        .fold<double>(0, (total, value) => total + value);
+    return pw.Column(
       children: [
-        _summaryItem('Alimentación', count(RegisterEventType.feeding)),
-        pw.SizedBox(width: 10),
-        _summaryItem('Sueño', count(RegisterEventType.sleep)),
-        pw.SizedBox(width: 10),
-        _summaryItem('Pañales', count(RegisterEventType.diaper)),
-        pw.SizedBox(width: 10),
-        _summaryItem(
-          'Observaciones',
-          count(RegisterEventType.clinicalObservation),
+        pw.Row(
+          children: [
+            _summaryItem('Alimentación', count(RegisterEventType.feeding)),
+            pw.SizedBox(width: 10),
+            _summaryItem('Sueño', count(RegisterEventType.sleep)),
+            pw.SizedBox(width: 10),
+            _summaryItem('Pañales', count(RegisterEventType.diaper)),
+          ],
+        ),
+        pw.SizedBox(height: 10),
+        pw.Row(
+          children: [
+            _summaryItem('Mamadera / fórmula', totalMl.round(), unit: 'mL'),
+            pw.SizedBox(width: 10),
+            _summaryItem(
+              'Observaciones',
+              count(RegisterEventType.clinicalObservation),
+            ),
+          ],
         ),
       ],
     );
   }
 
-  static pw.Widget _summaryItem(String label, int value) => pw.Expanded(
-    child: pw.Container(
-      padding: const pw.EdgeInsets.all(12),
-      decoration: pw.BoxDecoration(
-        color: PdfColors.teal50,
-        borderRadius: pw.BorderRadius.circular(8),
-      ),
-      child: pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          pw.Text(label, style: const pw.TextStyle(fontSize: 9)),
-          pw.Text(
-            '$value',
-            style: pw.TextStyle(
-              fontSize: 21,
-              color: PdfColors.teal700,
-              fontWeight: pw.FontWeight.bold,
-            ),
+  static pw.Widget _summaryItem(String label, int value, {String? unit}) =>
+      pw.Expanded(
+        child: pw.Container(
+          padding: const pw.EdgeInsets.all(12),
+          decoration: pw.BoxDecoration(
+            color: PdfColors.teal50,
+            borderRadius: pw.BorderRadius.circular(8),
           ),
-        ],
-      ),
-    ),
-  );
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text(label, style: const pw.TextStyle(fontSize: 9)),
+              pw.Text(
+                unit == null ? '$value' : '$value $unit',
+                style: pw.TextStyle(
+                  fontSize: 21,
+                  color: PdfColors.teal700,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
 
   static pw.Widget _sectionTitle(String value) => pw.Padding(
     padding: const pw.EdgeInsets.only(bottom: 8),
@@ -269,6 +283,8 @@ class HealthReportExporter {
   }
 
   static String _detail(RegisteredEvent event) {
+    final amountMl = event.details['amount_ml'];
+    if (amountMl != null) return '$amountMl mL';
     for (final key in const ['title', 'description', 'value', 'amount']) {
       final value = event.details[key];
       if (value != null && value.toString().trim().isNotEmpty) {

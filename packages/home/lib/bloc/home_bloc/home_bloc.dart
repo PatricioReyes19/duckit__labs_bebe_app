@@ -14,9 +14,11 @@ typedef HomePresentationClock = DateTime Function();
 class HomeBloc extends Bloc<HomeEvent, HomeState> {
   HomeBloc({
     required GetHomeOverview getHomeOverview,
+    RegisterEventSyncService? syncService,
     HomePresentationClock? clock,
   })  : _getHomeOverview = getHomeOverview,
         _clock = clock ?? DateTime.now,
+        _syncService = syncService,
         super(const HomeState.initial()) {
     on<_Started>((event, emit) => _load(emit, showLoading: true));
     on<_Refreshed>((event, emit) => _load(emit, showLoading: false));
@@ -28,6 +30,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
   final GetHomeOverview _getHomeOverview;
   final HomePresentationClock _clock;
+  final RegisterEventSyncService? _syncService;
   late final StreamSubscription<void> _registerEventsSubscription;
 
   Future<void> _load(
@@ -41,6 +44,9 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       emit(current.copyWith(isRefreshing: true));
     }
     try {
+      if (!showLoading && _syncService != null) {
+        await _syncService.synchronize();
+      }
       final entity = await _getHomeOverview();
       emit(
         HomeState.loaded(

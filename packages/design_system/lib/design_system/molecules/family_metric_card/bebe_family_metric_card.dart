@@ -193,12 +193,12 @@ class _FamilyMetricCardContent extends StatelessWidget {
                       copy,
                     ],
                   )
-                : Row(
+                : Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       leading,
-                      SizedBox(width: spacing.spacingS),
-                      Expanded(child: copy),
+                      SizedBox(height: spacing.spacingM),
+                      copy,
                     ],
                   )
           : Row(

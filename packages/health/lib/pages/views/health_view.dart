@@ -84,6 +84,14 @@ class _HealthOverviewContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BebeHealthOverviewTemplate(
+      onRefresh: () async {
+        final bloc = context.read<HealthBloc>();
+        final completed = bloc.stream.firstWhere(
+          (state) => state is HealthLoaded || state is HealthFailure,
+        );
+        bloc.add(const HealthEvent.retried());
+        await completed;
+      },
       primaryActions: FeatureActionGrid(
         minimumItemWidth: 156,
         maximumColumnCount: 2,

@@ -1,5 +1,5 @@
 import 'package:app_layout/src/bloc/app_layout_bloc.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -16,7 +16,7 @@ class AppLayoutPage extends ShellRoute {
     super.observers,
   }) : super(
          pageBuilder: (context, state, child) {
-           return CupertinoPage<void>(
+           return MaterialPage<void>(
              key: const ValueKey('app-layout-provider'),
              name: 'AppLayoutProvider',
              child: BlocProvider(create: appLayoutBloc, child: child),

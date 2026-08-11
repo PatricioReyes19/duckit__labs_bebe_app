@@ -1,5 +1,9 @@
+import 'dart:async';
+
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:health/bloc/health_flow_bloc.dart';
 import 'package:health/models/health_flow_controller.dart';
 
 class HealthFlowBody extends StatefulWidget {
@@ -19,30 +23,45 @@ class HealthFlowBody extends StatefulWidget {
 }
 
 class _HealthFlowBodyState extends State<HealthFlowBody> {
+  late HealthFlowBloc _bloc;
+
   @override
   void initState() {
     super.initState();
-    widget.controller.load();
+    _bloc = HealthFlowBloc(widget.controller)..load();
+  }
+
+  @override
+  void didUpdateWidget(covariant HealthFlowBody oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      unawaited(_bloc.close());
+      _bloc = HealthFlowBloc(widget.controller)..load();
+    }
+  }
+
+  @override
+  void dispose() {
+    unawaited(_bloc.close());
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: widget.controller,
-      builder: (context, _) {
-        if (widget.controller.isLoading &&
-            widget.controller.activeBaby == null) {
+    return BlocBuilder<HealthFlowBloc, HealthFlowState>(
+      bloc: _bloc,
+      builder: (context, state) {
+        if (state.isLoading && widget.controller.activeBaby == null) {
           return const Center(child: CircularProgressIndicator());
         }
-        if (widget.controller.error != null &&
-            widget.controller.activeBaby == null) {
+        if (state.error != null && widget.controller.activeBaby == null) {
           return HealthFlowError(
             message: 'No pudimos cargar la información de salud.',
-            onRetry: () => widget.controller.load(force: true),
+            onRetry: () => _bloc.load(force: true),
           );
         }
         return RefreshIndicator(
-          onRefresh: () => widget.controller.load(force: true),
+          onRefresh: () => _bloc.load(force: true),
           child: ListView(
             padding: widget.padding,
             children: widget.builder(context),

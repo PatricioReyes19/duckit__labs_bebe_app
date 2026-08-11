@@ -58,8 +58,12 @@ class AgendaBloc extends Bloc<AgendaEvent, AgendaState> {
   }) async {
     final previous = _currentOverview;
     if (showLoading) emit(const AgendaState.loading());
-    if (showLoading && _syncService != null) {
-      unawaited(_syncService.synchronize());
+    if (_syncService != null) {
+      if (showLoading) {
+        unawaited(_syncService.synchronize());
+      } else {
+        await _syncService.synchronize();
+      }
     }
     try {
       final resolvedBabyId =

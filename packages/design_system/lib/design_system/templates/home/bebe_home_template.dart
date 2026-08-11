@@ -19,6 +19,7 @@ class BebeHomeTemplate extends StatelessWidget {
     this.errorMessage,
     this.errorState,
     this.onRetry,
+    this.onRefresh,
     this.maximumContentWidth = BebeLayout.pageContentMaxWidth,
     super.key,
   });
@@ -37,6 +38,7 @@ class BebeHomeTemplate extends StatelessWidget {
   final String? errorMessage;
   final Widget? errorState;
   final VoidCallback? onRetry;
+  final Future<void> Function()? onRefresh;
 
   final double maximumContentWidth;
 
@@ -57,42 +59,57 @@ class BebeHomeTemplate extends StatelessWidget {
       top: false,
       child: ColoredBox(
         color: context.theme.colors.background.neutralsSurface,
-        child: SingleChildScrollView(
-          primary: true,
-          physics: const AlwaysScrollableScrollPhysics(
-            parent: BouncingScrollPhysics(),
-          ),
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          padding: EdgeInsets.symmetric(
-            horizontal: spacing.spacing2xl,
-            vertical: spacing.spacingXl,
-          ),
-          child: BebeResponsiveContent(
-            maxWidth: maximumContentWidth,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                activeBabyHeader,
-                SizedBox(height: spacing.spacing4xl),
-                quickActions,
-                if (isEmpty) ...[
-                  SizedBox(height: spacing.spacing4xl),
-                  emptyState ?? const SizedBox.shrink(),
-                ] else ...[
-                  SizedBox(height: spacing.spacing4xl),
-                  todaySummary,
-                  SizedBox(height: spacing.spacing4xl),
-                  upcomingHealth,
-                  SizedBox(height: spacing.spacing4xl),
-                  recentInformation,
+        child: _HomeRefreshableScroll(
+          onRefresh: onRefresh,
+          child: SingleChildScrollView(
+            primary: true,
+            physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics(),
+            ),
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: EdgeInsets.symmetric(
+              horizontal: spacing.spacing2xl,
+              vertical: spacing.spacingXl,
+            ),
+            child: BebeResponsiveContent(
+              maxWidth: maximumContentWidth,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  activeBabyHeader,
+                  if (isEmpty) ...[
+                    SizedBox(height: spacing.spacing4xl),
+                    emptyState ?? const SizedBox.shrink(),
+                  ] else ...[
+                    SizedBox(height: spacing.spacing4xl),
+                    todaySummary,
+                    SizedBox(height: spacing.spacing4xl),
+                    quickActions,
+                    SizedBox(height: spacing.spacing4xl),
+                    upcomingHealth,
+                    SizedBox(height: spacing.spacing4xl),
+                    recentInformation,
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),
       ),
     );
   }
+}
+
+class _HomeRefreshableScroll extends StatelessWidget {
+  const _HomeRefreshableScroll({required this.child, this.onRefresh});
+
+  final Widget child;
+  final Future<void> Function()? onRefresh;
+
+  @override
+  Widget build(BuildContext context) => onRefresh == null
+      ? child
+      : RefreshIndicator(onRefresh: onRefresh!, child: child);
 }
 
 class _HomeErrorState extends StatelessWidget {

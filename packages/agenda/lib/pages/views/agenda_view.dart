@@ -156,6 +156,11 @@ class _AgendaContent extends StatelessWidget {
         ),
         onPageChanged: (focusedDay) =>
             bloc.add(AgendaEvent.weekChanged(focusedDay)),
+        onTodayPressed: () {
+          final today = DateTime.now();
+          final day = DateTime(today.year, today.month, today.day);
+          bloc.add(AgendaEvent.daySelected(selectedDay: day, focusedDay: day));
+        },
         onPreviousWeekPressed: () => bloc.add(
           AgendaEvent.weekChanged(
             overview.focusedWeekDay.subtract(const Duration(days: 7)),
@@ -167,49 +172,52 @@ class _AgendaContent extends StatelessWidget {
           ),
         ),
       ),
-      filters: BebeAgendaCategoryFilters(
-        selectedId: overview.selectedCategory.name,
-        onItemPressed: (id) => bloc.add(
-          AgendaEvent.categorySelected(
-            AgendaFilterCategory.values.firstWhere(
-              (category) => category.name == id,
-              orElse: () => AgendaFilterCategory.all,
+      filters: _AgendaFullBleed(
+        horizontalInset: spacing.spacingXl,
+        child: BebeAgendaCategoryFilters(
+          selectedId: overview.selectedCategory.name,
+          onItemPressed: (id) => bloc.add(
+            AgendaEvent.categorySelected(
+              AgendaFilterCategory.values.firstWhere(
+                (category) => category.name == id,
+                orElse: () => AgendaFilterCategory.all,
+              ),
             ),
           ),
+          items: const [
+            BebeAgendaFilterData(
+              id: 'all',
+              label: 'Todos',
+              icon: Icon(Icons.grid_view_rounded),
+              variant: BebeFilterChipVariant.brand,
+              semanticLabel: 'Mostrar todos los eventos',
+            ),
+            BebeAgendaFilterData(
+              id: 'vaccines',
+              label: 'Vacunas',
+              icon: Icon(Icons.vaccines_outlined),
+              variant: BebeFilterChipVariant.accent,
+            ),
+            BebeAgendaFilterData(
+              id: 'controls',
+              label: 'Controles',
+              icon: Icon(Icons.medical_services_outlined),
+              variant: BebeFilterChipVariant.information,
+            ),
+            BebeAgendaFilterData(
+              id: 'medication',
+              label: 'Medicación',
+              icon: Icon(Icons.medication_outlined),
+              variant: BebeFilterChipVariant.warning,
+            ),
+            BebeAgendaFilterData(
+              id: 'exams',
+              label: 'Exámenes',
+              icon: Icon(Icons.science_outlined),
+              variant: BebeFilterChipVariant.information,
+            ),
+          ],
         ),
-        items: const [
-          BebeAgendaFilterData(
-            id: 'all',
-            label: 'Todos',
-            icon: Icon(Icons.grid_view_rounded),
-            variant: BebeFilterChipVariant.brand,
-            semanticLabel: 'Mostrar todos los eventos',
-          ),
-          BebeAgendaFilterData(
-            id: 'vaccines',
-            label: 'Vacunas',
-            icon: Icon(Icons.vaccines_outlined),
-            variant: BebeFilterChipVariant.accent,
-          ),
-          BebeAgendaFilterData(
-            id: 'controls',
-            label: 'Controles',
-            icon: Icon(Icons.medical_services_outlined),
-            variant: BebeFilterChipVariant.information,
-          ),
-          BebeAgendaFilterData(
-            id: 'medication',
-            label: 'Medicación',
-            icon: Icon(Icons.medication_outlined),
-            variant: BebeFilterChipVariant.warning,
-          ),
-          BebeAgendaFilterData(
-            id: 'exams',
-            label: 'Exámenes',
-            icon: Icon(Icons.science_outlined),
-            variant: BebeFilterChipVariant.information,
-          ),
-        ],
       ),
       todaySection: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -233,6 +241,7 @@ class _AgendaContent extends StatelessWidget {
         title: 'Próximos días',
         emptyMessage: 'No hay próximos eventos para la categoría seleccionada.',
         events: upcomingEvents,
+        scrollable: true,
         onEventPressed: onEventPressed,
       ),
       reminderBanner: BebeAgendaReminderBanner(
@@ -348,17 +357,39 @@ class _MonthlyOverview extends StatelessWidget {
   }
 }
 
+class _AgendaFullBleed extends StatelessWidget {
+  const _AgendaFullBleed({required this.child, required this.horizontalInset});
+
+  final Widget child;
+  final double horizontalInset;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final width = constraints.maxWidth + horizontalInset * 2;
+      return OverflowBox(
+        minWidth: width,
+        maxWidth: width,
+        alignment: Alignment.center,
+        child: child,
+      );
+    },
+  );
+}
+
 class _AgendaEventGroup extends StatelessWidget {
   const _AgendaEventGroup({
     required this.title,
     required this.emptyMessage,
     required this.events,
+    this.scrollable = false,
     this.onEventPressed,
   });
 
   final String title;
   final String emptyMessage;
   final List<AgendaEventVm> events;
+  final bool scrollable;
   final ValueChanged<String>? onEventPressed;
 
   @override
@@ -372,6 +403,23 @@ class _AgendaEventGroup extends StatelessWidget {
         SizedBox(height: spacing.spacingL),
         if (events.isEmpty)
           _AgendaSectionEmptyState(message: emptyMessage)
+        else if (scrollable && events.length > 3)
+          SizedBox(
+            height: 410,
+            child: Scrollbar(
+              child: ListView.separated(
+                primary: false,
+                physics: const BouncingScrollPhysics(),
+                padding: EdgeInsets.only(right: spacing.spacingXs),
+                itemCount: events.length,
+                separatorBuilder: (_, __) => SizedBox(height: spacing.spacingM),
+                itemBuilder: (context, index) => _AgendaEventCard(
+                  event: events[index],
+                  onPressed: () => onEventPressed?.call(events[index].id),
+                ),
+              ),
+            ),
+          )
         else
           for (var index = 0; index < events.length; index++) ...[
             _AgendaEventCard(

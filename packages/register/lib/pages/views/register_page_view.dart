@@ -143,6 +143,8 @@ class _RegisterPageViewState extends State<RegisterPageView> {
             duration: _duration(cubit.durationMinutes),
             endTime:
                 cubit.endAt == null ? '--:--' : _time(context, cubit.endAt!),
+            scheduleNextFeeding: cubit.scheduleNextFeeding,
+            reminderLabel: 'En ${cubit.reminderHours} horas',
             mood: cubit.mood,
             notesController: _feedingNotes,
             symptomsController: _feedingSymptoms,
@@ -162,6 +164,11 @@ class _RegisterPageViewState extends State<RegisterPageView> {
                     Duration(minutes: cubit.durationMinutes),
                   ),
               cubit.endTimeChanged,
+            ),
+            onScheduleNextFeedingChanged: cubit.scheduleNextFeedingChanged,
+            onReminderPressed: () => _pickReminderHours(
+              current: cubit.reminderHours,
+              onSelected: cubit.reminderHoursChanged,
             ),
             onMoodChanged: cubit.moodChanged,
             onNotesChanged: cubit.notesChanged,
@@ -241,6 +248,8 @@ class _RegisterPageViewState extends State<RegisterPageView> {
             amount: cubit.amount,
             urineColor: cubit.urineColor,
             urineAmount: cubit.urineAmount,
+            scheduleReminder: cubit.scheduleReminder,
+            reminderLabel: 'En ${cubit.reminderHours} horas',
             notesController: _diaperNotes,
             symptomsController: _diaperSymptoms,
             onDatePressed: () => _pickDate(
@@ -256,6 +265,11 @@ class _RegisterPageViewState extends State<RegisterPageView> {
             onAmountChanged: cubit.amountChanged,
             onUrineColorChanged: cubit.urineColorChanged,
             onUrineAmountChanged: cubit.urineAmountChanged,
+            onScheduleReminderChanged: cubit.scheduleReminderChanged,
+            onReminderPressed: () => _pickReminderHours(
+              current: cubit.reminderHours,
+              onSelected: cubit.reminderHoursChanged,
+            ),
             onNotesChanged: cubit.notesChanged,
             onSymptomsChanged: cubit.symptomsChanged,
           ),
@@ -528,6 +542,36 @@ class _RegisterPageViewState extends State<RegisterPageView> {
                 title: Text(option),
                 selected: option == current,
                 onTap: () => Navigator.of(context).pop(option),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (selected != null) onSelected(selected);
+  }
+
+  Future<void> _pickReminderHours({
+    required int current,
+    required ValueChanged<int> onSelected,
+  }) async {
+    final selected = await showModalBottomSheet<int>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            const ListTile(
+              title: Text(
+                'Programar recordatorio',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+            for (final hours in RegisterCatalog.careReminderIntervals)
+              ListTile(
+                leading: const Icon(Icons.alarm_outlined),
+                title: Text('En $hours horas'),
+                selected: current == hours,
+                onTap: () => Navigator.of(context).pop(hours),
               ),
           ],
         ),

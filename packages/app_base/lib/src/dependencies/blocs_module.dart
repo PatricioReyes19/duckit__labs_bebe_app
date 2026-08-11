@@ -61,8 +61,14 @@ abstract class BlocsModule {
   // Home
   //============================================================================
 
-  HomeBloc homeBloc(GetHomeOverview getHomeOverview) {
-    return HomeBloc(getHomeOverview: getHomeOverview);
+  HomeBloc homeBloc(
+    GetHomeOverview getHomeOverview,
+    RegisterEventSyncService syncService,
+  ) {
+    return HomeBloc(
+      getHomeOverview: getHomeOverview,
+      syncService: syncService,
+    );
   }
 
   //============================================================================

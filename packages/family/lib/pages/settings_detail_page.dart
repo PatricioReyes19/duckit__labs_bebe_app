@@ -1,6 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:family/family.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -72,7 +72,7 @@ class SettingsDetailPage extends GoRoute {
            final section = SettingsSectionKindPresentation.fromRouteValue(
              state.pathParameters['section'],
            )!;
-           return CupertinoPage<void>(
+           return MaterialPage<void>(
              key: ValueKey('settings-${section.routeValue}'),
              name: 'Settings${section.name}',
              child: BlocProvider(

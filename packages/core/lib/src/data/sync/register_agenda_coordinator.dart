@@ -27,6 +27,12 @@ class RegisterAgendaCoordinator {
   Future<void>? _running;
   bool _rerunRequested = false;
 
+  /// Ventana móvil para tratamientos sin término explícito. Se repone en cada
+  /// reconciliación, por lo que una pauta abierta no desaparece después de dos
+  /// semanas y tampoco materializa una cantidad infinita de filas.
+  static const openEndedHorizon = Duration(days: 90);
+  static const maximumGeneratedDoses = 1024;
+
   void start() {
     _subscription ??= _registerRepository.changes.listen((_) {
       unawaited(reconcile());
@@ -87,7 +93,7 @@ class RegisterAgendaCoordinator {
     final explicitEnd = DateTime.tryParse(
       (event.details['end_date'] as String?) ?? '',
     )?.toLocal();
-    final horizon = explicitEnd ?? now.add(const Duration(days: 14));
+    final horizon = explicitEnd ?? now.add(openEndedHorizon);
     var next = event.occurredAt.toLocal().add(interval);
     while (!next.isAfter(now)) {
       next = next.add(interval);
@@ -98,7 +104,7 @@ class RegisterAgendaCoordinator {
     final unit = event.details['unit'];
     final frequency = event.details['frequency'];
     final result = <AgendaEventDraft>[];
-    while (!next.isAfter(horizon) && result.length < 64) {
+    while (!next.isAfter(horizon) && result.length < maximumGeneratedDoses) {
       final startsAt = next.toUtc();
       result.add(
         AgendaEventDraft(

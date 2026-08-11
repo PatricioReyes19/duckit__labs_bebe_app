@@ -53,45 +53,49 @@ class BebeHealthOverviewTemplate extends StatelessWidget {
       );
     }
 
-    return ColoredBox(
-      color: context.theme.colors.background.neutralsSurface,
-      child: SingleChildScrollView(
-        physics: onRefresh != null
-            ? const AlwaysScrollableScrollPhysics()
-            : const ClampingScrollPhysics(),
-        // El eje horizontal queda libre para que los carruseles alcancen ambos
-        // bordes. Cada carrusel administra su primer/último inset desplazable.
-        padding: EdgeInsets.symmetric(vertical: spacing.spacingXs),
-        child: BebeResponsiveContent(
-          maxWidth: maximumContentWidth,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              padded(primaryActions),
-              if (supportAction != null) ...[
-                SizedBox(height: spacing.spacingXl),
-                padded(supportAction!),
-              ],
+    final scrollView = SingleChildScrollView(
+      physics: onRefresh != null
+          ? const AlwaysScrollableScrollPhysics()
+          : const ClampingScrollPhysics(),
+      // El eje horizontal queda libre para que los carruseles alcancen ambos
+      // bordes. Cada carrusel administra su primer/último inset desplazable.
+      padding: EdgeInsets.symmetric(vertical: spacing.spacingXs),
+      child: BebeResponsiveContent(
+        maxWidth: maximumContentWidth,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            padded(primaryActions),
+            if (supportAction != null) ...[
               SizedBox(height: spacing.spacingXl),
-              padded(upcomingHeader),
-              SizedBox(height: spacing.spacingL),
-
-              // Intencionalmente sin padding horizontal.
-              upcomingCarousel,
-
-              if (quickSummary != null) ...[
-                SizedBox(height: spacing.spacingXl),
-                padded(quickSummary!),
-              ],
-              if (historyAction != null) ...[
-                SizedBox(height: spacing.spacingXl),
-                padded(historyAction!),
-              ],
+              padded(supportAction!),
             ],
-          ),
+            SizedBox(height: spacing.spacingXl),
+            padded(upcomingHeader),
+            SizedBox(height: spacing.spacingL),
+
+            // Intencionalmente sin padding horizontal.
+            upcomingCarousel,
+
+            if (quickSummary != null) ...[
+              SizedBox(height: spacing.spacingXl),
+              padded(quickSummary!),
+            ],
+            if (historyAction != null) ...[
+              SizedBox(height: spacing.spacingXl),
+              padded(historyAction!),
+            ],
+            SizedBox(height: spacing.spacing4xl),
+          ],
         ),
       ),
+    );
+    return ColoredBox(
+      color: context.theme.colors.background.neutralsSurface,
+      child: onRefresh == null
+          ? scrollView
+          : RefreshIndicator(onRefresh: onRefresh!, child: scrollView),
     );
   }
 }

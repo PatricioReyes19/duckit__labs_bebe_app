@@ -38,6 +38,7 @@ class App extends StatelessWidget {
               child: MaterialApp.router(
                 title: 'DuckIT BebéApp',
                 debugShowCheckedModeBanner: false,
+                scaffoldMessengerKey: appScaffoldMessengerKey,
                 routerConfig: router,
                 theme: theme.lightTheme(),
                 darkTheme: theme.darkTheme(),

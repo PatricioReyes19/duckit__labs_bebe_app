@@ -50,68 +50,86 @@ class BebeFeatureActionCard extends StatelessWidget {
 
     final cardBorderRadius = BorderRadius.circular(radius.radius3xl);
 
+    final leading = SizedBox.square(
+      dimension: _iconContainerSize,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: palette.iconSurface,
+          shape: BoxShape.circle,
+        ),
+        child: Center(
+          child: IconTheme(
+            data: IconThemeData(color: palette.iconContent, size: _iconSize),
+            child: icon,
+          ),
+        ),
+      ),
+    );
+    final copy = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          effectiveTitle,
+          style: theme.typography.styles.title.sm.semibold.copyWith(
+            color: palette.title,
+          ),
+        ),
+        if (effectiveDescription != null) ...[
+          SizedBox(height: spacing.spacingXs),
+          Text(
+            effectiveDescription,
+            style: theme.typography.styles.body.sm.regular.copyWith(
+              color: palette.description,
+            ),
+          ),
+        ],
+      ],
+    );
+    final chevron = SizedBox(
+      width: _chevronSlotWidth,
+      child: Align(
+        alignment: Alignment.centerRight,
+        child: Icon(
+          Icons.chevron_right_rounded,
+          size: _chevronIconSize,
+          color: palette.chevron,
+        ),
+      ),
+    );
     final content = Padding(
       padding: EdgeInsets.all(spacing.spacingM),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          SizedBox.square(
-            dimension: _iconContainerSize,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: palette.iconSurface,
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: IconTheme(
-                  data: IconThemeData(
-                    color: palette.iconContent,
-                    size: _iconSize,
-                  ),
-                  child: icon,
-                ),
-              ),
-            ),
-          ),
-          SizedBox(width: spacing.spacingM),
-          Flexible(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth < 220) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  effectiveTitle,
-                  style: theme.typography.styles.title.sm.semibold.copyWith(
-                    color: palette.title,
-                  ),
+                Row(
+                  children: [
+                    leading,
+                    const Spacer(),
+                    if (_isInteractive) chevron,
+                  ],
                 ),
-                if (effectiveDescription != null) ...[
-                  SizedBox(height: spacing.spacingXs),
-                  Text(
-                    effectiveDescription,
-                    style: theme.typography.styles.body.sm.regular.copyWith(
-                      color: palette.description,
-                    ),
-                  ),
-                ],
+                SizedBox(height: spacing.spacingM),
+                copy,
               ],
-            ),
-          ),
-          if (_isInteractive) ...[
-            SizedBox(width: spacing.spacingS),
-            SizedBox(
-              width: _chevronSlotWidth,
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: Icon(
-                  Icons.chevron_right_rounded,
-                  size: _chevronIconSize,
-                  color: palette.chevron,
-                ),
-              ),
-            ),
-          ],
-        ],
+            );
+          }
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              leading,
+              SizedBox(width: spacing.spacingM),
+              Expanded(child: copy),
+              if (_isInteractive) ...[
+                SizedBox(width: spacing.spacingS),
+                chevron,
+              ],
+            ],
+          );
+        },
       ),
     );
 
@@ -140,10 +158,7 @@ class BebeFeatureActionCard extends StatelessWidget {
     final visualCard = SizedBox(
       width: double.infinity,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(
-          minHeight: _minimumHeight,
-          maxHeight: 120,
-        ),
+        constraints: const BoxConstraints(minHeight: _minimumHeight),
         child: DecoratedBox(
           decoration: BoxDecoration(
             borderRadius: cardBorderRadius,

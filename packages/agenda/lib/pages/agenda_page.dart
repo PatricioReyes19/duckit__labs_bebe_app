@@ -1,5 +1,5 @@
 import 'package:agenda/agenda.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -23,7 +23,7 @@ class AgendaPage extends GoRoute {
   }) : super(
          path: fullPath,
          pageBuilder: (context, state) {
-           return CupertinoPage<void>(
+           return MaterialPage<void>(
              key: const ValueKey('agenda'),
              name: name ?? nameRoute,
              child: BlocProvider(

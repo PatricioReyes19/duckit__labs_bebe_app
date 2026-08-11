@@ -195,7 +195,8 @@ class HomeOverviewVm extends Equatable {
     var months =
         (reference.year - birth.year) * 12 + reference.month - birth.month;
     if (reference.day < birth.day) months--;
-    return months <= 0 ? 'Menos de un mes' : '$months meses';
+    if (months <= 0) return 'Menos de un mes';
+    return months == 1 ? '1 mes' : '$months meses';
   }
 
   @override

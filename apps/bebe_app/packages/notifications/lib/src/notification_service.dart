@@ -30,6 +30,14 @@ abstract interface class NotificationService {
 
   Future<void> clearAll();
 
+  Future<void> scheduleReminder({
+    required String id,
+    required String title,
+    required String body,
+    required DateTime scheduledAt,
+    String route = '/agenda',
+  });
+
   Future<void> unregisterCurrentDevice();
 
   AppNotification? takePendingOpenedNotification();

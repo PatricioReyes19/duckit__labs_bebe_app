@@ -18,6 +18,8 @@ class DiaperRegisterCubit extends RegisterFormCubit {
             'urineAmount': 'normal',
             'notes': '',
             'symptoms': '',
+            'scheduleReminder': false,
+            'reminderHours': 3,
           },
         );
 
@@ -30,6 +32,8 @@ class DiaperRegisterCubit extends RegisterFormCubit {
   String get urineAmount => state.value<String>('urineAmount');
   String get notes => state.value<String>('notes');
   String get symptoms => state.value<String>('symptoms');
+  bool get scheduleReminder => state.value<bool>('scheduleReminder');
+  int get reminderHours => state.value<int>('reminderHours');
 
   void subtypeChanged(String value) => setValue('subtype', value);
   void dateChanged(DateTime value) =>
@@ -43,6 +47,9 @@ class DiaperRegisterCubit extends RegisterFormCubit {
   void urineAmountChanged(String value) => setValue('urineAmount', value);
   void notesChanged(String value) => setValue('notes', value);
   void symptomsChanged(String value) => setValue('symptoms', value);
+  void scheduleReminderChanged(bool value) =>
+      setValue('scheduleReminder', value);
+  void reminderHoursChanged(int value) => setValue('reminderHours', value);
 
   @override
   RegisterEventDraft buildDraft() {
@@ -61,6 +68,8 @@ class DiaperRegisterCubit extends RegisterFormCubit {
         if (includesStool) 'color': color,
         if (includesStool) 'amount': amount,
         'symptoms': symptoms.trim(),
+        'schedule_reminder': scheduleReminder,
+        if (scheduleReminder) 'reminder_interval_hours': reminderHours,
       },
     );
   }

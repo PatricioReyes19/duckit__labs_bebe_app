@@ -1,6 +1,6 @@
 import 'package:core/core.dart';
 import 'package:family/family.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -54,7 +54,7 @@ class FamilySubpage extends GoRoute {
          pageBuilder: (context, state) {
            final babyId = state.pathParameters['babyId'];
            final memberId = state.pathParameters['memberId'];
-           return CupertinoPage<Object?>(
+           return MaterialPage<Object?>(
              key: ValueKey('family-${kind.name}-$babyId-$memberId'),
              name: 'Family${kind.name}',
              child: BlocProvider(

@@ -1,4 +1,4 @@
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:home/home.dart';
@@ -17,7 +17,7 @@ class HomePage extends GoRoute {
   }) : super(
           path: fullPath,
           pageBuilder: (context, state) {
-            return CupertinoPage<void>(
+            return MaterialPage<void>(
               key: const ValueKey('home'),
               name: name ?? nameRoute,
               child: BlocProvider(

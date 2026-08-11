@@ -15,4 +15,6 @@ abstract final class RegisterCatalog {
     'Cada 12 horas',
     'Una vez al día',
   ];
+
+  static const careReminderIntervals = <int>[2, 3, 4, 6];
 }

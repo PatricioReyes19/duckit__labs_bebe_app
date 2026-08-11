@@ -496,6 +496,7 @@ GoRouter createAppRouter({
         onHealthPressed: (context) => context.go(HealthPage.fullPath),
         onFamilyPressed: (context) => context.go(FamilyPage.fullPath),
         onSaved: (context, event) {
+          unawaited(_scheduleRegisterReminder(event));
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text(
@@ -529,6 +530,76 @@ GoRouter createAppRouter({
         ),
       ),
     ],
+  );
+}
+
+Future<void> _scheduleRegisterReminder(RegisteredEvent event) async {
+  final service = getIt<NotificationService>();
+  final details = event.details;
+
+  if (event.type == RegisterEventType.medication &&
+      details['schedule_next_doses'] == true) {
+    final interval = switch (details['frequency']) {
+      'Cada 4 horas' => const Duration(hours: 4),
+      'Cada 6 horas' => const Duration(hours: 6),
+      'Cada 8 horas' => const Duration(hours: 8),
+      'Cada 12 horas' => const Duration(hours: 12),
+      'Una vez al día' => const Duration(days: 1),
+      _ => null,
+    };
+    if (interval == null) return;
+    final explicitEnd = DateTime.tryParse(
+      (details['end_date'] as String?) ?? '',
+    )?.toLocal();
+    final horizon = explicitEnd ?? DateTime.now().add(const Duration(days: 30));
+    var next = event.occurredAt.toLocal().add(interval);
+    while (!next.isAfter(DateTime.now())) {
+      next = next.add(interval);
+    }
+    final name = (details['name'] as String?)?.trim();
+    var scheduled = 0;
+    while (!next.isAfter(horizon) && scheduled < 60) {
+      await service.scheduleReminder(
+        id: 'medication-${event.id}-${next.millisecondsSinceEpoch}',
+        title: 'Hora del medicamento',
+        body:
+            'Corresponde la próxima dosis de ${name?.isNotEmpty == true ? name : 'medicamento'}.',
+        scheduledAt: next,
+        route: '/agenda',
+      );
+      next = next.add(interval);
+      scheduled += 1;
+    }
+    return;
+  }
+
+  final shouldSchedule = switch (event.type) {
+    RegisterEventType.feeding => details['schedule_next_feeding'] == true,
+    RegisterEventType.diaper => details['schedule_reminder'] == true,
+    _ => false,
+  };
+  final hours = (details['reminder_interval_hours'] as num?)?.toInt();
+  if (!shouldSchedule || hours == null || hours <= 0) return;
+  final scheduledAt = event.occurredAt.toLocal().add(Duration(hours: hours));
+  final (title, body, route) = switch (event.type) {
+    RegisterEventType.feeding => (
+        'Próxima toma',
+        'Es momento de revisar si corresponde una nueva mamadera o fórmula.',
+        '/register/feeding',
+      ),
+    RegisterEventType.diaper => (
+        'Próximo cambio de pañal',
+        'Revisa el pañal y registra el cambio cuando corresponda.',
+        '/register/diaper',
+      ),
+    _ => ('Recordatorio', 'Tienes una tarea pendiente.', '/agenda'),
+  };
+  await service.scheduleReminder(
+    id: '${event.type.name}-${event.id}-${scheduledAt.millisecondsSinceEpoch}',
+    title: title,
+    body: body,
+    scheduledAt: scheduledAt,
+    route: route,
   );
 }
 
@@ -636,20 +707,31 @@ Future<void> _signOutAndOpenLogin(
 }) async {
   try {
     await getIt<AuthService>().signOut();
-  } finally {
-    // Se descarta la conexión en memoria antes de que otra cuenta pueda abrir
-    // su propia base local. La base en disco permanece aislada por usuario.
-    try {
-      await getIt<BebeDatabase>().close();
-    } on Object {
-      // El cierre de sesión y la navegación no dependen de este housekeeping.
+  } on Object catch (error) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No pudimos cerrar la sesión: $error')),
+      );
     }
+    return;
+  }
+
+  try {
     await NavigationSessionStore(getIt()).clear();
-    getIt<GoRouter>().go(
-      invitationPending
-          ? _invitationAuthLocation(StartupPaths.login, invitationCode)
-          : StartupPaths.login,
-    );
+  } on Object {
+    // Una preferencia dañada no debe impedir salir de la cuenta.
+  }
+  final destination = invitationPending
+      ? _invitationAuthLocation(StartupPaths.login, invitationCode)
+      : StartupPaths.authEntry;
+  getIt<GoRouter>().go(destination);
+
+  // La limpieza local ocurre después de navegar para que el botón responda
+  // inmediatamente. La base en disco permanece aislada por usuario.
+  try {
+    await getIt<BebeDatabase>().close();
+  } on Object {
+    // La sesión ya fue cerrada por la fuente de autenticación.
   }
 }
 

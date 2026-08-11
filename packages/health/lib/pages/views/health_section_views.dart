@@ -1,4 +1,5 @@
 import 'package:core/core.dart';
+import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:health/models/health_flow_controller.dart';
 import 'package:health/pages/health_section_page.dart';
@@ -294,7 +295,17 @@ class _GrowthSectionViewState extends State<GrowthSectionView> {
                   height: 190,
                   width: double.infinity,
                   child: CustomPaint(
-                    painter: _GrowthChartPainter(color: color),
+                    painter: _GrowthChartPainter(
+                      color: color,
+                      unit: unit,
+                      values: measurements.isEmpty
+                          ? (type == HealthMeasurementType.weight
+                                ? const [3.2, 4.8, 6.1, 7.25]
+                                : const [50.0, 55.0, 60.0, 65.0])
+                          : measurements.reversed
+                                .map((measurement) => measurement.$1)
+                                .toList(growable: false),
+                    ),
                   ),
                 ),
               ],
@@ -680,6 +691,30 @@ class ReportsSectionView extends StatelessWidget {
         final feedings = count(RegisterEventType.feeding);
         final sleeps = count(RegisterEventType.sleep);
         final diapers = count(RegisterEventType.diaper);
+        final recordsInRange = controller.records
+            .where((event) => event.occurredAt.isAfter(after))
+            .toList(growable: false);
+        final totalFeedingMl = recordsInRange
+            .where((event) => event.type == RegisterEventType.feeding)
+            .map(
+              (event) => (event.details['amount_ml'] as num?)?.toDouble() ?? 0,
+            )
+            .fold<double>(0, (total, value) => total + value);
+        final feedingTrend = _dailyTrend(
+          recordsInRange,
+          RegisterEventType.feeding,
+          days,
+        );
+        final sleepTrend = _dailyTrend(
+          recordsInRange,
+          RegisterEventType.sleep,
+          days,
+        );
+        final diaperTrend = _dailyTrend(
+          recordsInRange,
+          RegisterEventType.diaper,
+          days,
+        );
         return [
           if (controller.offlineMode) ...[
             HealthSurface(
@@ -717,37 +752,34 @@ class ReportsSectionView extends StatelessWidget {
                 controller.selectReportRange(value.first),
           ),
           const SizedBox(height: 18),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          BebeMetricsOverview(
+            minimumItemWidth: 112,
+            maximumColumnCount: 3,
+            semanticLabel: 'Resumen del reporte',
             children: [
-              Expanded(
-                child: HealthMetricTile(
-                  label: 'Alimentación',
-                  value: feedings == 0 ? '—' : '$feedings',
-                  caption: feedings == 0 ? 'Sin datos' : 'tomas',
-                  icon: Icons.local_drink_outlined,
-                  color: colors.primary,
-                ),
+              BebeCompactMetricCard(
+                label: 'Alimentación',
+                value: totalFeedingMl == 0
+                    ? (feedings == 0 ? '—' : '$feedings')
+                    : '${totalFeedingMl.round()}',
+                unit: totalFeedingMl == 0 ? null : 'mL',
+                supportingText: feedings == 0 ? 'Sin datos' : '$feedings tomas',
+                icon: const Icon(Icons.local_drink_outlined),
+                variant: BebeMetricCardVariant.feeding,
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: HealthMetricTile(
-                  label: 'Sueño',
-                  value: sleeps == 0 ? '—' : '$sleeps',
-                  caption: sleeps == 0 ? 'Sin datos' : 'registros',
-                  icon: Icons.bedtime_outlined,
-                  color: colors.secondary,
-                ),
+              BebeCompactMetricCard(
+                label: 'Sueño',
+                value: sleeps == 0 ? '—' : '$sleeps',
+                supportingText: sleeps == 0 ? 'Sin datos' : '$sleeps registros',
+                icon: const Icon(Icons.bedtime_outlined),
+                variant: BebeMetricCardVariant.sleep,
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: HealthMetricTile(
-                  label: 'Pañales',
-                  value: diapers == 0 ? '—' : '$diapers',
-                  caption: diapers == 0 ? 'Sin datos' : 'cambios',
-                  icon: Icons.water_drop_outlined,
-                  color: colors.tertiary,
-                ),
+              BebeCompactMetricCard(
+                label: 'Pañales',
+                value: diapers == 0 ? '—' : '$diapers',
+                supportingText: diapers == 0 ? 'Sin datos' : '$diapers cambios',
+                icon: const Icon(Icons.water_drop_outlined),
+                variant: BebeMetricCardVariant.diaper,
               ),
             ],
           ),
@@ -769,8 +801,21 @@ class ReportsSectionView extends StatelessWidget {
                       primary: colors.primary,
                       secondary: colors.secondary,
                       tertiary: colors.tertiary,
+                      feeding: feedingTrend,
+                      sleep: sleepTrend,
+                      diaper: diaperTrend,
                     ),
                   ),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 8,
+                  children: [
+                    _ChartLegend(color: colors.primary, label: 'Alimentación'),
+                    _ChartLegend(color: colors.secondary, label: 'Sueño'),
+                    _ChartLegend(color: colors.tertiary, label: 'Pañales'),
+                  ],
                 ),
               ],
             ),
@@ -1120,6 +1165,55 @@ IconData _historyIcon(RegisterEventType type) => switch (type) {
   RegisterEventType.measurement => Icons.monitor_weight_outlined,
 };
 
+List<double> _dailyTrend(
+  List<RegisteredEvent> records,
+  RegisterEventType type,
+  int days,
+) {
+  final today = DateTime.now();
+  final visibleDays = days.clamp(1, 30);
+  final counts = List<double>.generate(visibleDays, (index) {
+    final date = DateTime(
+      today.year,
+      today.month,
+      today.day,
+    ).subtract(Duration(days: visibleDays - index - 1));
+    return records
+        .where(
+          (event) =>
+              event.type == type &&
+              event.occurredAt.year == date.year &&
+              event.occurredAt.month == date.month &&
+              event.occurredAt.day == date.day,
+        )
+        .length
+        .toDouble();
+  });
+  final maximum = counts.fold<double>(0, (a, b) => a > b ? a : b);
+  if (maximum == 0) return counts;
+  return counts.map((value) => .12 + value / maximum * .72).toList();
+}
+
+class _ChartLegend extends StatelessWidget {
+  const _ChartLegend({required this.color, required this.label});
+
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      DecoratedBox(
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        child: const SizedBox.square(dimension: 9),
+      ),
+      const SizedBox(width: 6),
+      Text(label, style: Theme.of(context).textTheme.labelMedium),
+    ],
+  );
+}
+
 Color _historyColor(BuildContext context, RegisterEventType type) {
   final colors = Theme.of(context).colorScheme;
   return switch (type) {
@@ -1133,18 +1227,31 @@ Color _historyColor(BuildContext context, RegisterEventType type) {
 }
 
 class _GrowthChartPainter extends CustomPainter {
-  const _GrowthChartPainter({required this.color});
+  const _GrowthChartPainter({
+    required this.color,
+    required this.values,
+    required this.unit,
+  });
 
   final Color color;
+  final List<double> values;
+  final String unit;
 
   @override
   void paint(Canvas canvas, Size size) {
+    final chart = Rect.fromLTRB(30, 8, size.width - 34, size.height - 28);
     final grid = Paint()
       ..color = color.withValues(alpha: 0.14)
       ..strokeWidth = 1;
     for (var i = 0; i <= 4; i++) {
-      final y = size.height * i / 4;
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), grid);
+      final y = chart.top + chart.height * i / 4;
+      canvas.drawLine(Offset(chart.left, y), Offset(chart.right, y), grid);
+      _paintLabel(
+        canvas,
+        '${(4 - i) * (unit == 'kg' ? 2.5 : 10)}',
+        Offset(0, y - 7),
+        color.withValues(alpha: .7),
+      );
     }
     final percentile = Paint()
       ..color = color.withValues(alpha: 0.28)
@@ -1153,39 +1260,128 @@ class _GrowthChartPainter extends CustomPainter {
     for (var line = 0; line < 3; line++) {
       final path = Path();
       for (var i = 0; i <= 6; i++) {
-        final x = size.width * i / 6;
-        final y = size.height * (0.84 - line * 0.19) - (i * 7.0).clamp(0, 32);
+        final x = chart.left + chart.width * i / 6;
+        final progress = i / 6;
+        final y =
+            chart.bottom -
+            chart.height * (.12 + line * .22 + progress * (.24 - line * .03));
         if (i == 0) {
           path.moveTo(x, y);
         } else {
           path.lineTo(x, y);
         }
       }
-      canvas.drawPath(path, percentile);
+      _drawDashedPath(canvas, path, percentile);
+      _paintLabel(
+        canvas,
+        const ['P3', 'P50', 'P97'][line],
+        Offset(
+          chart.right + 5,
+          chart.bottom - chart.height * (.36 + line * .19),
+        ),
+        color.withValues(alpha: line == 1 ? 1 : .65),
+      );
     }
+
+    for (var i = 0; i <= 6; i++) {
+      _paintLabel(
+        canvas,
+        '$i',
+        Offset(chart.left + chart.width * i / 6 - 3, chart.bottom + 6),
+        color.withValues(alpha: .7),
+      );
+    }
+
+    final effectiveValues = values.isEmpty ? const [0.0] : values;
+    final maximum = effectiveValues.fold<double>(
+      unit == 'kg' ? 10 : 80,
+      (current, value) => value > current ? value : current,
+    );
+    final minimum = unit == 'kg' ? 0.0 : 40.0;
+    Offset pointFor(int index) {
+      final denominator = effectiveValues.length <= 1
+          ? 1
+          : effectiveValues.length - 1;
+      final x = chart.left + chart.width * index / denominator;
+      final normalized =
+          ((effectiveValues[index] - minimum) / (maximum - minimum))
+              .clamp(0, 1)
+              .toDouble();
+      return Offset(x, chart.bottom - chart.height * normalized);
+    }
+
     final actual = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3
       ..strokeCap = StrokeCap.round;
-    final path = Path()
-      ..moveTo(4, size.height * 0.82)
-      ..lineTo(size.width * 0.24, size.height * 0.68)
-      ..lineTo(size.width * 0.48, size.height * 0.54);
+    final first = pointFor(0);
+    final path = Path()..moveTo(first.dx, first.dy);
+    for (var index = 1; index < effectiveValues.length; index++) {
+      final point = pointFor(index);
+      path.lineTo(point.dx, point.dy);
+    }
+    final area = Path.from(path)
+      ..lineTo(pointFor(effectiveValues.length - 1).dx, chart.bottom)
+      ..lineTo(first.dx, chart.bottom)
+      ..close();
+    canvas.drawPath(
+      area,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [color.withValues(alpha: .18), color.withValues(alpha: .01)],
+        ).createShader(chart),
+    );
     canvas.drawPath(path, actual);
     final point = Paint()..color = color;
-    for (final offset in [
-      Offset(4, size.height * 0.82),
-      Offset(size.width * 0.24, size.height * 0.68),
-      Offset(size.width * 0.48, size.height * 0.54),
-    ]) {
-      canvas.drawCircle(offset, 5, point);
+    for (var index = 0; index < effectiveValues.length; index++) {
+      canvas.drawCircle(pointFor(index), 5, point);
     }
+  }
+
+  static void _drawDashedPath(Canvas canvas, Path path, Paint paint) {
+    for (final metric in path.computeMetrics()) {
+      var distance = 0.0;
+      while (distance < metric.length) {
+        canvas.drawPath(
+          metric.extractPath(
+            distance,
+            (distance + 6).clamp(0, metric.length).toDouble(),
+          ),
+          paint,
+        );
+        distance += 10;
+      }
+    }
+  }
+
+  static void _paintLabel(
+    Canvas canvas,
+    String value,
+    Offset offset,
+    Color color,
+  ) {
+    final painter = TextPainter(
+      text: TextSpan(
+        text: value,
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    painter.paint(canvas, offset);
   }
 
   @override
   bool shouldRepaint(covariant _GrowthChartPainter oldDelegate) =>
-      oldDelegate.color != color;
+      oldDelegate.color != color ||
+      oldDelegate.values != values ||
+      oldDelegate.unit != unit;
 }
 
 class _ReportsChartPainter extends CustomPainter {
@@ -1193,11 +1389,17 @@ class _ReportsChartPainter extends CustomPainter {
     required this.primary,
     required this.secondary,
     required this.tertiary,
+    required this.feeding,
+    required this.sleep,
+    required this.diaper,
   });
 
   final Color primary;
   final Color secondary;
   final Color tertiary;
+  final List<double> feeding;
+  final List<double> sleep;
+  final List<double> diaper;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1209,6 +1411,7 @@ class _ReportsChartPainter extends CustomPainter {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), grid);
     }
     void line(Color color, List<double> points) {
+      if (points.isEmpty) return;
       final paint = Paint()
         ..color = color
         ..strokeWidth = 3
@@ -1216,7 +1419,9 @@ class _ReportsChartPainter extends CustomPainter {
         ..strokeCap = StrokeCap.round;
       final path = Path();
       for (var i = 0; i < points.length; i++) {
-        final x = size.width * i / (points.length - 1);
+        final x = points.length == 1
+            ? size.width / 2
+            : size.width * i / (points.length - 1);
         final y = size.height * (1 - points[i]);
         if (i == 0) {
           path.moveTo(x, y);
@@ -1229,7 +1434,9 @@ class _ReportsChartPainter extends CustomPainter {
       for (var i = 0; i < points.length; i++) {
         canvas.drawCircle(
           Offset(
-            size.width * i / (points.length - 1),
+            points.length == 1
+                ? size.width / 2
+                : size.width * i / (points.length - 1),
             size.height * (1 - points[i]),
           ),
           4,
@@ -1238,14 +1445,17 @@ class _ReportsChartPainter extends CustomPainter {
       }
     }
 
-    line(primary, const [0.42, 0.55, 0.50, 0.66, 0.58, 0.70, 0.48]);
-    line(secondary, const [0.65, 0.75, 0.52, 0.45, 0.54, 0.62, 0.60]);
-    line(tertiary, const [0.20, 0.28, 0.18, 0.20, 0.24, 0.30, 0.22]);
+    line(primary, feeding);
+    line(secondary, sleep);
+    line(tertiary, diaper);
   }
 
   @override
   bool shouldRepaint(covariant _ReportsChartPainter oldDelegate) =>
       oldDelegate.primary != primary ||
       oldDelegate.secondary != secondary ||
-      oldDelegate.tertiary != tertiary;
+      oldDelegate.tertiary != tertiary ||
+      oldDelegate.feeding != feeding ||
+      oldDelegate.sleep != sleep ||
+      oldDelegate.diaper != diaper;
 }

@@ -88,6 +88,13 @@ class _FamilyContent extends StatelessWidget {
     final bloc = context.read<FamilyBloc>();
 
     return BebeFamilyOverviewTemplate(
+      onRefresh: () async {
+        final completed = bloc.stream.firstWhere(
+          (state) => state is FamilyLoaded || state is FamilyFailure,
+        );
+        bloc.add(const FamilyEvent.retried());
+        await completed;
+      },
       familyContext: BebeFamilyContextHeader(
         familyName: overview.familyName,
         babyName: activeBaby.name,
@@ -218,8 +225,10 @@ class _FamilySummary extends StatelessWidget {
             BebeFamilyMetricCard(
               value: '${overview.pendingInvitations}',
               label: overview.pendingInvitations == 1
-                  ? 'invitación pendiente'
-                  : 'invitaciones pendientes',
+                  ? 'invitación'
+                  : 'invitaciones',
+              semanticLabel:
+                  '${overview.pendingInvitations} invitaciones pendientes',
               icon: const Icon(Icons.mail_outline_rounded),
               variant: BebeFamilyMetricCardVariant.warning,
             ),

@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:core/core.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -32,7 +32,7 @@ class AgendaSubpage extends GoRoute {
     super.routes,
   }) : super(
          path: kind.relativePath,
-         pageBuilder: (context, state) => CupertinoPage<void>(
+         pageBuilder: (context, state) => MaterialPage<void>(
            key: ValueKey(
              'agenda-${kind.name}-${state.pathParameters['eventId']}',
            ),

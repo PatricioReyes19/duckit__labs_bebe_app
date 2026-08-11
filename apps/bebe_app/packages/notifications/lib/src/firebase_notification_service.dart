@@ -6,6 +6,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/data/latest.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
 
 import 'notification_inbox_store.dart';
 import 'notification_message.dart';
@@ -55,6 +57,15 @@ class FirebaseNotificationService implements NotificationService {
     'Notificaciones importantes',
     description: 'Alertas, recordatorios y actividad del círculo de cuidado.',
     importance: Importance.high,
+  );
+
+  static const _reminderChannel = AndroidNotificationChannel(
+    'bebeapp_reminders',
+    'Alarmas y recordatorios',
+    description: 'Alarmas de medicamentos, alimentación y cambios de pañal.',
+    importance: Importance.max,
+    playSound: true,
+    enableVibration: true,
   );
 
   final FirebaseMessaging _messaging;
@@ -139,6 +150,7 @@ class FirebaseNotificationService implements NotificationService {
   }
 
   Future<void> _initializeLocalNotifications() async {
+    tz.initializeTimeZones();
     const settings = InitializationSettings(
       android: AndroidInitializationSettings('@mipmap/ic_launcher'),
       iOS: IOSInitializationSettings(
@@ -160,6 +172,57 @@ class FirebaseNotificationService implements NotificationService {
           AndroidFlutterLocalNotificationsPlugin
         >()
         ?.createNotificationChannel(_channel);
+    await _localNotifications
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
+        ?.createNotificationChannel(_reminderChannel);
+  }
+
+  @override
+  Future<void> scheduleReminder({
+    required String id,
+    required String title,
+    required String body,
+    required DateTime scheduledAt,
+    String route = '/agenda',
+  }) async {
+    if (kIsWeb || !scheduledAt.isAfter(DateTime.now())) return;
+    await initialize();
+    final notification = AppNotification(
+      id: id,
+      title: title,
+      body: body,
+      receivedAt: scheduledAt,
+      data: {'route': route},
+    );
+    await _localNotifications.zonedSchedule(
+      id: id.hashCode & 0x7fffffff,
+      title: title,
+      body: body,
+      scheduledDate: tz.TZDateTime.from(scheduledAt.toUtc(), tz.UTC),
+      notificationDetails: const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'bebeapp_reminders',
+          'Alarmas y recordatorios',
+          channelDescription:
+              'Alarmas de medicamentos, alimentación y cambios de pañal.',
+          importance: Importance.max,
+          priority: Priority.max,
+          category: AndroidNotificationCategory.alarm,
+          audioAttributesUsage: AudioAttributesUsage.alarm,
+          ticker: 'Recordatorio de BebéApp',
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+          interruptionLevel: InterruptionLevel.timeSensitive,
+        ),
+      ),
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      payload: jsonEncode(notification.toJson()),
+    );
   }
 
   Future<void> _handleForegroundMessage(RemoteMessage message) async {

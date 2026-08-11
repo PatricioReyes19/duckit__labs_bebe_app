@@ -1,6 +1,6 @@
 import 'package:family/family.dart';
 import 'package:design_system/design_system.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -30,7 +30,7 @@ class SettingsPage extends GoRoute {
   }) : super(
          path: relativePath,
          pageBuilder: (context, state) {
-           return CupertinoPage<void>(
+           return MaterialPage<void>(
              key: const ValueKey('settings'),
              name: name ?? nameRoute,
              child: BlocProvider(

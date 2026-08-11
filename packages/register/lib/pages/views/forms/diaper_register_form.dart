@@ -16,6 +16,8 @@ class DiaperRegisterForm extends StatelessWidget {
     this.amount = 'normal',
     this.urineColor = 'clear',
     this.urineAmount = 'normal',
+    this.scheduleReminder = false,
+    this.reminderLabel = 'En 3 horas',
     this.notesController,
     this.symptomsController,
     this.onDatePressed,
@@ -25,6 +27,8 @@ class DiaperRegisterForm extends StatelessWidget {
     this.onAmountChanged,
     this.onUrineColorChanged,
     this.onUrineAmountChanged,
+    this.onScheduleReminderChanged,
+    this.onReminderPressed,
     this.onNotesChanged,
     this.onSymptomsChanged,
     super.key,
@@ -38,6 +42,8 @@ class DiaperRegisterForm extends StatelessWidget {
   final String amount;
   final String urineColor;
   final String urineAmount;
+  final bool scheduleReminder;
+  final String reminderLabel;
   final TextEditingController? notesController;
   final TextEditingController? symptomsController;
   final VoidCallback? onDatePressed;
@@ -47,6 +53,8 @@ class DiaperRegisterForm extends StatelessWidget {
   final ValueChanged<String>? onAmountChanged;
   final ValueChanged<String>? onUrineColorChanged;
   final ValueChanged<String>? onUrineAmountChanged;
+  final ValueChanged<bool>? onScheduleReminderChanged;
+  final VoidCallback? onReminderPressed;
   final ValueChanged<String>? onNotesChanged;
   final ValueChanged<String>? onSymptomsChanged;
 
@@ -169,6 +177,24 @@ class DiaperRegisterForm extends StatelessWidget {
             ],
             selectedValue: amount,
             onChanged: onAmountChanged,
+          ),
+        ],
+        SizedBox(height: spacing.spacingXl),
+        BebeSettingsSwitchTile(
+          title: 'Recordar próximo cambio',
+          description:
+              'Programa una alarma para ayudarte a mantener los tiempos.',
+          value: scheduleReminder,
+          onChanged: onScheduleReminderChanged,
+        ),
+        if (scheduleReminder) ...[
+          SizedBox(height: spacing.spacingL),
+          BebePickerField(
+            compact: true,
+            label: 'Próximo recordatorio',
+            value: reminderLabel,
+            kind: BebePickerFieldKind.selection,
+            onPressed: onReminderPressed,
           ),
         ],
         SizedBox(height: spacing.spacingXl),

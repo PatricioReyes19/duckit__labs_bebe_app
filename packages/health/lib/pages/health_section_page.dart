@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:health/models/health_flow_controller.dart';
@@ -72,7 +71,7 @@ class HealthSectionPage extends GoRoute {
     required HealthFlowController controller,
   }) : super(
          path: kind.relativePath,
-         pageBuilder: (context, state) => CupertinoPage<void>(
+         pageBuilder: (context, state) => MaterialPage<void>(
            key: ValueKey('health-${kind.name}'),
            name: 'Health${kind.name}',
            child: _HealthSectionView(
@@ -87,7 +86,7 @@ class HealthSectionPage extends GoRoute {
              pageBuilder: (context, state) {
                final action =
                    state.pathParameters['action'] ?? HealthFlowAction.detail;
-               return CupertinoPage<void>(
+               return MaterialPage<void>(
                  key: ValueKey('health-${kind.name}-$action'),
                  name: 'Health${kind.name}-$action',
                  child: HealthFlowDetailView(

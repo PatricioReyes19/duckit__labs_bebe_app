@@ -10,6 +10,7 @@ class BebeFamilyOverviewTemplate extends StatelessWidget {
     this.familyActions,
     this.horizontalPadding,
     this.maximumContentWidth = BebeLayout.pageContentMaxWidth,
+    this.onRefresh,
     super.key,
   });
 
@@ -20,46 +21,48 @@ class BebeFamilyOverviewTemplate extends StatelessWidget {
   final Widget? familyActions;
   final double? horizontalPadding;
   final double maximumContentWidth;
+  final Future<void> Function()? onRefresh;
 
   @override
   Widget build(BuildContext context) {
     final spacing = context.theme.spacing;
     final effectiveHorizontalPadding = horizontalPadding ?? spacing.spacingL;
-    return ColoredBox(
-      color: context.theme.colors.background.neutralsSurface,
-      child: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(
-          spacing.spacingS,
-          spacing.spacingS,
-          spacing.spacingS,
-          spacing.spacing4xl,
-        ),
-        child: BebeResponsiveContent(
-          maxWidth: maximumContentWidth,
-          child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: effectiveHorizontalPadding,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                familyContext,
+    final scrollView = SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(
+        spacing.spacingS,
+        spacing.spacingS,
+        spacing.spacingS,
+        spacing.spacing4xl,
+      ),
+      child: BebeResponsiveContent(
+        maxWidth: maximumContentWidth,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: effectiveHorizontalPadding),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              familyContext,
+              SizedBox(height: spacing.spacingXl),
+              familySummary,
+              SizedBox(height: spacing.spacingXl),
+              babiesSection,
+              SizedBox(height: spacing.spacingXl),
+              careCircleSection,
+              if (familyActions != null) ...[
                 SizedBox(height: spacing.spacingXl),
-                familySummary,
-                SizedBox(height: spacing.spacingXl),
-                babiesSection,
-                SizedBox(height: spacing.spacingXl),
-                careCircleSection,
-                if (familyActions != null) ...[
-                  SizedBox(height: spacing.spacingXl),
-                  familyActions!,
-                ],
+                familyActions!,
               ],
-            ),
+            ],
           ),
         ),
       ),
+    );
+    return ColoredBox(
+      color: context.theme.colors.background.neutralsSurface,
+      child: onRefresh == null
+          ? scrollView
+          : RefreshIndicator(onRefresh: onRefresh!, child: scrollView),
     );
   }
 }

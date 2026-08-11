@@ -18,6 +18,8 @@ class FeedingRegisterCubit extends RegisterFormCubit {
             'mood': 'calm',
             'notes': '',
             'symptoms': '',
+            'scheduleNextFeeding': false,
+            'reminderHours': 4,
           },
         );
 
@@ -30,8 +32,14 @@ class FeedingRegisterCubit extends RegisterFormCubit {
   String get mood => state.value<String>('mood');
   String get notes => state.value<String>('notes');
   String get symptoms => state.value<String>('symptoms');
+  bool get scheduleNextFeeding => state.value<bool>('scheduleNextFeeding');
+  int get reminderHours => state.value<int>('reminderHours');
 
-  void subtypeChanged(String value) => setValue('subtype', value);
+  void subtypeChanged(String value) {
+    setValue('subtype', value);
+    if (value == 'breast') setValue('scheduleNextFeeding', false);
+  }
+
   void sideChanged(String value) => setValue('side', value);
   void amountMlChanged(String value) => setValue('amountMl', value);
   void dateChanged(DateTime value) =>
@@ -47,6 +55,9 @@ class FeedingRegisterCubit extends RegisterFormCubit {
   void moodChanged(String value) => setValue('mood', value);
   void notesChanged(String value) => setValue('notes', value);
   void symptomsChanged(String value) => setValue('symptoms', value);
+  void scheduleNextFeedingChanged(bool value) =>
+      setValue('scheduleNextFeeding', value);
+  void reminderHoursChanged(int value) => setValue('reminderHours', value);
 
   @override
   RegisterEventDraft buildDraft() {
@@ -72,6 +83,9 @@ class FeedingRegisterCubit extends RegisterFormCubit {
         'end_at': endAt?.toUtc().toIso8601String(),
         'mood': mood,
         'symptoms': symptoms.trim(),
+        if (subtype != 'breast') 'schedule_next_feeding': scheduleNextFeeding,
+        if (subtype != 'breast' && scheduleNextFeeding)
+          'reminder_interval_hours': reminderHours,
       },
     );
   }
