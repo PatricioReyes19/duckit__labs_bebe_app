@@ -1,7 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 
 abstract final class BebeDatabaseSchema {
-  static const version = 5;
+  static const version = 6;
 
   static const registerEvents = 'register_events';
   static const families = 'families';
@@ -230,6 +230,10 @@ CREATE TABLE IF NOT EXISTS $healthEvents (
   starts_at INTEGER NOT NULL,
   caregiver_id TEXT,
   status TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  sync_status TEXT NOT NULL DEFAULT 'pending',
+  sync_error TEXT,
   FOREIGN KEY (baby_id) REFERENCES $babies(id) ON DELETE CASCADE,
   FOREIGN KEY (caregiver_id) REFERENCES $familyMembers(id) ON DELETE SET NULL
 )
@@ -237,6 +241,10 @@ CREATE TABLE IF NOT EXISTS $healthEvents (
     await database.execute('''
 CREATE INDEX IF NOT EXISTS idx_health_events_baby_starts
 ON $healthEvents (baby_id, starts_at)
+''');
+    await database.execute('''
+CREATE INDEX IF NOT EXISTS idx_health_events_sync
+ON $healthEvents (sync_status, updated_at)
 ''');
     await database.execute('''
 CREATE TABLE IF NOT EXISTS $healthMeasurements (
@@ -268,9 +276,70 @@ CREATE TABLE IF NOT EXISTS $appSettings (
   account_email TEXT NOT NULL,
   language TEXT NOT NULL,
   time_format TEXT NOT NULL,
-  text_size TEXT NOT NULL
+  text_size TEXT NOT NULL,
+  updated_at INTEGER NOT NULL DEFAULT 0,
+  sync_status TEXT NOT NULL DEFAULT 'pending',
+  sync_error TEXT
 )
 ''');
+  }
+
+  static Future<void> upgradeHealthAndSettingsForSync(Database database) async {
+    final healthColumns = (await database.rawQuery(
+      'PRAGMA table_info($healthEvents)',
+    )).map((row) => row['name']).whereType<String>().toSet();
+    if (!healthColumns.contains('created_at')) {
+      await database.execute(
+        'ALTER TABLE $healthEvents ADD COLUMN created_at INTEGER NOT NULL DEFAULT 0',
+      );
+      await database.execute(
+        'UPDATE $healthEvents SET created_at = starts_at WHERE created_at = 0',
+      );
+    }
+    if (!healthColumns.contains('updated_at')) {
+      await database.execute(
+        'ALTER TABLE $healthEvents ADD COLUMN updated_at INTEGER NOT NULL DEFAULT 0',
+      );
+      await database.execute(
+        'UPDATE $healthEvents SET updated_at = starts_at WHERE updated_at = 0',
+      );
+    }
+    if (!healthColumns.contains('sync_status')) {
+      await database.execute(
+        "ALTER TABLE $healthEvents ADD COLUMN sync_status TEXT NOT NULL DEFAULT 'pending'",
+      );
+    }
+    if (!healthColumns.contains('sync_error')) {
+      await database.execute(
+        'ALTER TABLE $healthEvents ADD COLUMN sync_error TEXT',
+      );
+    }
+    await database.execute('''
+CREATE INDEX IF NOT EXISTS idx_health_events_sync
+ON $healthEvents (sync_status, updated_at)
+''');
+
+    final settingsColumns = (await database.rawQuery(
+      'PRAGMA table_info($appSettings)',
+    )).map((row) => row['name']).whereType<String>().toSet();
+    if (!settingsColumns.contains('updated_at')) {
+      await database.execute(
+        'ALTER TABLE $appSettings ADD COLUMN updated_at INTEGER NOT NULL DEFAULT 0',
+      );
+      await database.update(appSettings, {
+        'updated_at': DateTime.now().toUtc().millisecondsSinceEpoch,
+      }, where: 'updated_at = 0');
+    }
+    if (!settingsColumns.contains('sync_status')) {
+      await database.execute(
+        "ALTER TABLE $appSettings ADD COLUMN sync_status TEXT NOT NULL DEFAULT 'pending'",
+      );
+    }
+    if (!settingsColumns.contains('sync_error')) {
+      await database.execute(
+        'ALTER TABLE $appSettings ADD COLUMN sync_error TEXT',
+      );
+    }
   }
 
   static Future<void> upgradeFamilyInvitations(Database database) async {

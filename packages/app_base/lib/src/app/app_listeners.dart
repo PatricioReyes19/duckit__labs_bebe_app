@@ -46,7 +46,7 @@ class _AppListenersState extends State<AppListeners> {
             messenger,
             title: notification.title,
             message: notification.body,
-            variant: BebeInAppSnackbarVariant.information,
+            variant: _snackbarVariant(notification),
             actionLabel: 'Ver',
             onActionPressed: () => _openNotification(notification),
           );
@@ -83,3 +83,10 @@ class _AppListenersState extends State<AppListeners> {
     );
   }
 }
+
+BebeInAppSnackbarVariant _snackbarVariant(AppNotification notification) =>
+    switch (notification.data['status']) {
+      'accepted' => BebeInAppSnackbarVariant.success,
+      'rejected' || 'revoked' => BebeInAppSnackbarVariant.warning,
+      _ => BebeInAppSnackbarVariant.information,
+    };

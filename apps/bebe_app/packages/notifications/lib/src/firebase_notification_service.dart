@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -38,19 +37,23 @@ class FirebaseNotificationService implements NotificationService {
   FirebaseNotificationService({
     FirebaseMessaging? messaging,
     FirebaseAuth? auth,
-    FirebaseFirestore? firestore,
     FlutterLocalNotificationsPlugin? localNotifications,
     NotificationInboxStore? inboxStore,
     RegisterRemoteNotificationDevice? registerRemoteDevice,
     UnregisterRemoteNotificationDevice? unregisterRemoteDevice,
+    LoadRemoteNotifications? loadRemoteNotifications,
+    MarkRemoteNotificationRead? markRemoteNotificationRead,
+    MarkAllRemoteNotificationsRead? markAllRemoteNotificationsRead,
   }) : _messaging = messaging ?? FirebaseMessaging.instance,
        _auth = auth ?? FirebaseAuth.instance,
-       _firestore = firestore ?? FirebaseFirestore.instance,
        _localNotifications =
            localNotifications ?? FlutterLocalNotificationsPlugin(),
        _inboxStore = inboxStore ?? NotificationInboxStore(),
        _registerRemoteDevice = registerRemoteDevice,
-       _unregisterRemoteDevice = unregisterRemoteDevice;
+       _unregisterRemoteDevice = unregisterRemoteDevice,
+       _loadRemoteNotifications = loadRemoteNotifications,
+       _markRemoteNotificationRead = markRemoteNotificationRead,
+       _markAllRemoteNotificationsRead = markAllRemoteNotificationsRead;
 
   static const _channel = AndroidNotificationChannel(
     'bebeapp_high_importance',
@@ -70,11 +73,13 @@ class FirebaseNotificationService implements NotificationService {
 
   final FirebaseMessaging _messaging;
   final FirebaseAuth _auth;
-  final FirebaseFirestore _firestore;
   final FlutterLocalNotificationsPlugin _localNotifications;
   final NotificationInboxStore _inboxStore;
   final RegisterRemoteNotificationDevice? _registerRemoteDevice;
   final UnregisterRemoteNotificationDevice? _unregisterRemoteDevice;
+  final LoadRemoteNotifications? _loadRemoteNotifications;
+  final MarkRemoteNotificationRead? _markRemoteNotificationRead;
+  final MarkAllRemoteNotificationsRead? _markAllRemoteNotificationsRead;
   final StreamController<List<AppNotification>> _notificationsController =
       StreamController<List<AppNotification>>.broadcast();
   final StreamController<AppNotification> _openedController =
@@ -255,6 +260,7 @@ class FirebaseNotificationService implements NotificationService {
       wasOpened: true,
     );
     await _record(notification);
+    await _tryMarkRemoteRead(notification.id);
     _publishOpened(notification);
   }
 
@@ -272,6 +278,7 @@ class FirebaseNotificationService implements NotificationService {
         raw.map((key, value) => MapEntry(key.toString(), value)),
       ).copyWith(wasOpened: true);
       await _record(notification);
+      await _tryMarkRemoteRead(notification.id);
       _publishOpened(notification);
     } on Object {
       return;
@@ -300,15 +307,56 @@ class FirebaseNotificationService implements NotificationService {
 
   @override
   Future<void> refreshInbox() async {
-    _currentNotifications = await _inboxStore.load();
+    final local = await _inboxStore.load();
+    var remote = const <AppNotification>[];
+    try {
+      remote = await _loadRemoteNotifications?.call() ?? const [];
+    } on Object catch (error) {
+      debugPrint('No se pudo actualizar la bandeja desde Supabase: $error');
+    }
+    final merged =
+        <String, AppNotification>{
+          for (final item in local) item.id: item,
+          for (final item in remote) item.id: item,
+        }.values.toList()..sort(
+          (first, second) => second.receivedAt.compareTo(first.receivedAt),
+        );
+    _currentNotifications = merged.take(100).toList(growable: false);
+    await _inboxStore.save(_currentNotifications);
     _emitNotifications();
   }
 
   @override
   Future<void> clearAll() async {
-    await _inboxStore.clear();
-    _currentNotifications = <AppNotification>[];
+    try {
+      await _markAllRemoteNotificationsRead?.call();
+    } on Object catch (error) {
+      debugPrint('No se pudo marcar la bandeja remota como leída: $error');
+    } finally {
+      await _inboxStore.clear();
+      _currentNotifications = <AppNotification>[];
+      _emitNotifications();
+    }
+  }
+
+  @override
+  Future<void> markOpened(AppNotification notification) async {
+    final opened = notification.copyWith(wasOpened: true);
+    _currentNotifications = [
+      for (final item in _currentNotifications)
+        if (item.id == notification.id) opened else item,
+    ];
+    await _inboxStore.save(_currentNotifications);
     _emitNotifications();
+    await _tryMarkRemoteRead(notification.id);
+  }
+
+  Future<void> _tryMarkRemoteRead(String id) async {
+    try {
+      await _markRemoteNotificationRead?.call(id);
+    } on Object catch (error) {
+      debugPrint('No se pudo marcar la notificación remota como leída: $error');
+    }
   }
 
   void _emitNotifications() {
@@ -367,16 +415,11 @@ class FirebaseNotificationService implements NotificationService {
     }
 
     try {
-      await _syncUserProfile(user);
-    } on Object catch (error, stackTrace) {
-      debugPrint('No se pudo sincronizar el perfil del usuario: $error');
-      debugPrintStack(stackTrace: stackTrace);
-    }
-
-    try {
-      final state = await requestPermission();
-      if (state == NotificationPermissionState.denied) {
-        return;
+      final state = await permissionState();
+      if (state == NotificationPermissionState.authorized ||
+          state == NotificationPermissionState.provisional) {
+        final token = await _getTokenWhenAvailable();
+        if (token != null) await _registerToken(token);
       }
     } on Object catch (error, stackTrace) {
       debugPrint('No se pudo inicializar FCM para el usuario: $error');
@@ -401,19 +444,6 @@ class FirebaseNotificationService implements NotificationService {
     return _messaging.getToken();
   }
 
-  Future<void> _syncUserProfile(User user) async {
-    final reference = _firestore.collection('users').doc(user.uid);
-    await reference.set(<String, Object?>{
-      'email': user.email,
-      'displayName': user.displayName,
-      'photoUrl': user.photoURL,
-      'emailVerified': user.emailVerified,
-      'lastSeenAt': FieldValue.serverTimestamp(),
-      if (user.metadata.creationTime case final creationTime?)
-        'createdAt': Timestamp.fromDate(creationTime),
-    }, SetOptions(merge: true));
-  }
-
   Future<void> _registerToken(String token) async {
     final user = _auth.currentUser;
     if (user == null || token.isEmpty) {
@@ -426,15 +456,8 @@ class FirebaseNotificationService implements NotificationService {
 
     try {
       if (_registeredUserId == user.uid && _registeredToken != null) {
-        await _deviceReference(user.uid, _registeredToken!).delete();
+        await _unregisterRemoteDevice?.call(_registeredToken!);
       }
-
-      await _deviceReference(user.uid, token).set(<String, Object?>{
-        'token': token,
-        'platform': kIsWeb ? 'web' : defaultTargetPlatform.name,
-        'enabled': true,
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
       await _registerRemoteDevice?.call(
         token: token,
         platform: kIsWeb ? 'web' : defaultTargetPlatform.name,
@@ -447,18 +470,6 @@ class FirebaseNotificationService implements NotificationService {
     }
   }
 
-  DocumentReference<Map<String, dynamic>> _deviceReference(
-    String userId,
-    String token,
-  ) {
-    final tokenId = base64Url.encode(utf8.encode(token)).replaceAll('=', '');
-    return _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('devices')
-        .doc(tokenId);
-  }
-
   @override
   Future<void> unregisterCurrentDevice() async {
     final user = _auth.currentUser;
@@ -467,7 +478,6 @@ class FirebaseNotificationService implements NotificationService {
     try {
       token ??= await _messaging.getToken();
       if (user != null && token != null && token.isNotEmpty) {
-        await _deviceReference(user.uid, token).delete();
         await _unregisterRemoteDevice?.call(token);
       }
     } on Object catch (error, stackTrace) {

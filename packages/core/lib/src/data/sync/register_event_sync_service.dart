@@ -95,6 +95,7 @@ class RegisterEventSyncService {
     var failedCount = 0;
     Object? lastError;
     DateTime? newestRemoteTimestamp = await _local.readSyncCursor();
+    var pullCompleted = false;
     for (final event in pending) {
       try {
         await _local.markSyncing(event);
@@ -120,12 +121,15 @@ class RegisterEventSyncService {
         await _local.mergeRemote(event);
         newestRemoteTimestamp = _newest(newestRemoteTimestamp, event.updatedAt);
       }
+      pullCompleted = true;
     } on Object catch (error) {
       failedCount += 1;
       lastError = error;
     }
 
-    if (newestRemoteTimestamp != null) {
+    // A successful push must not advance the pull cursor if the pull failed:
+    // doing so could skip remote rows written by another caregiver.
+    if (pullCompleted && newestRemoteTimestamp != null) {
       await _local.writeSyncCursor(newestRemoteTimestamp);
     }
     final now = _clock().toUtc();

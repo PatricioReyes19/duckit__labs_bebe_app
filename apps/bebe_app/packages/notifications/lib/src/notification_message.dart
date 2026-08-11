@@ -22,6 +22,7 @@ class AppNotification {
 
     return AppNotification(
       id:
+          data['notification_id'] ??
           message.messageId ??
           '${receivedAt.microsecondsSinceEpoch}-${data.hashCode}',
       title: notification?.title ?? data['title'] ?? 'BebéApp',

@@ -126,10 +126,11 @@ class _NotificationsPageState extends State<NotificationsPage> {
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
                 sliver: SliverList.separated(
                   itemCount: _notifications.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  separatorBuilder: (_, _) => const SizedBox(height: 10),
                   itemBuilder: (context, index) => _NotificationCard(
                     _notifications[index],
-                    onPressed: widget.onNotificationPressed,
+                    onPressed: (notification) =>
+                        unawaited(_openNotification(notification)),
                   ),
                 ),
               ),
@@ -137,6 +138,11 @@ class _NotificationsPageState extends State<NotificationsPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _openNotification(AppNotification notification) async {
+    await widget.notificationService.markOpened(notification);
+    if (mounted) widget.onNotificationPressed?.call(notification);
   }
 }
 

@@ -6,6 +6,10 @@ typedef RegisterRemoteNotificationDevice =
 typedef UnregisterRemoteNotificationDevice =
     Future<void> Function(String token);
 
+typedef LoadRemoteNotifications = Future<List<AppNotification>> Function();
+typedef MarkRemoteNotificationRead = Future<void> Function(String id);
+typedef MarkAllRemoteNotificationsRead = Future<void> Function();
+
 enum NotificationPermissionState {
   notDetermined,
   denied,
@@ -29,6 +33,8 @@ abstract interface class NotificationService {
   Future<NotificationPermissionState> requestPermission();
 
   Future<void> clearAll();
+
+  Future<void> markOpened(AppNotification notification);
 
   Future<void> scheduleReminder({
     required String id,

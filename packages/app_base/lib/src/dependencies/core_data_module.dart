@@ -10,23 +10,87 @@ abstract class CoreDataModule {
       );
 
   @lazySingleton
-  FamilyRepository familyRepository(
+  FamilyRemoteDataSource familyRemoteDataSource(SupabaseRestClient client) =>
+      SupabaseFamilyRemoteDataSource(client);
+
+  @lazySingleton
+  ProfileRemoteDataSource profileRemoteDataSource(SupabaseRestClient client) =>
+      SupabaseProfileRemoteDataSource(client);
+
+  @lazySingleton
+  SqliteFamilyRepository localFamilyRepository(
     BebeDatabase database,
-    SupabaseRestClient remoteClient,
+    FamilyRemoteDataSource remote,
   ) =>
-      SqliteFamilyRepository(database, remoteClient: remoteClient);
+      SqliteFamilyRepository(database, remoteDataSource: remote);
+
+  @lazySingleton
+  FamilySyncService familySyncService(
+    SqliteFamilyRepository local,
+    FamilyRemoteDataSource remote,
+  ) =>
+      FamilySyncService(local, remote);
+
+  @lazySingleton
+  FamilyRepository familyRepository(
+    SqliteFamilyRepository local,
+    FamilySyncService syncService,
+  ) =>
+      OfflineFirstFamilyRepository(local, syncService);
 
   @lazySingleton
   SqliteAgendaRepository localAgendaRepository(BebeDatabase database) =>
       SqliteAgendaRepository(database);
 
   @lazySingleton
-  HealthRepository healthRepository(BebeDatabase database) =>
+  SqliteHealthRepository localHealthRepository(BebeDatabase database) =>
       SqliteHealthRepository(database);
 
   @lazySingleton
-  AppSettingsRepository appSettingsRepository(BebeDatabase database) =>
+  HealthEventRemoteDataSource healthEventRemoteDataSource(
+    SupabaseRestClient client,
+  ) =>
+      SupabaseHealthEventRemoteDataSource(client);
+
+  @lazySingleton
+  HealthEventSyncService healthEventSyncService(
+    SqliteHealthRepository local,
+    HealthEventRemoteDataSource remote,
+  ) =>
+      HealthEventSyncService(local, remote);
+
+  @lazySingleton
+  HealthRepository healthRepository(
+    SqliteHealthRepository local,
+    HealthEventSyncService syncService,
+  ) =>
+      OfflineFirstHealthRepository(local, syncService);
+
+  @lazySingleton
+  SqliteAppSettingsRepository localAppSettingsRepository(
+    BebeDatabase database,
+  ) =>
       SqliteAppSettingsRepository(database);
+
+  @lazySingleton
+  AppSettingsRemoteDataSource appSettingsRemoteDataSource(
+    SupabaseRestClient client,
+  ) =>
+      SupabaseAppSettingsRemoteDataSource(client);
+
+  @lazySingleton
+  AppSettingsSyncService appSettingsSyncService(
+    SqliteAppSettingsRepository local,
+    AppSettingsRemoteDataSource remote,
+  ) =>
+      AppSettingsSyncService(local, remote);
+
+  @lazySingleton
+  AppSettingsRepository appSettingsRepository(
+    SqliteAppSettingsRepository local,
+    AppSettingsSyncService syncService,
+  ) =>
+      OfflineFirstAppSettingsRepository(local, syncService);
 
   @lazySingleton
   GetFamilyOverview getFamilyOverview(FamilyRepository repository) =>

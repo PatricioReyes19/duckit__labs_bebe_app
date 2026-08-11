@@ -26,6 +26,18 @@ abstract class RegisterModule {
       SupabasePushDeviceRepository(client);
 
   @lazySingleton
+  ActivityNotificationRemoteDataSource activityNotificationRemoteDataSource(
+    SupabaseRestClient client,
+  ) =>
+      SupabaseActivityNotificationRemoteDataSource(client);
+
+  @lazySingleton
+  ActivityNotificationRepository activityNotificationRepository(
+    ActivityNotificationRemoteDataSource remote,
+  ) =>
+      SupabaseActivityNotificationRepository(remote);
+
+  @lazySingleton
   SqliteRegisterEventRepository localRegisterEventRepository(
     BebeDatabase database,
   ) =>
@@ -63,12 +75,18 @@ abstract class RegisterModule {
     SessionRepository sessionRepository,
     RegisterEventSyncService registerSyncService,
     AgendaEventSyncService agendaSyncService,
+    HealthEventSyncService healthSyncService,
+    AppSettingsSyncService appSettingsSyncService,
+    FamilySyncService familySyncService,
   ) =>
       SupabaseRealtimeSyncCoordinator(
         configuration,
         sessionRepository,
         registerSyncService,
         agendaSyncService,
+        healthSyncService: healthSyncService,
+        appSettingsSyncService: appSettingsSyncService,
+        familySyncService: familySyncService,
       );
 
   @lazySingleton

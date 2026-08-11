@@ -56,7 +56,10 @@ class _AppLifecycleObserverState extends State<AppLifecycleObserver>
               );
           unawaited(getIt<RegisterEventSyncService>().synchronize());
           unawaited(getIt<AgendaEventSyncService>().synchronize());
-          unawaited(getIt<NotificationService>().refreshInbox());
+          unawaited(getIt<HealthEventSyncService>().synchronize());
+          unawaited(getIt<AppSettingsSyncService>().synchronize());
+          unawaited(getIt<FamilySyncService>().synchronize());
+          unawaited(_refreshProfileAndInbox());
         }
 
       case AppLifecycleState.inactive:
@@ -71,4 +74,18 @@ class _AppLifecycleObserverState extends State<AppLifecycleObserver>
   ) {
     return widget.child;
   }
+}
+
+Future<void> _refreshProfileAndInbox() async {
+  try {
+    final session = await getIt<GetCurrentSession>()();
+    if (session != null) {
+      await getIt<ProfileRemoteDataSource>().syncAuthenticatedUser(
+        session.user,
+      );
+    }
+  } on Object {
+    // Profile sync is retried on the next authentication or app resume.
+  }
+  await getIt<NotificationService>().refreshInbox();
 }

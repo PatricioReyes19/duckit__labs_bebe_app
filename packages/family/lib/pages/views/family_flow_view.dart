@@ -136,9 +136,7 @@ class _BabySelectorView extends StatelessWidget {
           children: [
             for (var index = 0; index < family.babies.length; index++) ...[
               BebeBabySelector(
-                key: ValueKey(
-                  'family-baby-choice-${family.babies[index].id}',
-                ),
+                key: ValueKey('family-baby-choice-${family.babies[index].id}'),
                 name: family.babies[index].name,
                 ageLabel: _familyBabyAge(family.babies[index].birthDate),
                 avatar: _InitialAvatar(
@@ -785,7 +783,7 @@ class _InviteCaregiverViewState extends State<_InviteCaregiverView> {
         final bloc = context.read<FamilyFlowBloc>();
         return _FlowPage(
           description:
-              'Invita por correo o teléfono y decide exactamente qué podrá consultar.',
+              'Invita con el correo de su cuenta y decide exactamente qué podrá consultar.',
           children: [
             _BabyMiniHeader(babyName: widget.babyName),
             SizedBox(height: theme.spacing.spacingXl),
@@ -803,11 +801,11 @@ class _InviteCaregiverViewState extends State<_InviteCaregiverView> {
               controller: _contactController,
               keyboardType: TextInputType.emailAddress,
               decoration: InputDecoration(
-                labelText: 'Correo o teléfono',
+                labelText: 'Correo de la persona invitada',
                 prefixIcon: const Icon(Icons.alternate_email_rounded),
                 border: const OutlineInputBorder(),
                 errorText: state.submission == FamilyFlowSubmission.invalid
-                    ? 'Ingresa un correo o teléfono válido.'
+                    ? 'Ingresa un correo válido.'
                     : null,
               ),
               onChanged: (_) => bloc.add(const FamilyFlowInvitationReset()),

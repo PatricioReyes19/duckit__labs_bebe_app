@@ -10,9 +10,14 @@ class HealthEventModel {
     required this.description,
     required this.startsAt,
     required this.status,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    this.syncStatus = HealthSyncStatus.pending,
     this.caregiverId,
     this.caregiver,
-  });
+    this.syncError,
+  }) : createdAt = createdAt ?? startsAt,
+       updatedAt = updatedAt ?? createdAt ?? startsAt;
 
   final String id;
   final String babyId;
@@ -23,6 +28,10 @@ class HealthEventModel {
   final String? caregiverId;
   final FamilyMemberEntity? caregiver;
   final HealthEventStatus status;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final HealthSyncStatus syncStatus;
+  final String? syncError;
 
   factory HealthEventModel.fromEntity(HealthEventEntity entity) =>
       HealthEventModel(
@@ -32,10 +41,30 @@ class HealthEventModel {
         title: entity.title,
         description: entity.description,
         startsAt: entity.startsAt,
-        caregiverId: entity.caregiver?.id,
+        caregiverId: entity.caregiverId,
         caregiver: entity.caregiver,
         status: entity.status,
+        createdAt: entity.createdAt,
+        updatedAt: entity.updatedAt,
+        syncStatus: entity.syncStatus,
+        syncError: entity.syncError,
       );
+
+  factory HealthEventModel.fromRemoteJson(
+    Map<String, dynamic> json,
+  ) => HealthEventModel(
+    id: json['id']! as String,
+    babyId: json['baby_id']! as String,
+    type: _enumByName(HealthEventType.values, json['event_type']! as String),
+    title: json['title']! as String,
+    description: (json['description'] as String?) ?? '',
+    startsAt: _remoteDate(json, 'starts_at'),
+    caregiverId: json['caregiver_id'] as String?,
+    status: _enumByName(HealthEventStatus.values, json['status']! as String),
+    createdAt: _remoteDate(json, 'created_at'),
+    updatedAt: _remoteDate(json, 'updated_at'),
+    syncStatus: HealthSyncStatus.synced,
+  );
 
   factory HealthEventModel.fromRow(Map<String, Object?> row) {
     final caregiverName = row['caregiver_name'] as String?;
@@ -63,6 +92,19 @@ class HealthEventModel {
                   : FamilyMemberStatus.active,
             ),
       status: _enumByName(HealthEventStatus.values, row['status']! as String),
+      createdAt: DateTime.fromMillisecondsSinceEpoch(
+        (row['created_at'] as int?) ?? row['starts_at']! as int,
+        isUtc: true,
+      ),
+      updatedAt: DateTime.fromMillisecondsSinceEpoch(
+        (row['updated_at'] as int?) ?? row['starts_at']! as int,
+        isUtc: true,
+      ),
+      syncStatus: _enumByName(
+        HealthSyncStatus.values,
+        (row['sync_status'] as String?) ?? HealthSyncStatus.pending.name,
+      ),
+      syncError: row['sync_error'] as String?,
     );
   }
 
@@ -75,6 +117,23 @@ class HealthEventModel {
     'starts_at': startsAt.toUtc().millisecondsSinceEpoch,
     'caregiver_id': caregiverId,
     'status': status.name,
+    'created_at': createdAt.toUtc().millisecondsSinceEpoch,
+    'updated_at': updatedAt.toUtc().millisecondsSinceEpoch,
+    'sync_status': syncStatus.name,
+    'sync_error': syncError,
+  };
+
+  Map<String, Object?> toRemoteJson() => {
+    'id': id,
+    'baby_id': babyId,
+    'event_type': type.name,
+    'title': title,
+    'description': description,
+    'starts_at': startsAt.toUtc().toIso8601String(),
+    'caregiver_id': caregiverId,
+    'status': status.name,
+    'created_at': createdAt.toUtc().toIso8601String(),
+    'updated_at': updatedAt.toUtc().toIso8601String(),
   };
 
   HealthEventEntity toEntity() => HealthEventEntity(
@@ -85,8 +144,21 @@ class HealthEventModel {
     description: description,
     startsAt: startsAt,
     caregiver: caregiver,
+    caregiverId: caregiverId,
     status: status,
+    createdAt: createdAt,
+    updatedAt: updatedAt,
+    syncStatus: syncStatus,
+    syncError: syncError,
   );
+
+  static DateTime _remoteDate(Map<String, dynamic> json, String key) {
+    final value = json[key];
+    if (value is! String) {
+      throw FormatException('Invalid or missing remote date: $key');
+    }
+    return DateTime.parse(value).toUtc();
+  }
 }
 
 class HealthMeasurementModel {

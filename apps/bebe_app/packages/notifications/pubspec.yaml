@@ -10,7 +10,6 @@ environment:
 resolution: workspace
 
 dependencies:
-  cloud_firestore: ^6.7.1
   design_system:
   firebase_auth: ^6.5.7
   firebase_messaging: ^16.5.0

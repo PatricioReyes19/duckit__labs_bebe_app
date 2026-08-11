@@ -8,4 +8,5 @@ export 'agenda/agenda_repository.dart';
 export 'family/family_repository.dart';
 export 'health/health_repository.dart';
 export 'notifications/push_device_repository.dart';
+export 'notifications/activity_notification_repository.dart';
 export 'settings/app_settings_repository.dart';

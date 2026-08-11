@@ -375,8 +375,7 @@ GoRouter createAppRouter({
             invitationPending: invitationPending,
             onBackPressed: () => _backToAuthEntry(context),
             onAuthenticated: () {
-              unawaited(getIt<RegisterEventSyncService>().synchronize());
-              unawaited(getIt<AgendaEventSyncService>().synchronize());
+              _refreshAuthenticatedData();
               if (invitationPending) {
                 context.go(_invitationLocation(invitationCode));
                 return;
@@ -408,8 +407,7 @@ GoRouter createAppRouter({
             invitationPending: invitationPending,
             onBackPressed: () => _backToAuthEntry(context),
             onAccountCreated: () {
-              unawaited(getIt<RegisterEventSyncService>().synchronize());
-              unawaited(getIt<AgendaEventSyncService>().synchronize());
+              _refreshAuthenticatedData();
               context.go(
                 invitationPending
                     ? _invitationLocation(invitationCode)
@@ -542,6 +540,15 @@ GoRouter createAppRouter({
       ),
     ],
   );
+}
+
+void _refreshAuthenticatedData() {
+  unawaited(getIt<RegisterEventSyncService>().synchronize());
+  unawaited(getIt<AgendaEventSyncService>().synchronize());
+  unawaited(getIt<FamilySyncService>().synchronize());
+  unawaited(getIt<HealthEventSyncService>().synchronize());
+  unawaited(getIt<AppSettingsSyncService>().synchronize());
+  unawaited(getIt<NotificationService>().refreshInbox());
 }
 
 Future<void> _scheduleRegisterReminder(RegisteredEvent event) async {

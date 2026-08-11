@@ -102,7 +102,8 @@ class LocalOnboardingRepository implements OnboardingRepository {
           familyName: 'Círculo de ${invitation.babyName}',
           babyId: invitation.babyId ?? 'baby-${invitation.code}',
           babyName: invitation.babyName,
-          babyBirthDate: _estimatedBirthDate(invitation.babyAgeLabel),
+          babyBirthDate: invitation.babyBirthDate ??
+              _estimatedBirthDate(invitation.babyAgeLabel),
           memberId: 'member-$userId-${invitation.familyId ?? invitation.code}',
           memberName: user?.displayName ?? 'Cuidador/a',
           memberEmail: user?.email ?? '',
@@ -247,9 +248,25 @@ class LocalOnboardingRepository implements OnboardingRepository {
             raw['inviter_relationship']?.toString() ?? 'Administrador/a',
         babyName: raw['baby_name']?.toString() ?? 'Bebé',
         babyAgeLabel: raw['baby_age_label']?.toString() ?? 'Círculo compartido',
-        familyId: 'family-$babyId',
+        familyId: raw['family_id']?.toString() ?? 'family-$babyId',
         babyId: babyId,
+        babyBirthDate: switch (raw['baby_birth_date']) {
+          final String value => _parseRemoteDate(value),
+          _ => null,
+        },
       ),
     );
+  }
+
+  static DateTime? _parseRemoteDate(String value) {
+    final dateOnly = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$').firstMatch(value);
+    if (dateOnly != null) {
+      return DateTime.utc(
+        int.parse(dateOnly.group(1)!),
+        int.parse(dateOnly.group(2)!),
+        int.parse(dateOnly.group(3)!),
+      );
+    }
+    return DateTime.tryParse(value)?.toUtc();
   }
 }

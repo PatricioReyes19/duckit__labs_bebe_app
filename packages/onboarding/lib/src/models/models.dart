@@ -61,6 +61,7 @@ class CareInvitation {
     required this.babyAgeLabel,
     this.familyId,
     this.babyId,
+    this.babyBirthDate,
   });
 
   final String id;
@@ -71,6 +72,7 @@ class CareInvitation {
   final String babyAgeLabel;
   final String? familyId;
   final String? babyId;
+  final DateTime? babyBirthDate;
 }
 
 class InvitationLookupResult {

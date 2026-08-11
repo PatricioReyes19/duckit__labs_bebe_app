@@ -5,5 +5,6 @@ export 'family/family.dart';
 export 'health/health.dart';
 export 'home/home.dart';
 export 'notifications/push_device.dart';
+export 'notifications/activity_notification.dart';
 export 'settings/app_settings.dart';
 export 'session/session_entity.dart';

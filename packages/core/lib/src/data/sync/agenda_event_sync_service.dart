@@ -70,6 +70,7 @@ class AgendaEventSyncService {
     var failedCount = 0;
     Object? lastError;
     DateTime? newest = await _local.readSyncCursor();
+    var pullCompleted = false;
     for (final event in pending) {
       try {
         await _local.markSyncing(event);
@@ -91,11 +92,12 @@ class AgendaEventSyncService {
         await _local.mergeRemote(event);
         newest = _newest(newest, event.updatedAt);
       }
+      pullCompleted = true;
     } on Object catch (error) {
       failedCount += 1;
       lastError = error;
     }
-    if (newest != null) await _local.writeSyncCursor(newest);
+    if (pullCompleted && newest != null) await _local.writeSyncCursor(newest);
     final now = _clock().toUtc();
     return failedCount == 0
         ? _emit(

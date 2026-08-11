@@ -5,3 +5,4 @@ export 'register/register.dart';
 export 'sync/sync.dart';
 export 'local/local.dart';
 export 'repositories/repositories.dart';
+export 'datasources/datasources.dart';

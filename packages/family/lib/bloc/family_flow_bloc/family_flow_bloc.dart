@@ -157,9 +157,7 @@ class FamilyFlowBloc extends Bloc<FamilyFlowEvent, FamilyFlowState> {
     });
     on<FamilyFlowInvitationSubmitted>((event, emit) async {
       final contact = event.contact.trim();
-      final isValid =
-          RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(contact) ||
-          RegExp(r'^\+?[0-9][0-9\s-]{7,}$').hasMatch(contact);
+      final isValid = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(contact);
       if (!isValid) {
         emit(
           state.copyWith(
@@ -188,7 +186,7 @@ class FamilyFlowBloc extends Bloc<FamilyFlowEvent, FamilyFlowState> {
             babyId: event.babyId,
             babyName: event.babyName,
             name: event.name,
-            contact: contact,
+            contact: contact.toLowerCase(),
             role: _relationshipLabel(state.relationship),
             accessDescription: _capabilitySummary(state.capabilities),
             canWrite:

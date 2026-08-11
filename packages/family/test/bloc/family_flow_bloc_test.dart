@@ -43,6 +43,18 @@ void main() {
         ),
       );
 
+      bloc.add(const FamilyFlowInvitationSubmitted(contact: '+56912345678'));
+      await expectLater(
+        bloc.stream,
+        emitsThrough(
+          isA<FamilyFlowState>().having(
+            (state) => state.submission,
+            'phone invitation without phone authentication',
+            FamilyFlowSubmission.invalid,
+          ),
+        ),
+      );
+
       bloc.add(
         const FamilyFlowInvitationSubmitted(contact: 'abuela@example.com'),
       );

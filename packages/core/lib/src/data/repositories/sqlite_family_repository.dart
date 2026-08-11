@@ -8,7 +8,7 @@ import '../../domain/repositories/family/family_repository.dart';
 import '../local/bebe_database.dart';
 import '../local/bebe_database_schema.dart';
 import '../models/family_models.dart';
-import '../network/supabase_rest_client.dart';
+import '../datasources/remote/family_remote_data_source.dart';
 
 typedef LocalIdGenerator = String Function(String prefix);
 
@@ -16,13 +16,16 @@ class SqliteFamilyRepository implements FamilyRepository {
   SqliteFamilyRepository(
     this._database, {
     LocalIdGenerator? idGenerator,
-    SupabaseRestClient? remoteClient,
+    FamilyRemoteDataSource? remoteDataSource,
+    DateTime Function()? clock,
   }) : _idGenerator = idGenerator ?? _defaultId,
-       _remoteClient = remoteClient;
+       _remoteDataSource = remoteDataSource,
+       _clock = clock ?? DateTime.now;
 
   final BebeDatabase _database;
   final LocalIdGenerator _idGenerator;
-  final SupabaseRestClient? _remoteClient;
+  final FamilyRemoteDataSource? _remoteDataSource;
+  final DateTime Function() _clock;
   final StreamController<String> _activeBabyChanges =
       StreamController<String>.broadcast();
 
@@ -149,6 +152,7 @@ class SqliteFamilyRepository implements FamilyRepository {
         },
         conflictAlgorithm: sqlite.ConflictAlgorithm.ignore,
       );
+      await _markSnapshotPending(transaction);
     });
     return _overview(database, family);
   }
@@ -168,6 +172,7 @@ class SqliteFamilyRepository implements FamilyRepository {
       model.toRow(),
       conflictAlgorithm: sqlite.ConflictAlgorithm.abort,
     );
+    await _markSnapshotPending(database);
     return model.toEntity();
   }
 
@@ -188,6 +193,7 @@ class SqliteFamilyRepository implements FamilyRepository {
         where: 'id = ?',
         whereArgs: [id],
       );
+      await _markSnapshotPending(database);
     }
     final rows = await database.query(
       BebeDatabaseSchema.babies,
@@ -205,6 +211,12 @@ class SqliteFamilyRepository implements FamilyRepository {
         ? rawContact
         : rawContact.replaceAll(RegExp(r'[\s-]'), '');
     final database = await _database.database;
+    final remote = _remoteDataSource;
+    if (remote != null &&
+        remote.isConfigured &&
+        !await remote.isAuthenticated()) {
+      throw StateError('Inicia sesión para enviar la invitación.');
+    }
     final existing = await database.query(
       BebeDatabaseSchema.familyMembers,
       where: 'family_id = ? AND lower(contact) = ?',
@@ -240,21 +252,17 @@ class SqliteFamilyRepository implements FamilyRepository {
       conflictAlgorithm: sqlite.ConflictAlgorithm.abort,
     );
     try {
-      final client = _remoteClient;
-      if (client != null && await client.isAuthenticated()) {
-        await client.rpc(
-          'create_care_invitation',
-          parameters: {
-            'p_baby_id': draft.babyId,
-            'p_baby_name': draft.babyName,
-            'p_invitee_name': model.name,
-            'p_contact': contact,
-            'p_relationship': model.role,
-            'p_access_description': model.accessDescription,
-            'p_can_write': draft.canWrite,
-            'p_code': model.invitationCode,
-          },
-        );
+      if (remote != null && await remote.isAuthenticated()) {
+        await remote.createInvitation({
+          'p_baby_id': draft.babyId,
+          'p_baby_name': draft.babyName,
+          'p_invitee_name': model.name,
+          'p_contact': contact,
+          'p_relationship': model.role,
+          'p_access_description': model.accessDescription,
+          'p_can_write': draft.canWrite,
+          'p_code': model.invitationCode,
+        });
       }
     } on Object {
       await database.delete(
@@ -280,16 +288,13 @@ class SqliteFamilyRepository implements FamilyRepository {
     final now = DateTime.now().toUtc();
     final current = FamilyMemberModel.fromRow(rows.single);
     final invitationCode = await _newInvitationCode(database);
-    final client = _remoteClient;
-    if (client != null &&
+    final remote = _remoteDataSource;
+    if (remote != null &&
         current.invitationCode != null &&
-        await client.isAuthenticated()) {
-      await client.rpc(
-        'resend_care_invitation',
-        parameters: {
-          'p_code': current.invitationCode,
-          'p_new_code': invitationCode,
-        },
+        await remote.isAuthenticated()) {
+      await remote.resendInvitation(
+        code: current.invitationCode!,
+        newCode: invitationCode,
       );
     }
     await database.update(
@@ -325,12 +330,9 @@ class SqliteFamilyRepository implements FamilyRepository {
     );
     if (rows.isNotEmpty) {
       final code = rows.single['invitation_code'] as String?;
-      final client = _remoteClient;
-      if (client != null && code != null && await client.isAuthenticated()) {
-        await client.rpc(
-          'revoke_care_invitation',
-          parameters: {'p_code': code},
-        );
+      final remote = _remoteDataSource;
+      if (remote != null && code != null && await remote.isAuthenticated()) {
+        await remote.revokeInvitation(code);
       }
     }
     await database.delete(
@@ -400,8 +402,167 @@ class SqliteFamilyRepository implements FamilyRepository {
         },
         conflictAlgorithm: sqlite.ConflictAlgorithm.ignore,
       );
+      await _writeSyncMetadata(
+        transaction,
+        _familySyncedAtKey,
+        _clock().toUtc().toIso8601String(),
+      );
     });
     return _overview(database, family);
+  }
+
+  /// Returns a complete local family aggregate only when it has never been
+  /// uploaded or a family/baby mutation marked it as pending.
+  Future<FamilySyncSnapshot?> readPendingSnapshot() async {
+    final database = await _database.database;
+    final pendingAt = await _readSyncMetadata(database, _familyPendingAtKey);
+    final syncedAt = await _readSyncMetadata(database, _familySyncedAtKey);
+    if (pendingAt == null && syncedAt != null) return null;
+    final overview = await getCurrent();
+    final updatedAt = pendingAt == null
+        ? _clock().toUtc()
+        : DateTime.parse(pendingAt).toUtc();
+    if (pendingAt == null) {
+      await _writeSyncMetadata(
+        database,
+        _familyPendingAtKey,
+        updatedAt.toIso8601String(),
+      );
+    }
+    return FamilySyncSnapshot(overview: overview, updatedAt: updatedAt);
+  }
+
+  Future<void> markSnapshotSynced({
+    required FamilySyncSnapshot attempted,
+    required FamilySyncSnapshot accepted,
+  }) async {
+    final database = await _database.database;
+    await database.transaction((transaction) async {
+      await _writeSyncMetadata(
+        transaction,
+        _familySyncedAtKey,
+        accepted.updatedAt.toUtc().toIso8601String(),
+      );
+      await transaction.delete(
+        BebeDatabaseSchema.syncMetadata,
+        where: 'key = ? AND value = ?',
+        whereArgs: [
+          _familyPendingAtKey,
+          attempted.updatedAt.toUtc().toIso8601String(),
+        ],
+      );
+    });
+  }
+
+  /// Merges server aggregates without replacing the device-only avatar path or
+  /// the active baby selection when that baby still exists.
+  Future<void> mergeRemote(List<FamilySyncSnapshot> snapshots) async {
+    if (snapshots.isEmpty) return;
+    final database = await _database.database;
+    final pendingAtValue = await _readSyncMetadata(
+      database,
+      _familyPendingAtKey,
+    );
+    final pendingAt = pendingAtValue == null
+        ? null
+        : DateTime.tryParse(pendingAtValue)?.toUtc();
+    await database.transaction((transaction) async {
+      for (final snapshot in snapshots) {
+        if (pendingAt != null && pendingAt.isAfter(snapshot.updatedAt)) {
+          continue;
+        }
+        final overview = snapshot.overview;
+        final existingFamily = await transaction.query(
+          BebeDatabaseSchema.families,
+          where: 'id = ?',
+          whereArgs: [overview.id],
+          limit: 1,
+        );
+        final remoteBabyIds = overview.babies.map((baby) => baby.id).toSet();
+        final existingActiveBabyId = existingFamily.isEmpty
+            ? null
+            : existingFamily.single['active_baby_id'] as String?;
+        final activeBabyId = remoteBabyIds.contains(existingActiveBabyId)
+            ? existingActiveBabyId!
+            : overview.activeBabyId;
+        final familyRow = FamilyModel(
+          id: overview.id,
+          name: overview.name,
+          activeBabyId: activeBabyId,
+        ).toRow();
+        await transaction.insert(
+          BebeDatabaseSchema.families,
+          familyRow,
+          conflictAlgorithm: sqlite.ConflictAlgorithm.ignore,
+        );
+        await transaction.update(
+          BebeDatabaseSchema.families,
+          familyRow,
+          where: 'id = ?',
+          whereArgs: [overview.id],
+        );
+        for (final baby in overview.babies) {
+          final existing = await transaction.query(
+            BebeDatabaseSchema.babies,
+            columns: ['avatar_asset_path'],
+            where: 'id = ?',
+            whereArgs: [baby.id],
+            limit: 1,
+          );
+          final babyRow = BabyModel(
+            id: baby.id,
+            familyId: overview.id,
+            name: baby.name,
+            birthDate: baby.birthDate,
+            avatarAssetPath: existing.isEmpty
+                ? null
+                : existing.single['avatar_asset_path'] as String?,
+          ).toRow();
+          await transaction.insert(
+            BebeDatabaseSchema.babies,
+            babyRow,
+            conflictAlgorithm: sqlite.ConflictAlgorithm.ignore,
+          );
+          await transaction.update(
+            BebeDatabaseSchema.babies,
+            babyRow,
+            where: 'id = ?',
+            whereArgs: [baby.id],
+          );
+        }
+        for (final member in overview.members) {
+          final contact = member.contact?.trim().toLowerCase();
+          if (contact != null && contact.isNotEmpty) {
+            await transaction.delete(
+              BebeDatabaseSchema.familyMembers,
+              where: 'family_id = ? AND status = ? AND lower(contact) = ?',
+              whereArgs: [
+                overview.id,
+                FamilyMemberStatus.pending.name,
+                contact,
+              ],
+            );
+          }
+          final memberRow = FamilyMemberModel.fromEntity(member).toRow();
+          await transaction.insert(
+            BebeDatabaseSchema.familyMembers,
+            memberRow,
+            conflictAlgorithm: sqlite.ConflictAlgorithm.ignore,
+          );
+          await transaction.update(
+            BebeDatabaseSchema.familyMembers,
+            memberRow,
+            where: 'id = ?',
+            whereArgs: [member.id],
+          );
+        }
+        await _writeSyncMetadata(
+          transaction,
+          _familySyncedAtKey,
+          snapshot.updatedAt.toUtc().toIso8601String(),
+        );
+      }
+    });
   }
 
   static Future<FamilyOverviewEntity> _overview(
@@ -458,4 +619,38 @@ class SqliteFamilyRepository implements FamilyRepository {
     }
     throw StateError('No pudimos generar un código de invitación.');
   }
+
+  Future<void> _markSnapshotPending(sqlite.DatabaseExecutor database) =>
+      _writeSyncMetadata(
+        database,
+        _familyPendingAtKey,
+        _clock().toUtc().toIso8601String(),
+      );
+
+  static Future<String?> _readSyncMetadata(
+    sqlite.DatabaseExecutor database,
+    String key,
+  ) async {
+    final rows = await database.query(
+      BebeDatabaseSchema.syncMetadata,
+      columns: ['value'],
+      where: 'key = ?',
+      whereArgs: [key],
+      limit: 1,
+    );
+    return rows.isEmpty ? null : rows.single['value'] as String?;
+  }
+
+  static Future<void> _writeSyncMetadata(
+    sqlite.DatabaseExecutor database,
+    String key,
+    String value,
+  ) => database.insert(
+    BebeDatabaseSchema.syncMetadata,
+    {'key': key, 'value': value},
+    conflictAlgorithm: sqlite.ConflictAlgorithm.replace,
+  );
+
+  static const _familyPendingAtKey = 'family.snapshot.pending_at';
+  static const _familySyncedAtKey = 'family.snapshot.synced_at';
 }

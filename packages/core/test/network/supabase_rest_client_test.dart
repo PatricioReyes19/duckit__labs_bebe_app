@@ -73,12 +73,232 @@ void main() {
     expect(restored.details, entity.details);
     expect(restored.syncStatus, RegisterSyncStatus.synced);
   });
+
+  test(
+    'uses POST representation for inserts and PATCH filters for updates',
+    () async {
+      final adapter = _RecordingAdapter((options, _) {
+        if (options.method == 'POST') {
+          return _jsonResponse(201, const [
+            {'id': 'row-1'},
+          ]);
+        }
+        return _jsonResponse(200, const [
+          {'id': 'row-1', 'read_at': '2026-08-11T10:00:00.000Z'},
+        ]);
+      });
+      final dio = Dio(BaseOptions(baseUrl: configuration.url))
+        ..httpClientAdapter = adapter;
+      final client = SupabaseRestClient(
+        configuration,
+        _TokenProvider('firebase-token'),
+        dio: dio,
+      );
+
+      final inserted = await client.insert(
+        'example_rows',
+        data: const {'id': 'row-1'},
+      );
+      final patched = await client.patch(
+        'example_rows',
+        data: const {'read_at': '2026-08-11T10:00:00.000Z'},
+        filters: const {'id': 'eq.row-1'},
+      );
+
+      expect(inserted.single['id'], 'row-1');
+      expect(patched.single['read_at'], isNotNull);
+      expect(adapter.requests[0].method, 'POST');
+      expect(adapter.requests[0].path, '/rest/v1/example_rows');
+      expect(adapter.requests[1].method, 'PATCH');
+      expect(adapter.requests[1].queryParameters['id'], 'eq.row-1');
+    },
+  );
+
+  test(
+    'notification datasource loads unread rows and marks one read',
+    () async {
+      final adapter = _RecordingAdapter((options, _) {
+        if (options.method == 'GET') {
+          return _jsonResponse(200, const [
+            {
+              'id': 'notification-1',
+              'title': 'Agenda actualizada',
+              'body': 'Hay un nuevo evento.',
+              'route': '/agenda',
+              'payload': {'baby_id': 'baby-1'},
+              'created_at': '2026-08-11T10:00:00.000Z',
+              'read_at': null,
+            },
+          ]);
+        }
+        return _jsonResponse(200, const <Object?>[]);
+      });
+      final dio = Dio(BaseOptions(baseUrl: configuration.url))
+        ..httpClientAdapter = adapter;
+      final client = SupabaseRestClient(
+        configuration,
+        _TokenProvider('firebase-token'),
+        dio: dio,
+      );
+      final datasource = SupabaseActivityNotificationRemoteDataSource(client);
+
+      final unread = await datasource.listUnread();
+      await datasource.markRead(unread.single.id);
+
+      expect(unread.single.route, '/agenda');
+      expect(unread.single.payload['baby_id'], 'baby-1');
+      expect(adapter.requests[0].queryParameters['read_at'], 'is.null');
+      expect(adapter.requests[1].method, 'PATCH');
+      expect(adapter.requests[1].queryParameters['id'], 'eq.notification-1');
+    },
+  );
+
+  test(
+    'syncs the authenticated profile used to resolve pending invites',
+    () async {
+      final adapter = _RecordingAdapter(
+        (_, __) => _jsonResponse(200, const {'id': 'user-invited'}),
+      );
+      final dio = Dio(BaseOptions(baseUrl: configuration.url))
+        ..httpClientAdapter = adapter;
+      final datasource = SupabaseProfileRemoteDataSource(
+        SupabaseRestClient(
+          configuration,
+          _TokenProvider('invitee-token'),
+          dio: dio,
+        ),
+      );
+
+      await datasource.syncAuthenticatedUser(
+        const AuthUser(
+          id: 'user-invited',
+          email: 'abuela@example.com',
+          displayName: 'Ana Pérez',
+          emailVerification: true,
+        ),
+      );
+
+      expect(
+        adapter.requests.single.path,
+        '/rest/v1/rpc/upsert_current_profile',
+      );
+      expect(adapter.requests.single.data, const {
+        'p_display_name': 'Ana Pérez',
+        'p_email': 'abuela@example.com',
+      });
+    },
+  );
+
+  test(
+    'covers inviter creation, invitee lookup/acceptance and both alerts',
+    () async {
+      final adapter = _RecordingAdapter((options, _) {
+        if (options.path.endsWith('/create_care_invitation')) {
+          return _jsonResponse(200, const {
+            'id': 'invitation-1',
+            'code': 'FAMILY42',
+          });
+        }
+        if (options.path.endsWith('/lookup_care_invitation')) {
+          return _jsonResponse(200, const {
+            'found': true,
+            'id': 'invitation-1',
+            'family_id': 'family-1',
+            'baby_id': 'baby-1',
+            'baby_name': 'Mateo',
+            'baby_birth_date': '2026-01-10',
+          });
+        }
+        if (options.path.endsWith('/accept_care_invitation')) {
+          return _jsonResponse(200, const {
+            'id': 'invitation-1',
+            'status': 'accepted',
+          });
+        }
+        if (options.path == '/rest/v1/activity_notifications') {
+          return _jsonResponse(200, const [
+            {
+              'id': 'alert-invitee',
+              'title': 'Invitación a un círculo de cuidado',
+              'body': 'María te invitó a cuidar a Mateo',
+              'route': '/invitation?code=FAMILY42',
+              'payload': {'invitation_code': 'FAMILY42'},
+              'created_at': '2026-08-11T10:00:00.000Z',
+              'read_at': null,
+            },
+            {
+              'id': 'alert-owner',
+              'title': 'Invitación aceptada',
+              'body': 'Ana se unió al círculo de Mateo',
+              'route': '/family/care-circle',
+              'payload': {'status': 'accepted'},
+              'created_at': '2026-08-11T10:01:00.000Z',
+              'read_at': null,
+            },
+          ]);
+        }
+        return _jsonResponse(404, const {'message': 'unexpected request'});
+      });
+      final provider = _TokenProvider('owner-token');
+      final dio = Dio(BaseOptions(baseUrl: configuration.url))
+        ..httpClientAdapter = adapter;
+      final client = SupabaseRestClient(configuration, provider, dio: dio);
+      final family = SupabaseFamilyRemoteDataSource(client);
+
+      await family.createInvitation(const {
+        'p_baby_id': 'baby-1',
+        'p_baby_name': 'Mateo',
+        'p_invitee_name': 'Ana Pérez',
+        'p_contact': 'ana-perez@example.com',
+        'p_relationship': 'Abuela',
+        'p_access_description': 'ver historial, registrar',
+        'p_can_write': true,
+        'p_code': 'FAMILY42',
+      });
+      provider.token = 'invitee-token';
+      final lookup = await client.rpc(
+        'lookup_care_invitation',
+        parameters: const {'p_code': 'FAMILY42'},
+      );
+      final accepted = await client.rpc(
+        'accept_care_invitation',
+        parameters: const {'p_code': 'FAMILY42'},
+      );
+      final alerts = await SupabaseActivityNotificationRemoteDataSource(
+        client,
+      ).listUnread();
+
+      expect((lookup as Map)['family_id'], 'family-1');
+      expect((accepted as Map)['status'], 'accepted');
+      expect(
+        alerts.map((item) => item.route),
+        containsAll(['/invitation?code=FAMILY42', '/family/care-circle']),
+      );
+      expect(
+        adapter.requests.first.headers['Authorization'],
+        'Bearer owner-token',
+      );
+      expect(
+        (adapter.requests.first.data as Map)['p_contact'],
+        'ana-perez@example.com',
+      );
+      expect(
+        adapter.requests
+            .skip(1)
+            .every(
+              (request) =>
+                  request.headers['Authorization'] == 'Bearer invitee-token',
+            ),
+        isTrue,
+      );
+    },
+  );
 }
 
 class _TokenProvider implements AccessTokenProvider {
   _TokenProvider(this.token, {this.refreshedToken});
 
-  final String token;
+  String token;
   final String? refreshedToken;
   int forceRefreshCalls = 0;
 

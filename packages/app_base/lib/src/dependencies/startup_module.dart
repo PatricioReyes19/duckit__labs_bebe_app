@@ -23,6 +23,7 @@ abstract class StartupModule {
   @lazySingleton
   NotificationService notificationService(
     PushDeviceRepository pushDeviceRepository,
+    ActivityNotificationRepository activityNotificationRepository,
   ) =>
       FirebaseNotificationService(
         registerRemoteDevice: ({
@@ -33,16 +34,41 @@ abstract class StartupModule {
           PushDeviceEntity(token: token, platform: platform),
         ),
         unregisterRemoteDevice: pushDeviceRepository.unregister,
+        loadRemoteNotifications: () async {
+          final items = await activityNotificationRepository.listUnread();
+          return items
+              .map(
+                (item) => AppNotification(
+                  id: item.id,
+                  title: item.title,
+                  body: item.body,
+                  receivedAt: item.createdAt,
+                  data: {
+                    'route': item.route,
+                    for (final entry in item.payload.entries)
+                      entry.key: '${entry.value}',
+                  },
+                  wasOpened: item.readAt != null,
+                ),
+              )
+              .toList(growable: false);
+        },
+        markRemoteNotificationRead: activityNotificationRepository.markRead,
+        markAllRemoteNotificationsRead:
+            activityNotificationRepository.markAllRead,
       );
 
   @lazySingleton
   AuthService authService(
     AuthGateway gateway,
     NotificationService notificationService,
+    ProfileRemoteDataSource profileRemoteDataSource,
   ) =>
       AuthService(
         gateway,
         beforeSignOut: notificationService.unregisterCurrentDevice,
+        afterAuthentication: (session) =>
+            profileRemoteDataSource.syncAuthenticatedUser(session.user),
       );
 
   @lazySingleton

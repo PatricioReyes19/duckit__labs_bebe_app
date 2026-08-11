@@ -6,6 +6,8 @@ enum HealthEventStatus { scheduled, completed, cancelled }
 
 enum HealthMeasurementType { weight, height }
 
+enum HealthSyncStatus { synced, pending, syncing, failed }
+
 class HealthEventEntity {
   const HealthEventEntity({
     required this.id,
@@ -16,7 +18,14 @@ class HealthEventEntity {
     required this.startsAt,
     required this.status,
     this.caregiver,
-  });
+    String? caregiverId,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    this.syncStatus = HealthSyncStatus.pending,
+    this.syncError,
+  }) : _caregiverId = caregiverId,
+       createdAt = createdAt ?? startsAt,
+       updatedAt = updatedAt ?? createdAt ?? startsAt;
 
   final String id;
   final String babyId;
@@ -26,6 +35,13 @@ class HealthEventEntity {
   final DateTime startsAt;
   final HealthEventStatus status;
   final FamilyMemberEntity? caregiver;
+  final String? _caregiverId;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final HealthSyncStatus syncStatus;
+  final String? syncError;
+
+  String? get caregiverId => _caregiverId ?? caregiver?.id;
 }
 
 class HealthMeasurementEntity {

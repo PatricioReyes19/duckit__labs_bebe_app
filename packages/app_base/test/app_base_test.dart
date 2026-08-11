@@ -1,3 +1,4 @@
+import 'package:app_base/app_base.dart' as app_base;
 import 'package:app_base/src/dependencies/startup_module.dart';
 import 'package:app_base/src/router/app_layout_configuration.dart';
 import 'package:app_base/src/router/navigation_session_store.dart';
@@ -9,6 +10,10 @@ import 'package:onboarding/onboarding.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  test('el punto de entrada público incluye el contenedor generado', () {
+    expect(app_base.setupAppBaseDependencies, isA<Function>());
+  });
+
   group('LocalResolveEntryDestination', () {
     test('sin sesión abre la entrada de autenticación', () async {
       final resolver = LocalResolveEntryDestination(

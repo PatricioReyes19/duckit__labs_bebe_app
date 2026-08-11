@@ -1,110 +1,191 @@
-# Supabase, sincronización y alertas
+# Supabase: contrato, sincronización y notificaciones
 
-## Arquitectura adoptada
+## Estado de la integración
 
-La app es **offline-first**. SQLite sigue siendo la fuente de verdad que observa
-la interfaz; Supabase es el respaldo compartido y el canal de colaboración.
+La aplicación usa un enfoque **offline-first**:
 
-```mermaid
-flowchart LR
-  UI[Feature / BLoC] --> UC[Caso de uso]
-  UC --> R[Repositorio offline-first]
-  R --> SQL[(SQLite)]
-  R --> Q[Cola de sincronización]
-  Q --> M[Model fromEntity / JSON]
-  M --> D[Dio + JWT Firebase]
-  D --> S[(Supabase Data API)]
-  S --> RT[Supabase Realtime]
-  RT --> Q
-  S --> N[activity_notifications]
-  N --> F[Edge Function sin dependencias npm]
-  F --> FCM[Firebase Cloud Messaging]
+1. la UI llama casos de uso y repositorios de dominio;
+2. el repositorio escribe primero en SQLite y devuelve el resultado sin esperar
+   a la red;
+3. el servicio de sincronización procesa filas `pending`/`failed`;
+4. el datasource remoto convierte el modelo y llama Data API, RPC o Storage;
+5. Supabase Realtime solo despierta un nuevo pull; nunca escribe SQLite de
+   forma directa.
+
+La implementación remota está separada dentro de `data`:
+
+```text
+data/
+  datasources/remote/  # GET, POST/RPC y PATCH
+  models/              # entidad <-> SQLite <-> JSON remoto
+  repositories/        # implementación local y adaptadores de repositorio
+  sync/                # cola, reintentos, cursores y repositorios offline-first
+  network/             # Dio, token Firebase y errores HTTP
 ```
 
-- `supabase_flutter` inicializa Supabase y mantiene Realtime.
-- Dio realiza Data API, RPC y Storage mediante un adaptador único.
-- Firebase Auth sigue siendo el proveedor de identidad.
-- `RegisterEventModel` y `AgendaEventModel` traducen entidad, SQLite y JSON.
-- RLS autoriza por membresía del círculo de cuidado, no por la UI.
-- Un cambio Realtime no escribe directamente: despierta la misma cola que hace
-  pull, resuelve conflictos y actualiza SQLite.
+La app queda operativa en modo local si faltan las variables de Supabase. Para
+conectarla a un proyecto real todavía se deben proporcionar la URL y la
+publishable key y desplegar las migraciones; esos secretos no se incluyen en
+el repositorio.
 
-## Qué se sincroniza hoy
+## Matriz GET / POST / PATCH
 
-| Información | Destino | Estado |
-|---|---|---|
-| Alimentación, sueño, pañal, observación, medicamento y medición | `register_events` | Implementado |
-| Agenda y dosis derivadas de medicamentos | `agenda_events` | Implementado |
-| Fotos de observaciones | bucket privado `register-event-media` | Implementado |
-| Membresía mínima por bebé | `babies`, `baby_caregivers` | Implementado en backend |
-| Tokens FCM por dispositivo | `push_devices` | Implementado |
-| Alertas para otros cuidadores | `activity_notifications` + FCM | Implementado en backend |
-| Invitaciones de cuidado | `care_invitations` + RPC seguras | Implementado |
+| Área | Lectura | Creación/actualización | Eliminación o estado |
+|---|---|---|---|
+| Registros: alimentación, sueño, pañal, observación, medicamento y medición | `GET register_events` | `POST rpc/apply_register_event` | tombstone por el mismo RPC (`deleted_at`) |
+| Agenda y recordatorios recurrentes | `GET agenda_events` | `POST rpc/apply_agenda_event` | tombstone por el mismo RPC |
+| Controles, vacunas y eventos de salud | `GET health_events` | `POST rpc/apply_health_event` | cambio de `status`; no hay borrado físico |
+| Familia y bebés | `GET families`, `babies`, `baby_caregivers`, `profiles` | `POST rpc/apply_family_snapshot` | no se borra remotamente desde la app |
+| Preferencias | `GET user_preferences` | `POST rpc/apply_user_preferences` | no aplica |
+| Bandeja de actividad | `GET activity_notifications?read_at=is.null` | la crea un trigger del servidor | `PATCH activity_notifications` para `read_at` |
+| Dispositivos FCM | RPC del servidor/Edge Function | `POST rpc/register_push_device` | `POST rpc/unregister_push_device` |
+| Invitaciones | `POST rpc/lookup_care_invitation` | `create`, `accept`, `resend` por RPC | `reject` y `revoke` por RPC |
+| Fotos de observación | se conserva el path privado en `details` | `POST storage/v1/object/register-event-media/...` | `DELETE storage/v1/object/register-event-media` |
 
-Todavía son locales `families`, el perfil completo del bebé, la proyección de
-miembros de la pantalla Familia, `health_events`, `health_measurements` y
-preferencias. Las invitaciones ya se envían y responden en Supabase, mientras
-la app conserva una proyección SQLite para funcionar sin red. Antes de
-sincronizar el resto conviene aplicar el mismo patrón:
-entidad, modelo `fromEntity`, tabla local con estado de sync, RPC idempotente,
-RLS por `baby_caregivers`, pull incremental y pruebas de conflicto.
+Los RPC de escritura implementan un upsert transaccional y validan RLS. Se usa
+`POST` aunque semánticamente actualicen una fila porque PostgREST expone las
+funciones PostgreSQL bajo `/rest/v1/rpc/<función>`. `PATCH` directo solo se usa
+para marcar notificaciones leídas.
 
-No se debe subir:
+## Datos enviados y recibidos
 
-- JWT, refresh token, contraseña o `service_role`;
-- `sync_status`, `sync_error` y cursores locales;
-- rutas locales como `photo_paths`;
-- configuración visual puramente local, salvo decisión explícita de producto;
-- logs que contengan tokens, claves o datos clínicos.
+### Registro
 
-## Configuración paso a paso
+Se envía y recibe:
 
-### 1. Crear el proyecto
+```text
+id, baby_id, event_type, occurred_at, created_at, updated_at, deleted_at,
+caregiver_id, notes, details, schema_version
+```
 
-1. Crea el proyecto en Supabase.
-2. En **Project Settings > API Keys**, copia la **Project URL** y la
-   **Publishable key** (`sb_publishable_...`).
-3. En **Integrations > Data API**, verifica que Data API esté habilitada y que
-   `public` sea un esquema expuesto.
+`details` contiene los campos específicos del formulario. Las mediciones de
+crecimiento se guardan aquí con `measurement_type`, `value` y `unit`; Salud
+consume esos mismos registros, por lo que no existe una segunda escritura
+remota de la medición. `photo_paths` nunca se sube: se suben los archivos al
+bucket y se persisten únicamente `photo_storage_paths`.
 
-La publishable key identifica a la app y puede estar en el binario móvil. No
-autoriza datos por sí sola: RLS y el JWT del usuario son la seguridad real.
+### Agenda
 
-### 2. Conectar Firebase Auth
+```text
+id, baby_id, category, title, description, starts_at, created_at, updated_at,
+deleted_at, caregiver_id, source_register_event_id
+```
 
-1. En **Authentication > Third-Party Auth**, agrega Firebase.
-2. Usa el Project ID `bebeapp-313a4`.
-3. Desde un backend confiable con Firebase Admin, asigna el custom claim
-   `role: authenticated` a los usuarios.
-4. Después de asignar el claim, fuerza una renovación del ID token o vuelve a
+`source_register_event_id` evita duplicar eventos creados desde un medicamento
+u otro registro. Las recurrencias siguen siendo eventos normales en la base;
+el agrupamiento visual no altera su persistencia.
+
+### Salud
+
+```text
+id, baby_id, event_type, title, description, starts_at, caregiver_id, status,
+created_at, updated_at
+```
+
+`event_type`: `vaccine`, `pediatricControl` o `growthControl`.
+`status`: `scheduled`, `completed` o `cancelled`.
+
+### Familia
+
+El snapshot envía:
+
+```json
+{
+  "family_id": "...",
+  "family_name": "...",
+  "updated_at": "UTC ISO-8601",
+  "babies": [
+    {"id": "...", "display_name": "...", "birth_date": "UTC ISO-8601"}
+  ]
+}
+```
+
+Los miembros se consultan desde `baby_caregivers` y `profiles`; no se acepta
+desde el cliente un listado arbitrario de miembros. Las invitaciones son las
+únicas operaciones autorizadas para agregar o quitar acceso. La selección de
+bebé activo y la ruta local de su avatar se conservan en el dispositivo.
+
+### Preferencias
+
+```text
+theme_mode, high_contrast, personal_reminders, family_activity, daily_summary,
+reduce_motion, wifi_only, account_name, account_email, language, time_format,
+text_size, updated_at
+```
+
+El mismo RPC actualiza `profiles` con nombre y correo. Así las invitaciones y
+las tarjetas de Familia pueden resolver al cuidador sin duplicar una API de
+perfil.
+
+### Datos que nunca salen del dispositivo
+
+- JWT, refresh token, contraseña o secret/service-role key;
+- `sync_status`, `sync_error` y cursores;
+- rutas locales de archivos (`photo_paths`, avatar local);
+- estado efímero de BLoC, navegación, loaders y snackbars.
+
+## Resolución de conflictos y reintentos
+
+- Cada mutación local incrementa `updated_at` y queda `pending`.
+- El RPC acepta la versión más nueva (`last-write-wins`).
+- Los borrados de Registro/Agenda son tombstones para no resucitar datos.
+- El pull incremental usa `updated_at=gte.<cursor>` y orden
+  `updated_at.asc,id.asc`. El `gte` repite como máximo algunas filas, pero evita
+  perder dos cambios con el mismo timestamp; el merge local es idempotente.
+- El cursor solo avanza si el pull terminó. Un POST exitoso seguido de un GET
+  fallido no puede saltarse cambios de otro cuidador.
+- Los fallos quedan reintentables. La sincronización se solicita al guardar,
+  al iniciar, al volver de segundo plano y al recibir Realtime.
+- RLS autoriza por `baby_caregivers`; el cliente no decide permisos.
+
+## Implementación paso a paso
+
+### 1. Crear y enlazar Supabase
+
+1. Crear un proyecto en Supabase.
+2. Instalar Supabase CLI (en este checkout no está instalada actualmente).
+3. Desde la raíz del repositorio ejecutar:
+
+```powershell
+supabase init              # solo si todavía falta supabase/config.toml
+supabase login
+supabase link --project-ref <PROJECT_REF>
+supabase migration list
+supabase db push --dry-run
+supabase db push
+```
+
+`db push` aplica en orden las cinco migraciones de `supabase/migrations`. No
+usar `db reset --linked` en producción: elimina los datos del proyecto remoto.
+
+### 2. Conectar Firebase Auth como Third-Party Auth
+
+1. En Supabase: **Authentication > Third-Party Auth > Firebase**.
+2. Registrar el Project ID de Firebase usado por la app.
+3. Asignar a los usuarios Firebase el custom claim `role: authenticated` desde
+   un backend con Firebase Admin.
+4. Después de asignarlo, renovar el ID token (`getIdToken(true)`) o volver a
    iniciar sesión.
 
-La migración también valida `iss` y `aud` del JWT para que un token de otro
-proyecto Firebase no pase las políticas.
+Flutter inicializa Supabase con un callback que entrega el Firebase ID token.
+Dio añade en cada request:
 
-### 3. Crear el esquema remoto
+```text
+apikey: <SUPABASE_PUBLISHABLE_KEY>
+Authorization: Bearer <FIREBASE_ID_TOKEN>
+```
 
-Abre **SQL Editor** y ejecuta, en este orden:
+Ante un `401`, el interceptor renueva una vez el token y reintenta una vez. La
+secret/service-role key jamás debe compilarse en Flutter.
 
-1. `supabase/migrations/202608100001_create_register_event_sync.sql`
-2. `supabase/migrations/202608100002_create_agenda_event_sync.sql`
-3. `supabase/migrations/202608100003_create_care_circle_notifications.sql`
-4. `supabase/migrations/202608100004_create_care_invitations.sql`
-
-Las migraciones crean tablas, índices, RPC idempotentes, RLS, Storage,
-Realtime, círculos de cuidado, tokens y alertas. Para esta preparación no es
-necesario ejecutar `npm`, `npx` ni instalar paquetes JavaScript.
-
-### 4. Configurar la app
-
-Copia el ejemplo:
+### 3. Configurar la app
 
 ```powershell
 Copy-Item apps/bebe_app/config/supabase.dart-defines.example.json `
   apps/bebe_app/config/supabase.local.json
 ```
 
-Completa solamente:
+Editar el archivo ignorado por Git:
 
 ```json
 {
@@ -113,127 +194,110 @@ Completa solamente:
 }
 ```
 
-`supabase.local.json` está ignorado por Git. Ejecuta:
+Ejecutar:
 
 ```powershell
 flutter run -d android `
   --dart-define-from-file=apps/bebe_app/config/supabase.local.json
 ```
 
-Si las variables faltan, la capa remota queda deshabilitada y la app continúa
-trabajando en SQLite.
+En este checkout `supabase.local.json` no existe; es correcto que no se
+versione, pero debe crearse en cada entorno de ejecución.
 
-### 5. Configurar alertas push
+### 4. Verificar RLS y Realtime
 
-1. En Firebase Console crea una cuenta de servicio destinada a FCM HTTP v1.
-2. En Supabase **Edge Functions**, crea `send-activity-notification` usando
-   `supabase/functions/send-activity-notification/index.ts`.
-3. La función no importa paquetes npm; usa únicamente `fetch` y Web Crypto de
-   Deno.
-4. Configura estos secretos sólo en el servidor:
-   - `FIREBASE_SERVICE_ACCOUNT_JSON`
-   - `ACTIVITY_WEBHOOK_SECRET`
-5. `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` son provistos por Supabase a la
-   función. Nunca copies `SUPABASE_SERVICE_ROLE_KEY` a Flutter.
-6. En **Database Webhooks**, crea un webhook para `INSERT` sobre
-   `public.activity_notifications` hacia la función.
-7. Agrega el header `x-webhook-secret` con el mismo valor de
-   `ACTIVITY_WEBHOOK_SECRET`.
-
-La app registra el token FCM también en `push_devices`. El trigger de base
-crea una alerta para todos los cuidadores del bebé excepto quien hizo el
-cambio; la función envía FCM incluso si la app receptora está cerrada.
-
-### 6. Preparar dos cuidadores
-
-El primer registro de un bebé ejecuta `bootstrap_baby` de forma idempotente y
-crea al usuario como `owner`. Para agregar otra cuenta se debe invocar
-`add_baby_caregiver` desde un flujo autenticado del propietario, pasando el UID
-Firebase del segundo usuario.
-
-Durante desarrollo también se puede insertar la membresía desde SQL Editor:
-
-```sql
-insert into public.baby_caregivers (baby_id, user_id, role, can_write)
-values ('BABY_ID', 'FIREBASE_UID', 'caregiver', true)
-on conflict (baby_id, user_id) do update
-set role = excluded.role, can_write = excluded.can_write;
-```
-
-El identificador demo `local-active-baby` no sirve para múltiples familias en
-producción. El onboarding definitivo debe crear un UUID estable por bebé y
-persistirlo local/remotamente antes del primer registro.
-
-## Cómo se maneja el token de sesión
-
-El token **no se guarda en la base de datos**.
-
-1. Firebase Auth conserva la sesión mediante su SDK y almacenamiento seguro de
-   plataforma.
-2. `SessionRepository.getIdToken(forceRefresh: false)` obtiene un JWT vigente.
-3. El interceptor Dio añade en cada petición:
+Las migraciones agregan a `supabase_realtime`:
 
 ```text
-apikey: <SUPABASE_PUBLISHABLE_KEY>
-Authorization: Bearer <FIREBASE_ID_TOKEN>
+register_events, agenda_events, health_events, user_preferences,
+families, babies, baby_caregivers, activity_notifications
 ```
 
-4. Si Supabase responde `401`, se solicita una vez el token con
-   `forceRefresh: true` y se reintenta la petición una sola vez.
-5. Postgres lee `auth.jwt()->>'sub'`; las políticas verifican la membresía del
-   usuario en `baby_caregivers`.
-6. Al cerrar sesión se retira el token FCM del dispositivo y Firebase elimina
-   la sesión local.
+Pruebas manuales mínimas:
 
-La publishable key y el JWT cumplen funciones distintas: la primera identifica
-la aplicación; el segundo identifica al usuario. Una `service_role` omite RLS
-y por eso sólo puede existir en componentes de servidor.
+1. A y B son cuidadores del mismo bebé; C no lo es.
+2. A crea un registro sin red: debe verse `pending` en SQLite.
+3. Al volver la red: aparece en Supabase, cambia a `synced` y B lo recibe.
+4. C obtiene cero filas/403 para ese bebé.
+5. A y B editan el mismo elemento: converge el `updated_at` mayor.
+6. Repetir con Agenda, Salud, bebé y Preferencias.
+7. Revocar `can_write` de B y confirmar que GET sigue permitido pero escritura
+   es rechazada.
 
-## Flujo de escritura, sync y alerta
+### 5. Desplegar notificaciones push
 
-1. El formulario valida y guarda en SQLite con `pending`.
-2. La UI recibe el cambio inmediatamente desde el stream local.
-3. La cola convierte la entidad con `Model.fromEntity`.
-4. Dio llama `apply_register_event` o `apply_agenda_event`.
-5. El RPC hace upsert last-write-wins y conserva tombstones.
-6. Un trigger inserta una alerta única para los demás cuidadores.
-7. Realtime despierta el pull en otros dispositivos conectados.
-8. El webhook invoca la función y FCM alerta dispositivos en background.
-9. El evento local pasa a `synced`; un error queda `failed` para reintento.
+1. En Firebase habilitar FCM HTTP v1 y crear una cuenta de servicio de envío.
+2. Generar un secreto aleatorio largo para `ACTIVITY_WEBHOOK_SECRET`.
+3. Cargar secretos desde un archivo **no versionado** basado en
+   `supabase/functions/.env.example`:
 
-La sincronización se intenta al iniciar, al autenticarse, después de mutar, al
-recibir Realtime y al volver desde segundo plano.
+```powershell
+supabase secrets set --env-file supabase/functions/.env.local
+supabase functions deploy send-activity-notification
+```
 
-## Consultas Data API usadas por Dio
+4. En Supabase crear un Database Webhook:
+   - tabla: `public.activity_notifications`;
+   - evento: `INSERT`;
+   - destino: `https://<PROJECT_REF>.supabase.co/functions/v1/send-activity-notification`;
+   - header: `x-webhook-secret: <ACTIVITY_WEBHOOK_SECRET>`.
+5. En Android/iOS completar la configuración nativa de Firebase del proyecto.
 
-- Pull inicial: `GET /rest/v1/register_events?select=*&order=updated_at.asc,id.asc`
-- Pull incremental: añade `updated_at=gt.<cursor UTC>`.
-- Upsert seguro: `POST /rest/v1/rpc/apply_register_event`.
-- Agenda: mismos patrones con `agenda_events` y `apply_agenda_event`.
-- Storage: `/storage/v1/object/register-event-media/<baby>/<evento>/<archivo>`.
+Flujo resultante:
 
-La UI y los BLoC nunca conocen estas URLs; dependen de casos de uso y
-repositorios.
+```text
+cambio compartido -> trigger SQL -> activity_notifications
+  -> webhook -> Edge Function -> FCM HTTP v1 -> dispositivo
+```
 
-## Verificación mínima
+La app pide permiso desde la vista de notificaciones, registra el token en
+`push_devices`, guarda mensajes de foreground/background en la bandeja local,
+combina esa bandeja con el GET de Supabase y usa `notification_id` para no
+duplicar el mismo aviso. Al abrir o limpiar, actualiza `read_at`. Al cambiar el
+token o cerrar sesión, revoca el token remoto anterior.
 
-1. Usuario A inicia sesión y registra una alimentación sin red: aparece local
-   con estado pendiente.
-2. Al recuperar red, la fila aparece en Supabase y queda sincronizada.
-3. Usuario B, miembro del mismo bebé, recibe el pull Realtime y una alerta.
-4. Usuario C, sin membresía, obtiene cero filas o `403`.
-5. Editar desde B y eliminar desde A converge en ambos equipos sin resucitar el
-   tombstone.
-6. Una foto sólo puede abrirse por miembros autorizados.
-7. Rotar o revocar la sesión produce un único refresh/reintento, nunca un loop.
-8. Cerrar sesión elimina el token FCM del dispositivo.
-9. Una invitación sólo puede ser revisada por el correo destinatario; aceptar
-   crea la membresía y rechazar o revocar invalida el código.
+Los recordatorios de Agenda son notificaciones locales programadas con canal
+de alarma; no crean una fila remota. Se usa programación inexacta para no pedir
+permiso de alarma exacta. En Android 13+ e iOS el usuario debe conceder permiso
+antes de recibir FCM.
 
-## Referencias
+## Checklist de aceptación
 
-- [Quickstart oficial de Supabase para Flutter](https://supabase.com/docs/guides/getting-started/quickstarts/flutter)
-- [Paquete `supabase_flutter`](https://pub.dev/packages/supabase_flutter)
-- [Firebase como Third-Party Auth](https://supabase.com/docs/guides/auth/third-party/firebase-auth)
-- [API keys de Supabase](https://supabase.com/docs/guides/getting-started/api-keys)
-- [Cambios de base de datos con Realtime](https://supabase.com/docs/guides/realtime/subscribing-to-database-changes)
+- [ ] `supabase db push --dry-run` no informa errores.
+- [ ] Las seis migraciones figuran aplicadas en `supabase migration list`.
+- [ ] Firebase Third-Party Auth y claim `role: authenticated` funcionan.
+- [ ] Registro, Agenda, Salud, Familia y Preferencias convergen en dos equipos.
+- [ ] Un usuario ajeno no puede leer ni escribir datos.
+- [ ] Una invitación devuelve `family_id` y la fecha de nacimiento reales.
+- [ ] Bandeja remota: GET, PATCH individual y PATCH global funcionan.
+- [ ] Webhook/Edge Function entrega FCM y deshabilita tokens inválidos.
+- [ ] El cierre de sesión elimina el token remoto y los datos locales quedan
+      aislados por UID en un SQLite distinto.
+
+### Prueba manual del círculo familiar
+
+1. El usuario A crea un bebé y envía una invitación al correo exacto de B.
+2. Si B ya tenía cuenta, recibe una alerta con ruta
+   `/invitation?code=<código>`; si aún no tenía cuenta, la alerta se crea al
+   registrarse o iniciar sesión por primera vez.
+3. El enlace conserva el código al alternar entre Login y Crear cuenta.
+4. Con otro correo, `lookup_care_invitation` responde `wrong_account`.
+5. B acepta: se crea `baby_caregivers`, se actualiza su perfil y la app descarga
+   `families`, `babies`, miembros y perfiles antes de cerrar el loader.
+6. A recibe una alerta `care_invitation_accepted` con ruta
+   `/family/care-circle` y ve a B como miembro activo.
+7. Crear un registro con B y verificar que A lo recibe; deshabilitar escritura y
+   confirmar que B mantiene lectura pero ya no puede crear ni actualizar.
+8. Repetir con rechazo, reenvío y revocación; cada cambio debe aparecer en la
+   bandeja in-app sin duplicados.
+
+## Referencias oficiales
+
+- [Firebase Auth como Third-Party Auth](https://supabase.com/docs/guides/auth/third-party/firebase-auth)
+- [Migraciones y `db push`](https://supabase.com/docs/guides/local-development/cli-workflows)
+- [Postgres Changes / Realtime](https://supabase.com/docs/guides/realtime/subscribing-to-database-changes)
+- [Database Webhooks](https://supabase.com/docs/guides/database/webhooks)
+- [Despliegue de Edge Functions](https://supabase.com/docs/guides/functions/deploy)
+- [Secretos de Edge Functions](https://supabase.com/docs/guides/functions/secrets)
+- [Recepción FCM en Flutter](https://firebase.google.com/docs/cloud-messaging/flutter/receive-messages)
+- [Envío FCM HTTP v1](https://firebase.google.com/docs/cloud-messaging/send/v1-api)

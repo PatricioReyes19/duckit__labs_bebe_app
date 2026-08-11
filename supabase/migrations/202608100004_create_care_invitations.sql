@@ -48,9 +48,10 @@ set search_path = ''
 as $$
 declare
   caller_id text := auth.jwt() ->> 'sub';
-  normalized_contact text := lower(
-    regexp_replace(trim(p_contact), '[[:space:]-]', '', 'g')
-  );
+  normalized_contact text := case
+    when position('@' in trim(p_contact)) > 0 then lower(trim(p_contact))
+    else lower(regexp_replace(trim(p_contact), '[[:space:]-]', '', 'g'))
+  end;
   normalized_code text := upper(replace(trim(p_code), ' ', ''));
   invitation public.care_invitations;
   recipient_id text;

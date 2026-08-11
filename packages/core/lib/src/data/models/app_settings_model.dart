@@ -94,3 +94,79 @@ class AppSettingsModel {
     textSize: textSize,
   );
 }
+
+enum AppSettingsSyncStatus { synced, pending, syncing, failed }
+
+class AppSettingsSyncRecord {
+  const AppSettingsSyncRecord({
+    required this.settings,
+    required this.updatedAt,
+    required this.syncStatus,
+    this.syncError,
+  });
+
+  final AppSettingsEntity settings;
+  final DateTime updatedAt;
+  final AppSettingsSyncStatus syncStatus;
+  final String? syncError;
+
+  factory AppSettingsSyncRecord.fromRow(Map<String, Object?> row) =>
+      AppSettingsSyncRecord(
+        settings: AppSettingsModel.fromRow(row).toEntity(),
+        updatedAt: DateTime.fromMillisecondsSinceEpoch(
+          (row['updated_at'] as int?) ?? 0,
+          isUtc: true,
+        ),
+        syncStatus: AppSettingsSyncStatus.values.firstWhere(
+          (status) => status.name == row['sync_status'],
+          orElse: () => AppSettingsSyncStatus.pending,
+        ),
+        syncError: row['sync_error'] as String?,
+      );
+
+  factory AppSettingsSyncRecord.fromRemoteJson(Map<String, dynamic> json) =>
+      AppSettingsSyncRecord(
+        settings: AppSettingsEntity(
+          theme: AppThemePreference.values.firstWhere(
+            (theme) => theme.name == json['theme_mode'],
+            orElse: () => AppThemePreference.system,
+          ),
+          highContrast: json['high_contrast'] as bool? ?? false,
+          personalReminders: json['personal_reminders'] as bool? ?? true,
+          familyActivity: json['family_activity'] as bool? ?? true,
+          dailySummary: json['daily_summary'] as bool? ?? false,
+          reduceMotion: json['reduce_motion'] as bool? ?? false,
+          wifiOnly: json['wifi_only'] as bool? ?? false,
+          name: json['account_name'] as String? ?? '',
+          email: json['account_email'] as String? ?? '',
+          language: json['language'] as String? ?? 'Español',
+          timeFormat: json['time_format'] as String? ?? '24 horas',
+          textSize: json['text_size'] as String? ?? 'Predeterminado',
+        ),
+        updatedAt: DateTime.parse(json['updated_at']! as String).toUtc(),
+        syncStatus: AppSettingsSyncStatus.synced,
+      );
+
+  Map<String, Object?> toRow() => {
+    ...AppSettingsModel.fromEntity(settings).toRow(),
+    'updated_at': updatedAt.toUtc().millisecondsSinceEpoch,
+    'sync_status': syncStatus.name,
+    'sync_error': syncError,
+  };
+
+  Map<String, Object?> toRemoteJson() => {
+    'theme_mode': settings.theme.name,
+    'high_contrast': settings.highContrast,
+    'personal_reminders': settings.personalReminders,
+    'family_activity': settings.familyActivity,
+    'daily_summary': settings.dailySummary,
+    'reduce_motion': settings.reduceMotion,
+    'wifi_only': settings.wifiOnly,
+    'account_name': settings.name,
+    'account_email': settings.email,
+    'language': settings.language,
+    'time_format': settings.timeFormat,
+    'text_size': settings.textSize,
+    'updated_at': updatedAt.toUtc().toIso8601String(),
+  };
+}

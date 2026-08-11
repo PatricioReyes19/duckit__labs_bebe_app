@@ -170,3 +170,24 @@ class FamilyMemberModel {
       ? DateTime.fromMillisecondsSinceEpoch(value, isUtc: true)
       : null;
 }
+
+class FamilySyncSnapshot {
+  const FamilySyncSnapshot({required this.overview, required this.updatedAt});
+
+  final FamilyOverviewEntity overview;
+  final DateTime updatedAt;
+
+  Map<String, Object?> toRemoteJson() => {
+    'family_id': overview.id,
+    'family_name': overview.name,
+    'updated_at': updatedAt.toUtc().toIso8601String(),
+    'babies': [
+      for (final baby in overview.babies)
+        {
+          'id': baby.id,
+          'display_name': baby.name,
+          'birth_date': baby.birthDate.toUtc().toIso8601String(),
+        },
+    ],
+  };
+}

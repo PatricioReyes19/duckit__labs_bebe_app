@@ -2,8 +2,15 @@ import 'package:auth/auth.dart';
 import 'package:core/core.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
 void main() {
+  setUp(() {
+    SharedPreferencesAsyncPlatform.instance =
+        InMemorySharedPreferencesAsync.empty();
+  });
+
   group('AuthService', () {
     test('acepta un nombre de usuario y contraseña local de 5 caracteres',
         () async {
@@ -27,6 +34,48 @@ void main() {
 
       expect(gateway.lastDisplayName, 'María López');
       expect(gateway.lastEmail, 'maria@correo.com');
+    });
+
+    test('sincroniza el perfil luego de crear cuenta e iniciar sesión',
+        () async {
+      final gateway = _FakeAuthGateway();
+      final synchronizedUsers = <AuthUser>[];
+      final service = AuthService(
+        gateway,
+        afterAuthentication: (session) async {
+          synchronizedUsers.add(session.user);
+        },
+      );
+
+      await service.signUp(
+        displayName: 'María López',
+        email: 'maria@correo.com',
+        password: 'segura123',
+        acceptedTerms: true,
+      );
+      await service.signIn(
+        email: 'maria@correo.com',
+        password: 'segura123',
+      );
+
+      expect(synchronizedUsers, hasLength(2));
+      expect(synchronizedUsers.first.displayName, 'María López');
+      expect(synchronizedUsers.last.email, 'maria@correo.com');
+    });
+
+    test('no bloquea la sesión si falla la sincronización de perfil', () async {
+      final gateway = _FakeAuthGateway();
+      final service = AuthService(
+        gateway,
+        afterAuthentication: (_) => throw StateError('Supabase sin conexión'),
+      );
+
+      final session = await service.signIn(
+        email: 'maria@correo.com',
+        password: 'segura123',
+      );
+
+      expect(session.user.email, 'maria@correo.com');
     });
 
     test('no llama al gateway cuando el formulario es inválido', () async {

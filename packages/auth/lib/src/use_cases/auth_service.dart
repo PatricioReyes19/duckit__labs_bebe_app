@@ -8,10 +8,12 @@ class AuthService {
   const AuthService(
     this._gateway, {
     this.beforeSignOut,
+    this.afterAuthentication,
   });
 
   final AuthGateway _gateway;
   final Future<void> Function()? beforeSignOut;
+  final Future<void> Function(AuthSession session)? afterAuthentication;
 
   Future<AuthSession?> currentSession() {
     return _gateway.currentSession();
@@ -36,10 +38,12 @@ class AuthService {
       throw AuthValidationFailure(errors);
     }
 
-    return _gateway.signIn(
+    final session = await _gateway.signIn(
       email: email.trim().toLowerCase(),
       password: password,
     );
+    await _runAfterAuthentication(session);
+    return session;
   }
 
   Future<AuthSession> signUp({
@@ -62,11 +66,25 @@ class AuthService {
       throw AuthValidationFailure(errors);
     }
 
-    return _gateway.signUp(
+    final session = await _gateway.signUp(
       displayName: displayName.trim(),
       email: email.trim().toLowerCase(),
       password: password,
     );
+    await _runAfterAuthentication(session);
+    return session;
+  }
+
+  Future<void> _runAfterAuthentication(AuthSession session) async {
+    // Firebase remains the source of truth for the session. Profile syncing is
+    // best-effort so a temporary Supabase outage cannot lock the user out.
+    try {
+      await afterAuthentication?.call(session).timeout(
+            const Duration(seconds: 8),
+          );
+    } on Object {
+      // The next login/app resume retries the remote profile synchronization.
+    }
   }
 
   Future<void> signOut() async {

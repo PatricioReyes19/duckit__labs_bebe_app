@@ -73,15 +73,51 @@ class SupabaseRestClient {
         if (limit != null) 'limit': limit,
       },
     );
-    final data = response.data;
-    if (data is! List) {
-      throw const FormatException('Invalid Supabase collection response.');
-    }
-    return data
-        .whereType<Map>()
-        .map((row) => Map<String, dynamic>.from(row))
-        .toList(growable: false);
+    return _collection(response.data);
   });
+
+  Future<List<Map<String, dynamic>>> insert(
+    String table, {
+    required Object data,
+    String? onConflict,
+  }) => _guard(() async {
+    final response = await dio.post<Object?>(
+      '/rest/v1/$table',
+      data: data,
+      queryParameters: {if (onConflict != null) 'on_conflict': onConflict},
+      options: Options(
+        headers: {
+          'Prefer': onConflict == null
+              ? 'return=representation'
+              : 'resolution=merge-duplicates,return=representation',
+        },
+      ),
+    );
+    return _collection(response.data);
+  });
+
+  Future<List<Map<String, dynamic>>> patch(
+    String table, {
+    required Map<String, Object?> data,
+    required Map<String, String> filters,
+  }) => _guard(() async {
+    final response = await dio.patch<Object?>(
+      '/rest/v1/$table',
+      data: data,
+      queryParameters: filters,
+      options: Options(headers: const {'Prefer': 'return=representation'}),
+    );
+    return _collection(response.data);
+  });
+
+  Future<void> delete(String table, {required Map<String, String> filters}) =>
+      _guard(() async {
+        await dio.delete<void>(
+          '/rest/v1/$table',
+          queryParameters: filters,
+          options: Options(headers: const {'Prefer': 'return=minimal'}),
+        );
+      });
 
   Future<void> uploadObject({
     required String bucket,
@@ -122,5 +158,15 @@ class SupabaseRestClient {
     } on DioException catch (error) {
       throw SupabaseRemoteException.fromDio(error);
     }
+  }
+
+  static List<Map<String, dynamic>> _collection(Object? data) {
+    if (data is! List) {
+      throw const FormatException('Invalid Supabase collection response.');
+    }
+    return data
+        .whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList(growable: false);
   }
 }
