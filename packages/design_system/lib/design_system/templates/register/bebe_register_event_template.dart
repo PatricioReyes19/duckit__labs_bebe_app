@@ -11,6 +11,7 @@ class BebeRegisterEventTemplate extends StatelessWidget {
     required this.form,
     this.babySelector,
     this.categorySelector,
+    this.fullBleedCategorySelector = false,
     this.subcategorySelector,
     this.contextBanner,
     this.bottomNavigationBar,
@@ -23,6 +24,7 @@ class BebeRegisterEventTemplate extends StatelessWidget {
   final Widget header;
   final Widget? babySelector;
   final Widget? categorySelector;
+  final bool fullBleedCategorySelector;
   final Widget? subcategorySelector;
   final Widget? contextBanner;
   final Widget? bottomNavigationBar;
@@ -35,6 +37,12 @@ class BebeRegisterEventTemplate extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = context.theme;
     final spacing = theme.spacing;
+    final horizontalPadding = spacing.spacingXl;
+
+    Widget padded(Widget child) => Padding(
+      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+      child: child,
+    );
 
     return Scaffold(
       backgroundColor: theme.colors.background.neutralsSurface,
@@ -49,36 +57,39 @@ class BebeRegisterEventTemplate extends StatelessWidget {
             slivers: [
               SliverPadding(
                 padding: EdgeInsets.fromLTRB(
-                  spacing.spacingXl,
+                  0,
                   spacing.spacingM,
-                  spacing.spacingXl,
+                  0,
                   spacing.spacing4xl,
                 ),
                 sliver: SliverToBoxAdapter(
                   child: BebeResponsiveContent(
-                    maxWidth: maximumContentWidth,
+                    maxWidth: maximumContentWidth + horizontalPadding * 2,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        header,
+                        padded(header),
                         if (babySelector != null) ...[
                           SizedBox(height: spacing.spacingXl),
-                          babySelector!,
+                          padded(babySelector!),
                         ],
                         if (categorySelector != null) ...[
                           SizedBox(height: spacing.spacingXl),
-                          categorySelector!,
+                          if (fullBleedCategorySelector)
+                            categorySelector!
+                          else
+                            padded(categorySelector!),
                         ],
                         if (subcategorySelector != null) ...[
                           SizedBox(height: spacing.spacingL),
-                          subcategorySelector!,
+                          padded(subcategorySelector!),
                         ],
                         if (contextBanner != null) ...[
                           SizedBox(height: spacing.spacingL),
-                          contextBanner!,
+                          padded(contextBanner!),
                         ],
                         SizedBox(height: spacing.spacingL),
-                        form,
+                        padded(form),
                       ],
                     ),
                   ),

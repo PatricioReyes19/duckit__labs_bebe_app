@@ -42,5 +42,17 @@ void main() {
       expect(allowed.route, '/family/settings');
       expect(rejected.route, isNull);
     });
+
+    test('allows invitation deep links with their code', () {
+      final invitation = AppNotification(
+        id: 'invitation',
+        title: 'Invitación recibida',
+        body: 'Únete al círculo de Mateo',
+        receivedAt: DateTime.parse(receivedAt),
+        data: const {'route': '/invitation?code=MATEO2026'},
+      );
+
+      expect(invitation.route, '/invitation?code=MATEO2026');
+    });
   });
 }

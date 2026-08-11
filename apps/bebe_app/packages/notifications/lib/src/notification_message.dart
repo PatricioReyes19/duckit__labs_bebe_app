@@ -63,6 +63,8 @@ class AppNotification {
     if (candidate == null || !candidate.startsWith('/')) {
       return null;
     }
+    final uri = Uri.tryParse(candidate);
+    if (uri == null || uri.hasAuthority || uri.hasFragment) return null;
 
     const allowedPrefixes = <String>{
       '/home',
@@ -71,10 +73,11 @@ class AppNotification {
       '/family',
       '/register',
       '/notifications',
+      '/invitation',
     };
 
     return allowedPrefixes.any(
-          (prefix) => candidate == prefix || candidate.startsWith('$prefix/'),
+          (prefix) => uri.path == prefix || uri.path.startsWith('$prefix/'),
         )
         ? candidate
         : null;

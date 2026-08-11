@@ -12,4 +12,5 @@ export 'indicator_dot/indicator.dart';
 export 'navigation_icon_button/navigation_icon.dart';
 export 'calendar_makers.dart';
 export 'brand/brand.dart';
+export 'illustration/bebe_illustration_assets.dart';
 export 'rating_star/rating_star.dart';

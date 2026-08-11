@@ -114,10 +114,24 @@ class OnboardingCubit extends Cubit<OnboardingState> {
 
   Future<void> invitationDeclined() async {
     final invitation = state.invitation;
-    if (invitation != null) {
+    if (invitation == null || state.isLoading) return;
+    emit(state.copyWith(status: OnboardingActionStatus.loading));
+    try {
       await _repository.declineInvitation(invitation);
+      emit(
+        state.copyWith(
+          step: OnboardingStep.invitationDeclined,
+          status: OnboardingActionStatus.idle,
+        ),
+      );
+    } on Object {
+      emit(
+        state.copyWith(
+          status: OnboardingActionStatus.failure,
+          message: 'No pudimos rechazar la invitación. Inténtalo nuevamente.',
+        ),
+      );
     }
-    backToChoice();
   }
 
   void retryInvitation() {

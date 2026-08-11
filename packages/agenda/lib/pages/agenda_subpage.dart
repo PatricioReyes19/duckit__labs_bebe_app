@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:core/core.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -24,7 +26,9 @@ class AgendaSubpage extends GoRoute {
     required AgendaSubpageKind kind,
     required CreateAgendaEvent createAgendaEvent,
     required AgendaRepository agendaRepository,
-    this.babyId = 'local-active-baby',
+    required AppSettingsRepository appSettingsRepository,
+    GetFamilyOverview? getFamilyOverview,
+    this.babyId,
     super.routes,
   }) : super(
          path: kind.relativePath,
@@ -36,15 +40,17 @@ class AgendaSubpage extends GoRoute {
            child: _AgendaSubpageView(
              kind: kind,
              babyId: babyId,
+             getFamilyOverview: getFamilyOverview,
              eventId: state.pathParameters['eventId'],
              createAgendaEvent: createAgendaEvent,
              agendaRepository: agendaRepository,
+             appSettingsRepository: appSettingsRepository,
              onCompleted: () => context.pop(),
            ),
          ),
        );
 
-  final String babyId;
+  final String? babyId;
 
   static const reminderSettingsPath = '/agenda/reminders/settings';
   static const createReminderPath = '/agenda/reminders/new';
@@ -57,17 +63,21 @@ class _AgendaSubpageView extends StatefulWidget {
   const _AgendaSubpageView({
     required this.kind,
     required this.babyId,
+    required this.getFamilyOverview,
     required this.createAgendaEvent,
     required this.agendaRepository,
+    required this.appSettingsRepository,
     required this.onCompleted,
     this.eventId,
   });
 
   final AgendaSubpageKind kind;
-  final String babyId;
+  final String? babyId;
+  final GetFamilyOverview? getFamilyOverview;
   final String? eventId;
   final CreateAgendaEvent createAgendaEvent;
   final AgendaRepository agendaRepository;
+  final AppSettingsRepository appSettingsRepository;
   final VoidCallback onCompleted;
 
   @override
@@ -79,11 +89,20 @@ class _AgendaSubpageViewState extends State<_AgendaSubpageView> {
   final _notesController = TextEditingController();
   bool _personalReminders = true;
   bool _familyReminders = true;
+  bool _dailySummary = false;
+  bool _settingsLoading = true;
+  bool _settingsSaving = false;
   bool _saving = false;
   String? _error;
   AgendaCategory _category = AgendaCategory.controls;
   DateTime _date = DateTime.now().add(const Duration(days: 1));
   TimeOfDay _time = const TimeOfDay(hour: 9, minute: 0);
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_loadReminderSettings());
+  }
 
   @override
   void dispose() {
@@ -121,23 +140,62 @@ class _AgendaSubpageViewState extends State<_AgendaSubpageView> {
       'Elige qué avisos quieres recibir. Los eventos siguen disponibles aunque desactives una notificación.',
     ),
     const SizedBox(height: 16),
-    Card(
-      child: Column(
-        children: [
-          SwitchListTile(
-            title: const Text('Mis recordatorios'),
-            subtitle: const Text('Avisos asignados a tu cuenta'),
-            value: _personalReminders,
-            onChanged: (value) => setState(() => _personalReminders = value),
-          ),
-          const Divider(height: 1),
-          SwitchListTile(
-            title: const Text('Actividad familiar'),
-            subtitle: const Text('Eventos creados por otros cuidadores'),
-            value: _familyReminders,
-            onChanged: (value) => setState(() => _familyReminders = value),
-          ),
-        ],
+    if (_settingsLoading)
+      const Center(child: CircularProgressIndicator())
+    else
+      Card(
+        child: Column(
+          children: [
+            SwitchListTile(
+              title: const Text('Mis recordatorios'),
+              subtitle: const Text('Avisos asignados a tu cuenta'),
+              value: _personalReminders,
+              onChanged: _settingsSaving
+                  ? null
+                  : (value) => _saveReminderSettings(personalReminders: value),
+            ),
+            const Divider(height: 1),
+            SwitchListTile(
+              title: const Text('Actividad familiar'),
+              subtitle: const Text('Eventos creados por otros cuidadores'),
+              value: _familyReminders,
+              onChanged: _settingsSaving
+                  ? null
+                  : (value) => _saveReminderSettings(familyActivity: value),
+            ),
+            const Divider(height: 1),
+            SwitchListTile(
+              title: const Text('Resumen diario'),
+              subtitle: const Text(
+                'Un resumen compacto de la actividad del día',
+              ),
+              value: _dailySummary,
+              onChanged: _settingsSaving
+                  ? null
+                  : (value) => _saveReminderSettings(dailySummary: value),
+            ),
+          ],
+        ),
+      ),
+    if (_settingsSaving) ...[
+      const SizedBox(height: 12),
+      const LinearProgressIndicator(),
+    ],
+    if (_error != null) ...[
+      const SizedBox(height: 12),
+      Text(
+        _error!,
+        style: TextStyle(color: Theme.of(context).colorScheme.error),
+      ),
+    ],
+    const SizedBox(height: 16),
+    const Card(
+      child: ListTile(
+        leading: Icon(Icons.info_outline_rounded),
+        title: Text('Los cambios se guardan automáticamente'),
+        subtitle: Text(
+          'Desactivar avisos no elimina los recordatorios de la agenda.',
+        ),
       ),
     ),
   ];
@@ -272,6 +330,34 @@ class _AgendaSubpageViewState extends State<_AgendaSubpageView> {
                     'La pauta se actualiza desde el registro original.',
                   ),
                 ),
+              ] else ...[
+                const Divider(height: 1),
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _saving
+                              ? null
+                              : () => _editReminder(event),
+                          icon: const Icon(Icons.edit_outlined),
+                          label: const Text('Editar'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextButton.icon(
+                          onPressed: _saving
+                              ? null
+                              : () => _deleteReminder(event),
+                          icon: const Icon(Icons.delete_outline_rounded),
+                          label: const Text('Eliminar'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ],
           ),
@@ -279,6 +365,287 @@ class _AgendaSubpageViewState extends State<_AgendaSubpageView> {
       },
     ),
   ];
+
+  Future<void> _loadReminderSettings() async {
+    try {
+      final settings = await widget.appSettingsRepository.get();
+      if (!mounted) return;
+      setState(() {
+        _personalReminders = settings.personalReminders;
+        _familyReminders = settings.familyActivity;
+        _dailySummary = settings.dailySummary;
+        _settingsLoading = false;
+        _error = null;
+      });
+    } on Object {
+      if (!mounted) return;
+      setState(() {
+        _settingsLoading = false;
+        _error = 'No pudimos cargar tus preferencias de recordatorios.';
+      });
+    }
+  }
+
+  Future<void> _saveReminderSettings({
+    bool? personalReminders,
+    bool? familyActivity,
+    bool? dailySummary,
+  }) async {
+    final previousPersonal = _personalReminders;
+    final previousFamily = _familyReminders;
+    final previousSummary = _dailySummary;
+    setState(() {
+      _personalReminders = personalReminders ?? _personalReminders;
+      _familyReminders = familyActivity ?? _familyReminders;
+      _dailySummary = dailySummary ?? _dailySummary;
+      _settingsSaving = true;
+      _error = null;
+    });
+    try {
+      await widget.appSettingsRepository.update(
+        AppSettingsPatch(
+          personalReminders: personalReminders,
+          familyActivity: familyActivity,
+          dailySummary: dailySummary,
+        ),
+      );
+    } on Object {
+      if (!mounted) return;
+      setState(() {
+        _personalReminders = previousPersonal;
+        _familyReminders = previousFamily;
+        _dailySummary = previousSummary;
+        _error = 'No pudimos guardar el cambio. Inténtalo nuevamente.';
+      });
+    } finally {
+      if (mounted) setState(() => _settingsSaving = false);
+    }
+  }
+
+  Future<void> _editReminder(AgendaEventEntity event) async {
+    final titleController = TextEditingController(text: event.title);
+    final notesController = TextEditingController(text: event.description);
+    var category = event.category;
+    var date = event.startsAt.toLocal();
+    var time = TimeOfDay.fromDateTime(date);
+    var saving = false;
+    String? dialogError;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: const Text('Editar recordatorio'),
+          content: SingleChildScrollView(
+            child: SizedBox(
+              width: 440,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButtonFormField<AgendaCategory>(
+                    initialValue: category,
+                    decoration: const InputDecoration(
+                      labelText: 'Tipo',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: [
+                      for (final value in AgendaCategory.values)
+                        DropdownMenuItem(
+                          value: value,
+                          child: Text(_categoryLabel(value)),
+                        ),
+                    ],
+                    onChanged: saving
+                        ? null
+                        : (value) {
+                            if (value != null) {
+                              setDialogState(() => category = value);
+                            }
+                          },
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: titleController,
+                    decoration: const InputDecoration(
+                      labelText: 'Título',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: saving
+                              ? null
+                              : () async {
+                                  final picked = await showDatePicker(
+                                    context: dialogContext,
+                                    initialDate: date,
+                                    firstDate: DateTime.now().subtract(
+                                      const Duration(days: 1),
+                                    ),
+                                    lastDate: DateTime.now().add(
+                                      const Duration(days: 730),
+                                    ),
+                                  );
+                                  if (picked != null) {
+                                    setDialogState(() => date = picked);
+                                  }
+                                },
+                          icon: const Icon(Icons.calendar_today_outlined),
+                          label: Text(_formatDate(date)),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: saving
+                              ? null
+                              : () async {
+                                  final picked = await showTimePicker(
+                                    context: dialogContext,
+                                    initialTime: time,
+                                  );
+                                  if (picked != null) {
+                                    setDialogState(() => time = picked);
+                                  }
+                                },
+                          icon: const Icon(Icons.schedule_outlined),
+                          label: Text(time.format(dialogContext)),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: notesController,
+                    maxLines: 3,
+                    maxLength: 500,
+                    decoration: const InputDecoration(
+                      labelText: 'Notas (opcional)',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  if (dialogError != null)
+                    Text(
+                      dialogError!,
+                      style: TextStyle(
+                        color: Theme.of(dialogContext).colorScheme.error,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: saving ? null : () => Navigator.pop(dialogContext),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: saving
+                  ? null
+                  : () async {
+                      final title = titleController.text.trim();
+                      final startsAt = DateTime(
+                        date.year,
+                        date.month,
+                        date.day,
+                        time.hour,
+                        time.minute,
+                      );
+                      if (title.isEmpty || !startsAt.isAfter(DateTime.now())) {
+                        setDialogState(() {
+                          dialogError = title.isEmpty
+                              ? 'Escribe un título.'
+                              : 'El recordatorio debe quedar en el futuro.';
+                        });
+                        return;
+                      }
+                      setDialogState(() {
+                        saving = true;
+                        dialogError = null;
+                      });
+                      try {
+                        await widget.agendaRepository.update(
+                          event.id,
+                          AgendaEventPatch(
+                            category: category,
+                            title: title,
+                            description: notesController.text.trim(),
+                            startsAt: startsAt,
+                          ),
+                        );
+                        if (dialogContext.mounted) {
+                          Navigator.pop(dialogContext);
+                        }
+                        if (mounted) {
+                          setState(() {});
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Recordatorio actualizado.'),
+                            ),
+                          );
+                        }
+                      } on Object {
+                        if (dialogContext.mounted) {
+                          setDialogState(() {
+                            saving = false;
+                            dialogError = 'No pudimos guardar los cambios.';
+                          });
+                        }
+                      }
+                    },
+              child: saving
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Guardar'),
+            ),
+          ],
+        ),
+      ),
+    );
+    titleController.dispose();
+    notesController.dispose();
+  }
+
+  Future<void> _deleteReminder(AgendaEventEntity event) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('¿Eliminar recordatorio?'),
+        content: Text(
+          '“${event.title}” desaparecerá de la agenda del círculo de cuidado.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Volver'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _saving = true);
+    try {
+      await widget.agendaRepository.delete(event.id);
+      if (mounted) widget.onCompleted();
+    } on Object {
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _error = 'No pudimos eliminar el recordatorio.';
+        });
+      }
+    }
+  }
 
   Future<void> _pickDate() async {
     final value = await showDatePicker(
@@ -317,9 +684,15 @@ class _AgendaSubpageViewState extends State<_AgendaSubpageView> {
       _error = null;
     });
     try {
+      final resolvedBabyId =
+          widget.babyId ??
+          (await widget.getFamilyOverview?.call())?.activeBabyId;
+      if (resolvedBabyId == null || resolvedBabyId.isEmpty) {
+        throw StateError('No active baby is available for Agenda.');
+      }
       await widget.createAgendaEvent(
         AgendaEventDraft(
-          babyId: widget.babyId,
+          babyId: resolvedBabyId,
           category: _category,
           title: title,
           description: _notesController.text.trim(),

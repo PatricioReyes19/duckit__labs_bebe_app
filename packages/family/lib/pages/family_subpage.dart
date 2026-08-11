@@ -1,3 +1,4 @@
+import 'package:core/core.dart';
 import 'package:family/family.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -43,30 +44,38 @@ class FamilyBabyDraftResult {
 }
 
 class FamilySubpage extends GoRoute {
-  FamilySubpage({required FamilySubpageKind kind, super.routes})
-    : super(
-        path: kind.relativePath,
-        pageBuilder: (context, state) {
-          final babyId = state.pathParameters['babyId'];
-          final memberId = state.pathParameters['memberId'];
-          return CupertinoPage<Object?>(
-            key: ValueKey('family-${kind.name}-$babyId-$memberId'),
-            name: 'Family${kind.name}',
-            child: BlocProvider(
-              create: (_) =>
-                  FamilyFlowBloc(initialBabyId: babyId ?? 'local-active-baby'),
-              child: FamilyFlowView(
-                kind: kind,
-                babyId: babyId,
-                memberId: memberId,
-                onClose: () => context.pop(),
-                onBabySelected: (id) => context.pop(id),
-                onBabyCreated: (draft) => context.pop(draft),
-              ),
-            ),
-          );
-        },
-      );
+  FamilySubpage({
+    required FamilySubpageKind kind,
+    required GetFamilyOverview getFamilyOverview,
+    required FamilyRepository familyRepository,
+    super.routes,
+  }) : super(
+         path: kind.relativePath,
+         pageBuilder: (context, state) {
+           final babyId = state.pathParameters['babyId'];
+           final memberId = state.pathParameters['memberId'];
+           return CupertinoPage<Object?>(
+             key: ValueKey('family-${kind.name}-$babyId-$memberId'),
+             name: 'Family${kind.name}',
+             child: BlocProvider(
+               create: (_) => FamilyFlowBloc(
+                 initialBabyId: babyId ?? '',
+                 repository: familyRepository,
+               ),
+               child: FamilyFlowView(
+                 kind: kind,
+                 getFamilyOverview: getFamilyOverview,
+                 familyRepository: familyRepository,
+                 babyId: babyId,
+                 memberId: memberId,
+                 onClose: () => context.pop(),
+                 onBabySelected: (id) => context.pop(id),
+                 onBabyCreated: (draft) => context.pop(draft),
+               ),
+             ),
+           );
+         },
+       );
 
   static const babySelectorPath = '/family/babies';
   static const addBabyPath = '/family/babies/new';

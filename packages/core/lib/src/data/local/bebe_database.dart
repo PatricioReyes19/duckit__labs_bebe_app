@@ -53,6 +53,9 @@ class BebeDatabase {
           if (oldVersion < 4) {
             await BebeDatabaseSchema.upgradeAgendaEventsForSync(database);
           }
+          if (oldVersion < 5) {
+            await BebeDatabaseSchema.upgradeFamilyInvitations(database);
+          }
         },
       ),
     );

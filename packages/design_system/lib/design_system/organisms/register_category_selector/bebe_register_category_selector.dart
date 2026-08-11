@@ -27,6 +27,7 @@ class BebeRegisterCategorySelector<T> extends StatelessWidget {
     required this.selectedValue,
     required this.onChanged,
     this.semanticLabel = 'Categoría del registro',
+    this.contentPadding = EdgeInsets.zero,
     super.key,
   });
 
@@ -34,6 +35,10 @@ class BebeRegisterCategorySelector<T> extends StatelessWidget {
   final T selectedValue;
   final ValueChanged<T>? onChanged;
   final String semanticLabel;
+
+  /// Insets that scroll together with the categories instead of reducing the
+  /// horizontal viewport.
+  final EdgeInsetsGeometry contentPadding;
 
   @override
   Widget build(BuildContext context) {
@@ -57,8 +62,15 @@ class BebeRegisterCategorySelector<T> extends StatelessWidget {
       explicitChildNodes: true,
       child: LayoutBuilder(
         builder: (context, constraints) {
+          final resolvedPadding = contentPadding.resolve(
+            Directionality.of(context),
+          );
+          final availableWidth =
+              constraints.maxWidth -
+              resolvedPadding.left -
+              resolvedPadding.right;
           final totalGap = gap * (items.length - 1);
-          final fittedWidth = (constraints.maxWidth - totalGap) / items.length;
+          final fittedWidth = (availableWidth - totalGap) / items.length;
           final textScale = MediaQuery.textScalerOf(context).scale(1);
           final fits =
               fittedWidth >= minimumFittedTileWidth && textScale <= 1.3;
@@ -88,10 +100,13 @@ class BebeRegisterCategorySelector<T> extends StatelessWidget {
             ],
           );
 
-          if (fits) return row;
+          if (fits) {
+            return Padding(padding: contentPadding, child: row);
+          }
           return SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
+            padding: contentPadding,
             child: row,
           );
         },

@@ -31,6 +31,8 @@ class NavigationSessionStore {
     '/health/consultations',
     '/health/pediatric-care',
     '/health/clinical-history',
+    '/health/reports',
+    '/health/sync',
     '/family',
     '/family/babies',
     '/family/babies/new',
@@ -80,6 +82,9 @@ class NavigationSessionStore {
       await _preferences.setString(_locationKey, location.toString());
     }
   }
+
+  /// Elimina cualquier ruta privada recordada al terminar una sesión.
+  Future<void> clear() => _preferences.remove(_locationKey);
 
   static bool _isRestorable(String path) {
     return _restorablePaths.contains(path) ||

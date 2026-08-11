@@ -16,17 +16,19 @@ class LocalOnboardingRepository implements OnboardingRepository {
     Future<String?> Function()? currentUserId,
     Future<core.AuthUser?> Function()? currentUser,
     core.FamilyRepository? familyRepository,
+    core.SupabaseRestClient? remoteClient,
     Future<Directory> Function()? storageDirectory,
-  }) : _currentUserId = currentUserId,
-       _currentUser = currentUser,
-       _familyRepository = familyRepository,
-       _storageDirectory =
-           storageDirectory ?? getApplicationSupportDirectory;
+  })  : _currentUserId = currentUserId,
+        _currentUser = currentUser,
+        _familyRepository = familyRepository,
+        _remoteClient = remoteClient,
+        _storageDirectory = storageDirectory ?? getApplicationSupportDirectory;
 
   final SharedPreferencesAsync _preferences;
   final Future<String?> Function()? _currentUserId;
   final Future<core.AuthUser?> Function()? _currentUser;
   final core.FamilyRepository? _familyRepository;
+  final core.SupabaseRestClient? _remoteClient;
   final Future<Directory> Function() _storageDirectory;
 
   static const completedKey = 'bebeapp.onboarding.completed';
@@ -42,6 +44,14 @@ class LocalOnboardingRepository implements OnboardingRepository {
   @override
   Future<InvitationLookupResult> findInvitation(String code) async {
     final normalized = code.trim().toUpperCase().replaceAll(' ', '');
+    final client = _remoteClient;
+    if (client != null && await client.isAuthenticated()) {
+      final payload = await client.rpc(
+        'lookup_care_invitation',
+        parameters: {'p_code': normalized},
+      );
+      return _invitationResultFromRemote(payload, normalized);
+    }
     await Future<void>.delayed(const Duration(milliseconds: 350));
 
     return switch (normalized) {
@@ -75,6 +85,30 @@ class LocalOnboardingRepository implements OnboardingRepository {
 
   @override
   Future<void> acceptInvitation(CareInvitation invitation) async {
+    final client = _remoteClient;
+    if (client != null && await client.isAuthenticated()) {
+      await client.rpc(
+        'accept_care_invitation',
+        parameters: {'p_code': invitation.code},
+      );
+    }
+    final user = await _currentUser?.call();
+    final userId = user?.id ?? await _currentUserId?.call() ?? 'local-member';
+    final familyRepository = _familyRepository;
+    if (familyRepository != null) {
+      await familyRepository.joinCareCircle(
+        core.JoinedCareCircleDraft(
+          familyId: invitation.familyId ?? 'family-${invitation.code}',
+          familyName: 'Círculo de ${invitation.babyName}',
+          babyId: invitation.babyId ?? 'baby-${invitation.code}',
+          babyName: invitation.babyName,
+          babyBirthDate: _estimatedBirthDate(invitation.babyAgeLabel),
+          memberId: 'member-$userId-${invitation.familyId ?? invitation.code}',
+          memberName: user?.displayName ?? 'Cuidador/a',
+          memberEmail: user?.email ?? '',
+        ),
+      );
+    }
     await _preferences.setString(
       await _scopedKey(babyNameKey),
       invitation.babyName,
@@ -83,7 +117,19 @@ class LocalOnboardingRepository implements OnboardingRepository {
   }
 
   @override
-  Future<void> declineInvitation(CareInvitation invitation) async {}
+  Future<void> declineInvitation(CareInvitation invitation) async {
+    final client = _remoteClient;
+    if (client != null && await client.isAuthenticated()) {
+      await client.rpc(
+        'reject_care_invitation',
+        parameters: {'p_code': invitation.code},
+      );
+    }
+    await _preferences.setString(
+      await _scopedKey('bebeapp.invitation.last_declined'),
+      invitation.code,
+    );
+  }
 
   @override
   Future<BabyProfile> createBaby(BabyDraft draft) async {
@@ -166,5 +212,44 @@ class LocalOnboardingRepository implements OnboardingRepository {
     return const {'.jpg', '.jpeg', '.png', '.webp', '.heic'}.contains(extension)
         ? extension
         : '.jpg';
+  }
+
+  static DateTime _estimatedBirthDate(String ageLabel) {
+    final months = int.tryParse(
+      RegExp(r'\d+').firstMatch(ageLabel)?.group(0) ?? '',
+    );
+    final now = DateTime.now();
+    return DateTime(now.year, now.month - (months ?? 0), now.day);
+  }
+
+  static InvitationLookupResult _invitationResultFromRemote(
+    Object? payload,
+    String code,
+  ) {
+    final raw = payload is Map ? Map<String, Object?>.from(payload) : null;
+    if (raw == null || raw['found'] != true) {
+      final failure = switch (raw?['failure']) {
+        'expired' => InvitationFailureReason.expired,
+        'revoked' || 'rejected' => InvitationFailureReason.revoked,
+        'wrong_account' => InvitationFailureReason.wrongAccount,
+        'already_member' => InvitationFailureReason.alreadyMember,
+        _ => InvitationFailureReason.notFound,
+      };
+      return InvitationLookupResult.invalid(failure);
+    }
+    final babyId = raw['baby_id']?.toString() ?? '';
+    return InvitationLookupResult.valid(
+      CareInvitation(
+        id: raw['id']?.toString() ?? code,
+        code: code,
+        inviterName: raw['inviter_name']?.toString() ?? 'Tu familiar',
+        inviterRelationship:
+            raw['inviter_relationship']?.toString() ?? 'Administrador/a',
+        babyName: raw['baby_name']?.toString() ?? 'Bebé',
+        babyAgeLabel: raw['baby_age_label']?.toString() ?? 'Círculo compartido',
+        familyId: 'family-$babyId',
+        babyId: babyId,
+      ),
+    );
   }
 }

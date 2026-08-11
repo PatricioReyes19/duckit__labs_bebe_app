@@ -16,6 +16,7 @@ class HealthPage extends GoRoute {
     required HealthRouteAction openPediatricCare,
     required HealthRouteAction openAgenda,
     required HealthRouteAction openClinicalHistory,
+    required HealthRouteAction openReports,
     super.name,
     super.routes,
   }) : super(
@@ -35,6 +36,7 @@ class HealthPage extends GoRoute {
                  onPediatricCarePressed: () => openPediatricCare(context),
                  onAgendaPressed: () => openAgenda(context),
                  onClinicalHistoryPressed: () => openClinicalHistory(context),
+                 onReportsPressed: () => openReports(context),
                ),
              ),
            );

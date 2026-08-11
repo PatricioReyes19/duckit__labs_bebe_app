@@ -1,7 +1,7 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-class BabyDayNightThemeSwitch extends StatelessWidget {
+class BabyDayNightThemeSwitch extends StatefulWidget {
   const BabyDayNightThemeSwitch({
     required this.isDark,
     required this.followsSystem,
@@ -16,20 +16,63 @@ class BabyDayNightThemeSwitch extends StatelessWidget {
   final VoidCallback onUseSystem;
 
   @override
+  State<BabyDayNightThemeSwitch> createState() =>
+      _BabyDayNightThemeSwitchState();
+}
+
+class _BabyDayNightThemeSwitchState extends State<BabyDayNightThemeSwitch> {
+  static const _motionDuration = Duration(milliseconds: 160);
+
+  late bool _visualIsDark;
+  bool _isTransitioning = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _visualIsDark = widget.isDark;
+  }
+
+  @override
+  void didUpdateWidget(covariant BabyDayNightThemeSwitch oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_isTransitioning && widget.isDark != _visualIsDark) {
+      _visualIsDark = widget.isDark;
+    }
+  }
+
+  Future<void> _toggleTheme() async {
+    if (_isTransitioning) return;
+
+    final next = !_visualIsDark;
+    setState(() {
+      _visualIsDark = next;
+      _isTransitioning = true;
+    });
+    widget.onChanged(next);
+
+    await Future<void>.delayed(_motionDuration);
+    if (!mounted) return;
+    setState(() {
+      _isTransitioning = false;
+      _visualIsDark = widget.isDark;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = context.theme;
     final colors = theme.colors;
-    final trackColor = isDark
+    final trackColor = _visualIsDark
         ? colors.background.accentSurface
         : colors.background.warningSurface;
-    final trackBorder = isDark
+    final trackBorder = _visualIsDark
         ? colors.border.accentAlternative
         : colors.border.warningDefault;
 
     return Semantics(
       container: true,
       label: 'Tema visual. Bebé despierto para claro, bebé dormido para oscuro',
-      toggled: isDark,
+      toggled: _visualIsDark,
       child: ExcludeSemantics(
         child: Padding(
           padding: EdgeInsets.all(theme.spacing.spacingL),
@@ -44,7 +87,7 @@ class BabyDayNightThemeSwitch extends StatelessWidget {
               ),
               SizedBox(height: theme.spacing.spacingS),
               Text(
-                isDark
+                _visualIsDark
                     ? 'Dormido · luz suave para la noche'
                     : 'Despierto · pantalla clara para el día',
                 style: theme.typography.styles.body.sm.regular.copyWith(
@@ -56,9 +99,9 @@ class BabyDayNightThemeSwitch extends StatelessWidget {
                 color: Colors.transparent,
                 child: InkWell(
                   borderRadius: theme.borderRadius.full,
-                  onTap: () => onChanged(!isDark),
+                  onTap: _isTransitioning ? null : _toggleTheme,
                   child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 240),
+                    duration: _motionDuration,
                     curve: Curves.easeOutCubic,
                     height: 68,
                     padding: const EdgeInsets.all(6),
@@ -77,23 +120,23 @@ class BabyDayNightThemeSwitch extends StatelessWidget {
                                 child: _ModeLabel(
                                   label: 'Despierto',
                                   icon: Icons.wb_sunny_rounded,
-                                  selected: !isDark,
+                                  selected: !_visualIsDark,
                                 ),
                               ),
                               Expanded(
                                 child: _ModeLabel(
                                   label: 'Dormido',
                                   icon: Icons.nightlight_round,
-                                  selected: isDark,
+                                  selected: _visualIsDark,
                                 ),
                               ),
                             ],
                           ),
                         ),
                         AnimatedAlign(
-                          duration: const Duration(milliseconds: 240),
-                          curve: Curves.easeOutBack,
-                          alignment: isDark
+                          duration: _motionDuration,
+                          curve: Curves.easeOutCubic,
+                          alignment: _visualIsDark
                               ? Alignment.centerRight
                               : Alignment.centerLeft,
                           child: SizedBox.square(
@@ -103,7 +146,7 @@ class BabyDayNightThemeSwitch extends StatelessWidget {
                                 color: colors.background.neutralsSurface,
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: isDark
+                                  color: _visualIsDark
                                       ? colors.border.accentAlternative
                                       : colors.border.warningDefault,
                                 ),
@@ -111,8 +154,8 @@ class BabyDayNightThemeSwitch extends StatelessWidget {
                               ),
                               child: CustomPaint(
                                 painter: _BabyFacePainter(
-                                  sleeping: isDark,
-                                  lineColor: isDark
+                                  sleeping: _visualIsDark,
+                                  lineColor: _visualIsDark
                                       ? colors.text.accentDefault
                                       : colors.text.brandDefault,
                                   cheekColor: colors.background.errorSurface,
@@ -130,14 +173,14 @@ class BabyDayNightThemeSwitch extends StatelessWidget {
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton.icon(
-                  onPressed: followsSystem ? null : onUseSystem,
+                  onPressed: widget.followsSystem ? null : widget.onUseSystem,
                   icon: Icon(
-                    followsSystem
+                    widget.followsSystem
                         ? Icons.check_circle_rounded
                         : Icons.settings_suggest_outlined,
                   ),
                   label: Text(
-                    followsSystem
+                    widget.followsSystem
                         ? 'Siguiendo el sistema'
                         : 'Usar tema del sistema',
                   ),

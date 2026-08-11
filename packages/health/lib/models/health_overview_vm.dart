@@ -50,13 +50,13 @@ class HealthVaccinesSummaryVm {
 
 class HealthGrowthSummaryVm {
   const HealthGrowthSummaryVm({
-    required this.weightKg,
+    this.weightKg,
     this.heightCm,
     this.weightPercentile,
     this.recordedAtLabel,
   });
 
-  final double weightKg;
+  final double? weightKg;
   final double? heightCm;
   final int? weightPercentile;
   final String? recordedAtLabel;
@@ -119,7 +119,7 @@ class HealthOverviewVm {
             : 'Próxima: ${_dateLabel(nextVaccine.startsAt)}',
       ),
       growthSummary: HealthGrowthSummaryVm(
-        weightKg: weights.isEmpty ? 0 : weights.first.value,
+        weightKg: weights.isEmpty ? null : weights.first.value,
         heightCm: heights.isEmpty ? null : heights.first.value,
         recordedAtLabel: weights.isEmpty ? null : 'Último registro disponible',
       ),

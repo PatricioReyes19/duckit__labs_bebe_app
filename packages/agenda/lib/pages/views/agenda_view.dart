@@ -699,10 +699,16 @@ class _AgendaEmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _AgendaStateCard(
-      icon: const Icon(Icons.event_available_outlined),
+      icon: Image.asset(
+        BebeIllustrationAssets.emptyAgenda,
+        package: BebeIllustrationAssets.packageName,
+        height: 176,
+        fit: BoxFit.contain,
+        semanticLabel: 'Elefante bebé junto a un calendario vacío',
+      ),
       title: 'Tu agenda está vacía',
       description:
-          'Los próximos controles, vacunas y recordatorios aparecerán aquí.',
+          'Crea el primer recordatorio para una vacuna, control o medicamento.',
       actionLabel: 'Crear recordatorio',
       onActionPressed: onCreatePressed,
       variant: _AgendaStateCardVariant.brand,

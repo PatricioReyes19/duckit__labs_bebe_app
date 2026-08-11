@@ -1,7 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 
 abstract final class BebeDatabaseSchema {
-  static const version = 4;
+  static const version = 5;
 
   static const registerEvents = 'register_events';
   static const families = 'families';
@@ -173,12 +173,21 @@ CREATE TABLE IF NOT EXISTS $familyMembers (
   role TEXT NOT NULL,
   access_description TEXT NOT NULL,
   status TEXT NOT NULL,
+  contact TEXT,
+  invitation_code TEXT,
+  invited_at INTEGER,
+  invitation_expires_at INTEGER,
   FOREIGN KEY (family_id) REFERENCES $families(id) ON DELETE CASCADE
 )
 ''');
     await database.execute('''
 CREATE INDEX IF NOT EXISTS idx_family_members_family
 ON $familyMembers (family_id)
+''');
+    await database.execute('''
+CREATE UNIQUE INDEX IF NOT EXISTS idx_family_members_invitation_code
+ON $familyMembers (invitation_code)
+WHERE invitation_code IS NOT NULL
 ''');
     await database.execute('''
 CREATE TABLE IF NOT EXISTS $agendaEvents (
@@ -261,6 +270,37 @@ CREATE TABLE IF NOT EXISTS $appSettings (
   time_format TEXT NOT NULL,
   text_size TEXT NOT NULL
 )
+''');
+  }
+
+  static Future<void> upgradeFamilyInvitations(Database database) async {
+    final columns = (await database.rawQuery(
+      'PRAGMA table_info($familyMembers)',
+    )).map((row) => row['name']).whereType<String>().toSet();
+    if (!columns.contains('contact')) {
+      await database.execute(
+        'ALTER TABLE $familyMembers ADD COLUMN contact TEXT',
+      );
+    }
+    if (!columns.contains('invitation_code')) {
+      await database.execute(
+        'ALTER TABLE $familyMembers ADD COLUMN invitation_code TEXT',
+      );
+    }
+    if (!columns.contains('invited_at')) {
+      await database.execute(
+        'ALTER TABLE $familyMembers ADD COLUMN invited_at INTEGER',
+      );
+    }
+    if (!columns.contains('invitation_expires_at')) {
+      await database.execute(
+        'ALTER TABLE $familyMembers ADD COLUMN invitation_expires_at INTEGER',
+      );
+    }
+    await database.execute('''
+CREATE UNIQUE INDEX IF NOT EXISTS idx_family_members_invitation_code
+ON $familyMembers (invitation_code)
+WHERE invitation_code IS NOT NULL
 ''');
   }
 }

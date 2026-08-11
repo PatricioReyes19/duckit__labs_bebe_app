@@ -8,7 +8,8 @@ class BebeHorizontalCardCarousel extends StatefulWidget {
     this.initialPage = 0,
     this.viewportFraction = 0.88,
     this.showPageIndicator = true,
-    this.padEnds = true,
+    this.padEnds = false,
+    this.edgePadding,
     this.onPageChanged,
     this.semanticLabel,
     super.key,
@@ -32,6 +33,10 @@ class BebeHorizontalCardCarousel extends StatefulWidget {
   final double viewportFraction;
   final bool showPageIndicator;
   final bool padEnds;
+
+  /// Espacio inicial que pertenece al contenido desplazable. Desaparece al
+  /// avanzar el carrusel, a diferencia de un padding exterior fijo.
+  final double? edgePadding;
   final ValueChanged<int>? onPageChanged;
   final String? semanticLabel;
 
@@ -91,6 +96,7 @@ class _BebeHorizontalCardCarouselState
   @override
   Widget build(BuildContext context) {
     final spacing = context.theme.spacing;
+    final edgePadding = widget.edgePadding ?? spacing.spacingL;
     final effectiveSemanticLabel = _normalizeText(widget.semanticLabel);
 
     final content = Column(
@@ -105,7 +111,14 @@ class _BebeHorizontalCardCarouselState
             onPageChanged: _onPageChanged,
             itemBuilder: (context, index) {
               return Padding(
-                padding: EdgeInsets.symmetric(horizontal: spacing.spacingXs),
+                padding: EdgeInsets.only(
+                  left: index == 0 && !widget.padEnds
+                      ? edgePadding
+                      : spacing.spacingXs,
+                  right: index == widget.children.length - 1
+                      ? edgePadding
+                      : spacing.spacingXs,
+                ),
                 child: SizedBox.expand(
                   child: KeyedSubtree(
                     key: ValueKey<int>(index),

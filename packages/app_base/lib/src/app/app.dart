@@ -42,6 +42,8 @@ class App extends StatelessWidget {
                 theme: theme.lightTheme(),
                 darkTheme: theme.darkTheme(),
                 themeMode: themeState.themeMode,
+                themeAnimationDuration: const Duration(milliseconds: 140),
+                themeAnimationCurve: Curves.easeOutCubic,
                 locale: const Locale('es', 'CL'),
                 supportedLocales: const [
                   Locale('es', 'CL'),

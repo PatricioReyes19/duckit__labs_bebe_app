@@ -93,8 +93,8 @@ abstract final class BebeSeedData {
     ),
   ];
 
-  static const _members = <FamilyMemberModel>[
-    FamilyMemberModel(
+  static final _members = <FamilyMemberModel>[
+    const FamilyMemberModel(
       id: 'mother',
       familyId: familyId,
       name: 'Gesslien González',
@@ -102,7 +102,7 @@ abstract final class BebeSeedData {
       accessDescription: 'Puede registrar y ver salud',
       status: FamilyMemberStatus.active,
     ),
-    FamilyMemberModel(
+    const FamilyMemberModel(
       id: 'father',
       familyId: familyId,
       name: 'Patricio Reyes',
@@ -110,7 +110,7 @@ abstract final class BebeSeedData {
       accessDescription: 'Puede registrar y ver salud',
       status: FamilyMemberStatus.active,
     ),
-    FamilyMemberModel(
+    const FamilyMemberModel(
       id: 'grandmother',
       familyId: familyId,
       name: 'Rosa González',
@@ -125,6 +125,10 @@ abstract final class BebeSeedData {
       role: 'Tía',
       accessDescription: 'Invitación pendiente',
       status: FamilyMemberStatus.pending,
+      contact: 'carolina@example.com',
+      invitationCode: 'BEBE-CARO26',
+      invitedAt: DateTime.utc(2026, 8, 8),
+      invitationExpiresAt: DateTime.utc(2026, 8, 15),
     ),
   ];
 

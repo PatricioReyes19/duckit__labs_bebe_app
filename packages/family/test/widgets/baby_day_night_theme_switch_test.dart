@@ -48,5 +48,10 @@ void main() {
     await tester.pump();
 
     expect(requestedDark, isTrue);
+    expect(
+      tester.widget<AnimatedAlign>(find.byType(AnimatedAlign)).alignment,
+      Alignment.centerRight,
+    );
+    await tester.pump(const Duration(milliseconds: 200));
   });
 }

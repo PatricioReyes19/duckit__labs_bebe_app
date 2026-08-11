@@ -39,10 +39,13 @@ flowchart LR
 | Membresía mínima por bebé | `babies`, `baby_caregivers` | Implementado en backend |
 | Tokens FCM por dispositivo | `push_devices` | Implementado |
 | Alertas para otros cuidadores | `activity_notifications` + FCM | Implementado en backend |
+| Invitaciones de cuidado | `care_invitations` + RPC seguras | Implementado |
 
-Todavía son locales `families`, el perfil completo del bebé, miembros e
-invitaciones de la pantalla Familia, `health_events`, `health_measurements` y
-preferencias. Antes de sincronizarlos conviene aplicar el mismo patrón:
+Todavía son locales `families`, el perfil completo del bebé, la proyección de
+miembros de la pantalla Familia, `health_events`, `health_measurements` y
+preferencias. Las invitaciones ya se envían y responden en Supabase, mientras
+la app conserva una proyección SQLite para funcionar sin red. Antes de
+sincronizar el resto conviene aplicar el mismo patrón:
 entidad, modelo `fromEntity`, tabla local con estado de sync, RPC idempotente,
 RLS por `baby_caregivers`, pull incremental y pruebas de conflicto.
 
@@ -86,6 +89,7 @@ Abre **SQL Editor** y ejecuta, en este orden:
 1. `supabase/migrations/202608100001_create_register_event_sync.sql`
 2. `supabase/migrations/202608100002_create_agenda_event_sync.sql`
 3. `supabase/migrations/202608100003_create_care_circle_notifications.sql`
+4. `supabase/migrations/202608100004_create_care_invitations.sql`
 
 Las migraciones crean tablas, índices, RPC idempotentes, RLS, Storage,
 Realtime, círculos de cuidado, tokens y alertas. Para esta preparación no es
@@ -223,6 +227,8 @@ repositorios.
 6. Una foto sólo puede abrirse por miembros autorizados.
 7. Rotar o revocar la sesión produce un único refresh/reintento, nunca un loop.
 8. Cerrar sesión elimina el token FCM del dispositivo.
+9. Una invitación sólo puede ser revisada por el correo destinatario; aceptar
+   crea la membresía y rechazar o revocar invalida el código.
 
 ## Referencias
 

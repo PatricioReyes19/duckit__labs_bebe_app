@@ -25,8 +25,8 @@ class HealthBloc extends Bloc<HealthEvent, HealthState> {
   Future<void> _onLoad(HealthEvent event, Emitter<HealthState> emit) async {
     emit(const HealthState.loading());
     try {
-      final resolvedBabyId = babyId ??
-          (await _getFamilyOverview?.call())?.activeBabyId;
+      final resolvedBabyId =
+          babyId ?? (await _getFamilyOverview?.call())?.activeBabyId;
       if (resolvedBabyId == null || resolvedBabyId.isEmpty) {
         throw StateError('No active baby is available for Health.');
       }

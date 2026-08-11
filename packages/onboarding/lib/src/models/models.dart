@@ -8,6 +8,7 @@ enum OnboardingStep {
   babyProfile,
   babyCreated,
   invitationAccepted,
+  invitationDeclined,
 }
 
 enum SexReference { male, female }
@@ -58,6 +59,8 @@ class CareInvitation {
     required this.inviterRelationship,
     required this.babyName,
     required this.babyAgeLabel,
+    this.familyId,
+    this.babyId,
   });
 
   final String id;
@@ -66,6 +69,8 @@ class CareInvitation {
   final String inviterRelationship;
   final String babyName;
   final String babyAgeLabel;
+  final String? familyId;
+  final String? babyId;
 }
 
 class InvitationLookupResult {

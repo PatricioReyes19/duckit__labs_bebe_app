@@ -20,6 +20,11 @@ Future<void> bootstrap() async {
     () async {
       WidgetsFlutterBinding.ensureInitialized();
 
+      // Entrega el primer frame de Flutter inmediatamente. De esta forma el
+      // splash nativo no permanece visible durante Firebase, DI y servicios.
+      runApp(const _BootstrapSplashHandoff());
+      await WidgetsBinding.instance.endOfFrame;
+
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
       );
@@ -111,4 +116,89 @@ Future<void> bootstrap() async {
       );
     },
   );
+}
+
+/// Puente visual liviano entre el splash nativo y el flujo de arranque real.
+/// No depende de servicios ni de GetIt, por lo que puede pintarse de inmediato.
+class _BootstrapSplashHandoff extends StatefulWidget {
+  const _BootstrapSplashHandoff();
+
+  @override
+  State<_BootstrapSplashHandoff> createState() =>
+      _BootstrapSplashHandoffState();
+}
+
+class _BootstrapSplashHandoffState extends State<_BootstrapSplashHandoff>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      themeMode: ThemeMode.system,
+      theme: ThemeData(
+        brightness: Brightness.light,
+        scaffoldBackgroundColor: const Color(0xFFFAFAFC),
+      ),
+      darkTheme: ThemeData(
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: const Color(0xFF0F2A2D),
+      ),
+      home: Scaffold(
+        body: Center(
+          child: AnimatedBuilder(
+            animation: _controller,
+            builder: (context, child) {
+              final progress = Curves.easeInOut.transform(_controller.value);
+              return Opacity(
+                opacity: .86 + (progress * .14),
+                child: Transform.scale(
+                  scale: .97 + (progress * .03),
+                  child: child,
+                ),
+              );
+            },
+            child: Builder(
+              builder: (context) {
+                final isDark = Theme.of(context).brightness == Brightness.dark;
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    BebeBrandMark(
+                      variant: isDark
+                          ? BebeBrandMarkVariant.darkColor
+                          : BebeBrandMarkVariant.light,
+                      size: 112,
+                      excludeFromSemantics: true,
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      'BebéApp',
+                      style:
+                          Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                color: isDark
+                                    ? const Color(0xFFF4FBFB)
+                                    : const Color(0xFF008C91),
+                                fontWeight: FontWeight.w800,
+                              ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

@@ -55,6 +55,10 @@ class OnboardingView extends StatelessWidget {
               icon: Icons.family_restroom_rounded,
               onCompleted: onCompleted,
             ),
+          OnboardingStep.invitationDeclined => _InvitationDeclinedView(
+              babyName: state.invitation?.babyName ?? 'este bebé',
+              onContinue: context.read<OnboardingCubit>().backToChoice,
+            ),
         };
 
         return PopScope<Object?>(
@@ -98,6 +102,8 @@ class OnboardingView extends StatelessWidget {
       case OnboardingStep.babyCreated:
       case OnboardingStep.invitationAccepted:
         onCompleted();
+      case OnboardingStep.invitationDeclined:
+        cubit.backToChoice();
     }
   }
 }
@@ -371,12 +377,87 @@ class _InvitationReviewView extends StatelessWidget {
             label: 'Rechazar invitación',
             variant: BebeButtonVariant.text,
             leading: const Icon(Icons.cancel_outlined),
-            onPressed: state.isLoading ? null : cubit.invitationDeclined,
+            onPressed: state.isLoading
+                ? null
+                : () => _confirmInvitationDecline(context, cubit),
           ),
         ],
       ),
     );
   }
+}
+
+Future<void> _confirmInvitationDecline(
+  BuildContext context,
+  OnboardingCubit cubit,
+) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('¿Rechazar invitación?'),
+      content: const Text(
+        'No te unirás al círculo de cuidado. Si cambias de opinión, necesitarás una invitación vigente.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext, false),
+          child: const Text('Volver'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(dialogContext, true),
+          child: const Text('Sí, rechazar'),
+        ),
+      ],
+    ),
+  );
+  if (confirmed == true && context.mounted) {
+    await cubit.invitationDeclined();
+  }
+}
+
+class _InvitationDeclinedView extends StatelessWidget {
+  const _InvitationDeclinedView({
+    required this.babyName,
+    required this.onContinue,
+  });
+
+  final String babyName;
+  final VoidCallback onContinue;
+
+  @override
+  Widget build(BuildContext context) => _FlowScaffold(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const _BrandHeader(),
+            const SizedBox(height: 40),
+            const _HeroIcon(
+              icon: Icons.mark_email_read_outlined,
+              palette: _HeroPalette.warning,
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Invitación rechazada',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'No te uniste al círculo de $babyName. Puedes crear un perfil o usar otra invitación.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+            const SizedBox(height: 32),
+            BebeButton(
+              label: 'Elegir otra opción',
+              leading: const Icon(Icons.arrow_forward_rounded),
+              onPressed: onContinue,
+            ),
+          ],
+        ),
+      );
 }
 
 class _InvitationInvalidView extends StatelessWidget {
@@ -633,9 +714,8 @@ class _BabyProfileView extends StatelessWidget {
             clipBehavior: Clip.antiAlias,
             child: InkWell(
               key: const Key('baby_photo_picker'),
-              onTap: state.isLoading
-                  ? null
-                  : () => _pickBabyPhoto(context, cubit),
+              onTap:
+                  state.isLoading ? null : () => _pickBabyPhoto(context, cubit),
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -683,7 +763,9 @@ class _BabyProfileView extends StatelessWidget {
                             state.babyPhotoPath == null
                                 ? 'Elige una imagen de tu galería.'
                                 : 'La foto se guardará de forma privada en este dispositivo.',
-                            style: Theme.of(context).textTheme.bodySmall
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
                                 ?.copyWith(color: colors.text.neutralCaption),
                           ),
                         ],

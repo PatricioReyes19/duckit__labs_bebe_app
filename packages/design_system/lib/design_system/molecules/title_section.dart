@@ -9,7 +9,7 @@ class BebeTitleSection extends StatelessWidget {
     this.onActionPressed,
     this.trailing,
     this.trailingIcon = Icons.chevron_right_rounded,
-    this.maxTitleLines,
+    this.maxTitleLines = 1,
     this.maxDescriptionLines,
     super.key,
   });
@@ -26,7 +26,8 @@ class BebeTitleSection extends StatelessWidget {
 
   /// Optional visual limits for exceptional dense surfaces.
   ///
-  /// They default to null so section copy can grow with its content.
+  /// Los títulos usan una línea por defecto para mantener estable la jerarquía
+  /// y la alineación con sus acciones.
   final int? maxTitleLines;
   final int? maxDescriptionLines;
 
@@ -51,20 +52,30 @@ class BebeTitleSection extends StatelessWidget {
     final typography = theme.typography;
     final colors = theme.colors;
 
+    final titleText = Text(
+      title,
+      maxLines: maxTitleLines,
+      softWrap: maxTitleLines != 1,
+      overflow: maxTitleLines == null ? null : TextOverflow.ellipsis,
+      style: typography.styles.title.lg.semibold.copyWith(
+        color: colors.text.neutralTitle,
+      ),
+    );
+
     final copy = Semantics(
       header: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            title,
-            maxLines: maxTitleLines,
-            overflow: maxTitleLines == null ? null : TextOverflow.ellipsis,
-            style: typography.styles.title.lg.semibold.copyWith(
-              color: colors.text.neutralTitle,
-            ),
-          ),
+          if (maxTitleLines == 1)
+            FittedBox(
+              alignment: Alignment.centerLeft,
+              fit: BoxFit.scaleDown,
+              child: titleText,
+            )
+          else
+            titleText,
           if (_showDescription) ...[
             SizedBox(height: spacing.spacingS),
             Text(

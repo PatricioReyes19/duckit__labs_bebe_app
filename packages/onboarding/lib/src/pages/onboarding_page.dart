@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -36,10 +38,21 @@ class OnboardingPage extends GoRoute {
               key: ValueKey('onboarding-${entry.name}'),
               name: name ?? nameRoute,
               child: BlocProvider(
-                create: (_) => OnboardingCubit(
-                  repository: onboardingRepository(context),
-                  entry: entry,
-                ),
+                create: (_) {
+                  final cubit = OnboardingCubit(
+                    repository: onboardingRepository(context),
+                    entry: entry,
+                  );
+                  final invitationCode =
+                      state.uri.queryParameters['code']?.trim();
+                  if (entry == OnboardingEntry.invitation &&
+                      invitationCode != null &&
+                      invitationCode.isNotEmpty) {
+                    cubit.invitationCodeChanged(invitationCode);
+                    unawaited(cubit.invitationSubmitted());
+                  }
+                  return cubit;
+                },
                 child: OnboardingView(
                   entry: entry,
                   onCompleted: () => onCompleted(context),

@@ -130,6 +130,38 @@ void main() {
     expect(find.text('Alimentación'), findsOneWidget);
   });
 
+  testWidgets('category carousel scrolls across the full screen width',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 932);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      _RegisterTestApp(
+        theme: bebeTheme.lightTheme(),
+        child: _feedingView(),
+      ),
+    );
+
+    final carousel = find.descendant(
+      of: find.byType(
+        BebeRegisterCategorySelector<RegisterEventKind>,
+      ),
+      matching: find.byType(SingleChildScrollView),
+    );
+    expect(carousel, findsOneWidget);
+    expect(tester.getTopLeft(carousel).dx, 0);
+    expect(tester.getSize(carousel).width, 320);
+
+    final scrollView = tester.widget<SingleChildScrollView>(carousel);
+    final spacing = tester.element(carousel).theme.spacing;
+    expect(
+      scrollView.padding,
+      EdgeInsets.symmetric(horizontal: spacing.spacingXl),
+    );
+  });
+
   testWidgets('exposes page and action semantics', (tester) async {
     await tester.pumpWidget(
       _RegisterTestApp(

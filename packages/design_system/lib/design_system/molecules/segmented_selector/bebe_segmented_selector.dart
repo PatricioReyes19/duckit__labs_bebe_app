@@ -63,11 +63,13 @@ class BebeSegmentedSelector<T> extends StatelessWidget {
             label: Semantics(
               label: item.semanticLabel ?? item.label,
               selected: selected,
-              child: Text(
-                item.label,
-                maxLines: allowWrap ? 2 : 1,
-                textAlign: TextAlign.center,
-                style: theme.typography.styles.label.md.regular,
+              child: Flexible(
+                child: Text(
+                  item.label,
+                  maxLines: allowWrap ? 2 : 1,
+                  textAlign: TextAlign.center,
+                  style: theme.typography.styles.label.md.regular,
+                ),
               ),
             ),
           );

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:design_system/design_system.dart';
 import 'package:family/family.dart';
 import 'package:family/models/models.dart';
@@ -95,6 +97,7 @@ class _FamilyContent extends StatelessWidget {
         avatar: _FamilyAvatar(
           initials: activeBaby.initials,
           variant: activeBaby.avatarVariant,
+          imagePath: activeBaby.avatarPath,
         ),
         onContextPressed: onFamilyContextPressed ?? _emptyCallback,
         secondaryContext: secondaryBabies.isEmpty
@@ -107,6 +110,7 @@ class _FamilyContent extends StatelessWidget {
                   child: _FamilyAvatar(
                     initials: secondaryBabies.first.initials,
                     variant: secondaryBabies.first.avatarVariant,
+                    imagePath: secondaryBabies.first.avatarPath,
                   ),
                 ),
                 isSelected: false,
@@ -138,6 +142,7 @@ class _FamilyContent extends StatelessWidget {
               avatar: _FamilyAvatar(
                 initials: baby.initials,
                 variant: baby.avatarVariant,
+                imagePath: baby.avatarPath,
               ),
               isActive: baby.id == overview.activeBabyId,
               onPressed: () => onBabyPressed?.call(baby.id),
@@ -272,10 +277,15 @@ class _FamilyActions extends StatelessWidget {
 }
 
 class _FamilyAvatar extends StatelessWidget {
-  const _FamilyAvatar({required this.initials, required this.variant});
+  const _FamilyAvatar({
+    required this.initials,
+    required this.variant,
+    this.imagePath,
+  });
 
   final String initials;
   final FamilyAvatarVariant variant;
+  final String? imagePath;
 
   @override
   Widget build(BuildContext context) {
@@ -313,14 +323,16 @@ class _FamilyAvatar extends StatelessWidget {
           shape: BoxShape.circle,
           border: Border.all(color: palette.border),
         ),
-        child: Center(
-          child: Text(
-            initials,
-            style: theme.typography.styles.title.sm.semibold.copyWith(
-              color: palette.foreground,
-            ),
-          ),
-        ),
+        child: imagePath != null && File(imagePath!).existsSync()
+            ? ClipOval(child: Image.file(File(imagePath!), fit: BoxFit.cover))
+            : Center(
+                child: Text(
+                  initials,
+                  style: theme.typography.styles.title.sm.semibold.copyWith(
+                    color: palette.foreground,
+                  ),
+                ),
+              ),
       ),
     );
   }

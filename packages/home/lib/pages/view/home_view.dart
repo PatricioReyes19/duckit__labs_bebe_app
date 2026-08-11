@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -78,10 +80,15 @@ class _LoadedHome extends StatelessWidget {
     final recent = overview.recentInformation;
 
     return BebeHomeTemplate(
+      isEmpty: !overview.hasCareData,
+      emptyState: _HomeFirstSteps(
+        babyName: baby.name,
+        onRegisterPressed: () => openRegister(context, 'feeding'),
+      ),
       activeBabyHeader: BebeActiveBabyHeader(
         name: baby.name,
         ageLabel: baby.ageLabel,
-        avatar: AssetImage(baby.avatarAssetPath),
+        avatar: _babyImage(baby.avatarAssetPath),
         familyContextLabel: baby.familyContextLabel,
         siblings: baby.sibling == null
             ? []
@@ -89,7 +96,7 @@ class _LoadedHome extends StatelessWidget {
                 BebeSiblingSummaryData(
                   name: baby.sibling!.name,
                   ageLabel: baby.sibling!.ageLabel,
-                  avatar: AssetImage(baby.sibling!.avatarAssetPath),
+                  avatar: _babyImage(baby.sibling!.avatarAssetPath),
                 )
               ],
       ),
@@ -191,4 +198,79 @@ class _LoadedHome extends StatelessWidget {
       },
     );
   }
+}
+
+class _HomeFirstSteps extends StatelessWidget {
+  const _HomeFirstSteps({
+    required this.babyName,
+    required this.onRegisterPressed,
+  });
+
+  final String babyName;
+  final VoidCallback onRegisterPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: theme.colors.background.neutralsSurface,
+        borderRadius: BorderRadius.circular(theme.borderRadius.radius3xl),
+        border: Border.all(color: theme.colors.border.neutralDefault),
+        boxShadow: theme.elevation.low,
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(theme.spacing.spacingXl),
+        child: Column(
+          children: [
+            Image.asset(
+              BebeIllustrationAssets.emptyHome,
+              package: BebeIllustrationAssets.packageName,
+              height: 190,
+              fit: BoxFit.contain,
+              semanticLabel:
+                  'Elefante bebé con mamadera para comenzar los registros',
+            ),
+            SizedBox(height: theme.spacing.spacingL),
+            Text(
+              'Aún no hay registros de $babyName',
+              textAlign: TextAlign.center,
+              style: theme.typography.styles.title.md.semibold.copyWith(
+                color: theme.colors.text.neutralTitle,
+              ),
+            ),
+            SizedBox(height: theme.spacing.spacingS),
+            Text(
+              'Cada cuidado cuenta. Empieza con su primera alimentación, sueño o cambio de pañal.',
+              textAlign: TextAlign.center,
+              style: theme.typography.styles.body.md.regular.copyWith(
+                color: theme.colors.text.neutralBody,
+              ),
+            ),
+            SizedBox(height: theme.spacing.spacingXl),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: onRegisterPressed,
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('Registrar primer cuidado'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+ImageProvider _babyImage(String? path) {
+  if (path != null && path.isNotEmpty) {
+    final file = File(path);
+    if (file.existsSync()) return FileImage(file);
+    return AssetImage(path);
+  }
+  return AssetImage(
+    BebeBrandAssets.pathFor(BebeBrandMarkVariant.master),
+    package: BebeBrandAssets.packageName,
+  );
 }

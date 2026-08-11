@@ -70,7 +70,13 @@ class AuthService {
   }
 
   Future<void> signOut() async {
-    await beforeSignOut?.call();
+    // La limpieza de notificaciones es complementaria. Un fallo de red al
+    // desregistrar el dispositivo nunca debe impedir el cierre de la sesión.
+    try {
+      await beforeSignOut?.call();
+    } on Object {
+      // El gateway sigue siendo la fuente de verdad para cerrar la sesión.
+    }
     await _gateway.signOut();
   }
 

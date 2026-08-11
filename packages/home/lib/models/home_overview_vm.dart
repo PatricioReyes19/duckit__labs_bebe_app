@@ -8,6 +8,7 @@ class HomeOverviewVm extends Equatable {
     required this.quickActions,
     required this.upcomingHealth,
     required this.recentInformation,
+    required this.hasCareData,
   });
 
   final HomeActiveBabyVm activeBaby;
@@ -15,6 +16,7 @@ class HomeOverviewVm extends Equatable {
   final List<HomeQuickActionVm> quickActions;
   final HomeUpcomingHealthVm upcomingHealth;
   final HomeRecentInformationVm recentInformation;
+  final bool hasCareData;
 
   factory HomeOverviewVm.fromEntity(
     domain.HomeOverviewEntity entity, {
@@ -29,16 +31,14 @@ class HomeOverviewVm extends Equatable {
       activeBaby: HomeActiveBabyVm(
         name: entity.activeBaby.name,
         ageLabel: _ageLabel(entity.activeBaby.birthDate, referenceDate),
-        avatarAssetPath: entity.activeBaby.avatarAssetPath ??
-            'assets/images/baby_avatar.png',
+        avatarAssetPath: entity.activeBaby.avatarAssetPath,
         familyContextLabel: entity.family.name,
         sibling: siblings.isEmpty
             ? null
             : HomeSiblingVm(
                 name: siblings.first.name,
                 ageLabel: _ageLabel(siblings.first.birthDate, referenceDate),
-                avatarAssetPath: siblings.first.avatarAssetPath ??
-                    'assets/images/baby_avatar.png',
+                avatarAssetPath: siblings.first.avatarAssetPath,
               ),
       ),
       todayMetrics: entity.metrics
@@ -102,6 +102,9 @@ class HomeOverviewVm extends Equatable {
             : HomeRecentStatus.success,
         statusLabel: recent == null ? 'Sin registros' : 'Completado',
       ),
+      hasCareData: entity.metrics.any((metric) => metric.count > 0) ||
+          upcoming != null ||
+          recent != null,
     );
   }
 
@@ -202,6 +205,7 @@ class HomeOverviewVm extends Equatable {
         quickActions,
         upcomingHealth,
         recentInformation,
+        hasCareData,
       ];
 }
 
@@ -216,7 +220,7 @@ class HomeActiveBabyVm extends Equatable {
 
   final String name;
   final String ageLabel;
-  final String avatarAssetPath;
+  final String? avatarAssetPath;
   final String familyContextLabel;
   final HomeSiblingVm? sibling;
 
@@ -239,7 +243,7 @@ class HomeSiblingVm extends Equatable {
 
   final String name;
   final String ageLabel;
-  final String avatarAssetPath;
+  final String? avatarAssetPath;
 
   @override
   List<Object?> get props => [name, ageLabel, avatarAssetPath];

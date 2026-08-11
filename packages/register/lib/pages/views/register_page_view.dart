@@ -17,6 +17,7 @@ class RegisterPageView extends StatefulWidget {
     required this.onKindChanged,
     required this.onSaved,
     required this.onCancel,
+    this.babyAvatar,
     this.onNotificationsPressed,
     this.onHomePressed,
     this.onAgendaPressed,
@@ -29,6 +30,7 @@ class RegisterPageView extends StatefulWidget {
   final String babyName;
   final String babyAge;
   final String familyContextLabel;
+  final BebeAvatar? babyAvatar;
   final ValueChanged<RegisterEventKind> onKindChanged;
   final ValueChanged<RegisteredEvent> onSaved;
   final VoidCallback onCancel;
@@ -436,6 +438,7 @@ class _RegisterPageViewState extends State<RegisterPageView> {
       babyName: widget.babyName,
       babyAge: widget.babyAge,
       familyContextLabel: widget.familyContextLabel,
+      babyAvatar: widget.babyAvatar,
       showEventContext: showEventContext,
       useFormSurface: useFormSurface,
       subcategories: subcategories,

@@ -54,7 +54,7 @@ class _AppListenersState extends State<AppListeners> {
     return BlocListener<SessionBloc, SessionState>(
       listenWhen: (previous, current) =>
           previous is SessionAuthenticated && current is SessionUnauthenticated,
-      listener: (_, __) => getIt<GoRouter>().go(StartupPaths.authEntry),
+      listener: (_, __) => getIt<GoRouter>().go(StartupPaths.login),
       child: widget.child,
     );
   }

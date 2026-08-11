@@ -33,6 +33,14 @@ GoRouter createAppRouter({
   required NavigationSessionStore navigationSessionStore,
 }) {
   const startupRouteMapper = StartupRouteMapper();
+  final healthFlowController = HealthFlowController(
+    getFamilyOverview: getIt<GetFamilyOverview>(),
+    getHealthOverview: getIt<GetHealthOverview>(),
+    getRegisterEvents: getIt<GetRegisterEvents>(),
+    saveRegisterEvent: getIt<SaveRegisterEvent>(),
+    healthRepository: getIt<HealthRepository>(),
+    registerSyncService: getIt<RegisterEventSyncService>(),
+  );
 
   return GoRouter(
     navigatorKey: rootNavigatorKey,
@@ -97,6 +105,7 @@ GoRouter createAppRouter({
                     routes: [
                       HomeDailyHistoryPage(
                         getRegisterEvents: (_) => getIt<GetRegisterEvents>(),
+                        getFamilyOverview: (_) => getIt<GetFamilyOverview>(),
                         deleteRegisterEvent: (_) =>
                             getIt<DeleteRegisterEvent>(),
                         syncService: (_) => getIt<RegisterEventSyncService>(),
@@ -128,16 +137,22 @@ GoRouter createAppRouter({
                         kind: AgendaSubpageKind.reminderSettings,
                         createAgendaEvent: getIt<CreateAgendaEvent>(),
                         agendaRepository: getIt<AgendaRepository>(),
+                        appSettingsRepository: getIt<AppSettingsRepository>(),
+                        getFamilyOverview: getIt<GetFamilyOverview>(),
                       ),
                       AgendaSubpage(
                         kind: AgendaSubpageKind.createReminder,
                         createAgendaEvent: getIt<CreateAgendaEvent>(),
                         agendaRepository: getIt<AgendaRepository>(),
+                        appSettingsRepository: getIt<AppSettingsRepository>(),
+                        getFamilyOverview: getIt<GetFamilyOverview>(),
                       ),
                       AgendaSubpage(
                         kind: AgendaSubpageKind.eventDetail,
                         createAgendaEvent: getIt<CreateAgendaEvent>(),
                         agendaRepository: getIt<AgendaRepository>(),
+                        appSettingsRepository: getIt<AppSettingsRepository>(),
+                        getFamilyOverview: getIt<GetFamilyOverview>(),
                       ),
                     ],
                   ),
@@ -177,9 +192,17 @@ GoRouter createAppRouter({
                         HealthSectionKind.clinicalHistory,
                       ),
                     ),
+                    openReports: (context) => context.push(
+                      HealthSectionPage.locationFor(
+                        HealthSectionKind.reports,
+                      ),
+                    ),
                     routes: [
                       for (final kind in HealthSectionKind.values)
-                        HealthSectionPage(kind: kind),
+                        HealthSectionPage(
+                          kind: kind,
+                          controller: healthFlowController,
+                        ),
                     ],
                   ),
                 ],
@@ -274,14 +297,40 @@ GoRouter createAppRouter({
                           ),
                         ],
                       ),
-                      FamilySubpage(kind: FamilySubpageKind.babySelector),
-                      FamilySubpage(kind: FamilySubpageKind.addBaby),
-                      FamilySubpage(kind: FamilySubpageKind.babyDetail),
-                      FamilySubpage(kind: FamilySubpageKind.careCircle),
-                      FamilySubpage(kind: FamilySubpageKind.inviteCaregiver),
-                      FamilySubpage(kind: FamilySubpageKind.memberDetail),
+                      FamilySubpage(
+                        kind: FamilySubpageKind.babySelector,
+                        getFamilyOverview: getIt<GetFamilyOverview>(),
+                        familyRepository: getIt<FamilyRepository>(),
+                      ),
+                      FamilySubpage(
+                        kind: FamilySubpageKind.addBaby,
+                        getFamilyOverview: getIt<GetFamilyOverview>(),
+                        familyRepository: getIt<FamilyRepository>(),
+                      ),
+                      FamilySubpage(
+                        kind: FamilySubpageKind.babyDetail,
+                        getFamilyOverview: getIt<GetFamilyOverview>(),
+                        familyRepository: getIt<FamilyRepository>(),
+                      ),
+                      FamilySubpage(
+                        kind: FamilySubpageKind.careCircle,
+                        getFamilyOverview: getIt<GetFamilyOverview>(),
+                        familyRepository: getIt<FamilyRepository>(),
+                      ),
+                      FamilySubpage(
+                        kind: FamilySubpageKind.inviteCaregiver,
+                        getFamilyOverview: getIt<GetFamilyOverview>(),
+                        familyRepository: getIt<FamilyRepository>(),
+                      ),
+                      FamilySubpage(
+                        kind: FamilySubpageKind.memberDetail,
+                        getFamilyOverview: getIt<GetFamilyOverview>(),
+                        familyRepository: getIt<FamilyRepository>(),
+                      ),
                       FamilySubpage(
                         kind: FamilySubpageKind.familyConfiguration,
+                        getFamilyOverview: getIt<GetFamilyOverview>(),
+                        familyRepository: getIt<FamilyRepository>(),
                       ),
                     ],
                   ),
@@ -310,6 +359,7 @@ GoRouter createAppRouter({
         builder: (context, state) {
           final invitationPending =
               state.uri.queryParameters['next'] == 'invitation';
+          final invitationCode = state.uri.queryParameters['code'];
           return LoginPage(
             authService: getIt<AuthService>(),
             invitationPending: invitationPending,
@@ -318,14 +368,20 @@ GoRouter createAppRouter({
               unawaited(getIt<RegisterEventSyncService>().synchronize());
               unawaited(getIt<AgendaEventSyncService>().synchronize());
               if (invitationPending) {
-                context.go(StartupPaths.invitation);
+                context.go(_invitationLocation(invitationCode));
                 return;
               }
               unawaited(_openResolvedDestination(context));
             },
             onSignUpPressed: () {
-              final suffix = invitationPending ? '?next=invitation' : '';
-              context.pushReplacement('${StartupPaths.signUp}$suffix');
+              context.pushReplacement(
+                invitationPending
+                    ? _invitationAuthLocation(
+                        StartupPaths.signUp,
+                        invitationCode,
+                      )
+                    : StartupPaths.signUp,
+              );
             },
           );
         },
@@ -336,6 +392,7 @@ GoRouter createAppRouter({
         builder: (context, state) {
           final invitationPending =
               state.uri.queryParameters['next'] == 'invitation';
+          final invitationCode = state.uri.queryParameters['code'];
           return SignUpPage(
             authService: getIt<AuthService>(),
             invitationPending: invitationPending,
@@ -345,13 +402,19 @@ GoRouter createAppRouter({
               unawaited(getIt<AgendaEventSyncService>().synchronize());
               context.go(
                 invitationPending
-                    ? StartupPaths.invitation
+                    ? _invitationLocation(invitationCode)
                     : StartupPaths.onboarding,
               );
             },
             onLoginPressed: () {
-              final suffix = invitationPending ? '?next=invitation' : '';
-              context.pushReplacement('${StartupPaths.login}$suffix');
+              context.pushReplacement(
+                invitationPending
+                    ? _invitationAuthLocation(
+                        StartupPaths.login,
+                        invitationCode,
+                      )
+                    : StartupPaths.login,
+              );
             },
           );
         },
@@ -372,7 +435,10 @@ GoRouter createAppRouter({
       OnboardingPage(
         path: StartupPaths.invitation,
         parentNavigatorKey: rootNavigatorKey,
-        redirect: (_, __) => _requireSession(invitationPending: true),
+        redirect: (_, state) => _requireSession(
+          invitationPending: true,
+          invitationCode: state.uri.queryParameters['code'],
+        ),
         onboardingRepository: (_) => getIt<OnboardingRepository>(),
         entry: OnboardingEntry.invitation,
         onCompleted: (context) => context.go(StartupPaths.home),
@@ -383,6 +449,7 @@ GoRouter createAppRouter({
         onUseAnotherAccount: (context) => _signOutAndOpenLogin(
           context,
           invitationPending: true,
+          invitationCode: GoRouterState.of(context).uri.queryParameters['code'],
         ),
       ),
       GoRoute(
@@ -422,6 +489,7 @@ GoRouter createAppRouter({
       RegisterPage(
         parentNavigatorKey: rootNavigatorKey,
         saveRegisterEvent: (_) => getIt<SaveRegisterEvent>(),
+        getFamilyOverview: (_) => getIt<GetFamilyOverview>(),
         onNotificationsPressed: (context) => context.push('/notifications'),
         onHomePressed: (context) => context.go(StartupPaths.home),
         onAgendaPressed: (context) => context.go(AgendaPage.fullPath),
@@ -456,6 +524,8 @@ GoRouter createAppRouter({
         builder: (context, __) => NotificationsPage(
           notificationService: getIt<NotificationService>(),
           onBackPressed: () => _backOrHome(context),
+          onNotificationPressed: (notification) =>
+              context.go(notification.route ?? '/notifications'),
         ),
       ),
     ],
@@ -546,26 +616,56 @@ void _exitOnboarding(BuildContext context, OnboardingEntry entry) {
   }
 }
 
-Future<String?> _requireSession({bool invitationPending = false}) async {
+Future<String?> _requireSession({
+  bool invitationPending = false,
+  String? invitationCode,
+}) async {
   final session = await getIt<AuthService>().currentSession();
   if (session != null) {
     return null;
   }
   return invitationPending
-      ? '${StartupPaths.login}?next=invitation'
+      ? _invitationAuthLocation(StartupPaths.login, invitationCode)
       : StartupPaths.login;
 }
 
 Future<void> _signOutAndOpenLogin(
   BuildContext context, {
   bool invitationPending = false,
+  String? invitationCode,
 }) async {
-  await getIt<AuthService>().signOut();
-  if (context.mounted) {
-    final suffix = invitationPending ? '?next=invitation' : '';
-    context.go('${StartupPaths.login}$suffix');
+  try {
+    await getIt<AuthService>().signOut();
+  } finally {
+    // Se descarta la conexión en memoria antes de que otra cuenta pueda abrir
+    // su propia base local. La base en disco permanece aislada por usuario.
+    try {
+      await getIt<BebeDatabase>().close();
+    } on Object {
+      // El cierre de sesión y la navegación no dependen de este housekeeping.
+    }
+    await NavigationSessionStore(getIt()).clear();
+    getIt<GoRouter>().go(
+      invitationPending
+          ? _invitationAuthLocation(StartupPaths.login, invitationCode)
+          : StartupPaths.login,
+    );
   }
 }
+
+String _invitationLocation(String? code) => Uri(
+      path: StartupPaths.invitation,
+      queryParameters:
+          code == null || code.trim().isEmpty ? null : {'code': code.trim()},
+    ).toString();
+
+String _invitationAuthLocation(String path, String? code) => Uri(
+      path: path,
+      queryParameters: {
+        'next': 'invitation',
+        if (code != null && code.trim().isNotEmpty) 'code': code.trim(),
+      },
+    ).toString();
 
 class _PendingPage extends StatelessWidget {
   const _PendingPage({

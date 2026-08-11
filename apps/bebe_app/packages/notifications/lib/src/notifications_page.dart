@@ -9,11 +9,13 @@ class NotificationsPage extends StatefulWidget {
   const NotificationsPage({
     required this.notificationService,
     this.onBackPressed,
+    this.onNotificationPressed,
     super.key,
   });
 
   final NotificationService notificationService;
   final VoidCallback? onBackPressed;
+  final ValueChanged<AppNotification>? onNotificationPressed;
 
   @override
   State<NotificationsPage> createState() => _NotificationsPageState();
@@ -124,8 +126,10 @@ class _NotificationsPageState extends State<NotificationsPage> {
                 sliver: SliverList.separated(
                   itemCount: _notifications.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 10),
-                  itemBuilder: (context, index) =>
-                      _NotificationCard(_notifications[index]),
+                  itemBuilder: (context, index) => _NotificationCard(
+                    _notifications[index],
+                    onPressed: widget.onNotificationPressed,
+                  ),
                 ),
               ),
           ],
@@ -211,14 +215,18 @@ class _EmptyNotifications extends StatelessWidget {
 }
 
 class _NotificationCard extends StatelessWidget {
-  const _NotificationCard(this.notification);
+  const _NotificationCard(this.notification, {this.onPressed});
 
   final AppNotification notification;
+  final ValueChanged<AppNotification>? onPressed;
 
   @override
   Widget build(BuildContext context) {
     return Card(
       child: ListTile(
+        onTap: notification.route == null || onPressed == null
+            ? null
+            : () => onPressed!(notification),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: CircleAvatar(
           child: Icon(
@@ -242,6 +250,9 @@ class _NotificationCard extends StatelessWidget {
             ],
           ),
         ),
+        trailing: notification.route == null
+            ? null
+            : const Icon(Icons.chevron_right_rounded),
       ),
     );
   }

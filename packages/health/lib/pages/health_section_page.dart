@@ -1,6 +1,9 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:health/models/health_flow_controller.dart';
+import 'package:health/pages/views/health_flow_detail_views.dart';
+import 'package:health/pages/views/health_section_views.dart';
 
 enum HealthSectionKind {
   vaccines,
@@ -9,6 +12,8 @@ enum HealthSectionKind {
   consultations,
   pediatricCare,
   clinicalHistory,
+  reports,
+  sync,
 }
 
 extension HealthSectionKindPresentation on HealthSectionKind {
@@ -19,6 +24,8 @@ extension HealthSectionKindPresentation on HealthSectionKind {
     HealthSectionKind.consultations => 'consultations',
     HealthSectionKind.pediatricCare => 'pediatric-care',
     HealthSectionKind.clinicalHistory => 'clinical-history',
+    HealthSectionKind.reports => 'reports',
+    HealthSectionKind.sync => 'sync',
   };
 
   String get title => switch (this) {
@@ -28,6 +35,8 @@ extension HealthSectionKindPresentation on HealthSectionKind {
     HealthSectionKind.consultations => 'Consultas',
     HealthSectionKind.pediatricCare => 'Atención pediátrica',
     HealthSectionKind.clinicalHistory => 'Historial clínico',
+    HealthSectionKind.reports => 'Reportes',
+    HealthSectionKind.sync => 'Sincronización',
   };
 
   IconData get icon => switch (this) {
@@ -37,104 +46,140 @@ extension HealthSectionKindPresentation on HealthSectionKind {
     HealthSectionKind.consultations => Icons.medical_information_outlined,
     HealthSectionKind.pediatricCare => Icons.child_care_outlined,
     HealthSectionKind.clinicalHistory => Icons.history_outlined,
+    HealthSectionKind.reports => Icons.insights_rounded,
+    HealthSectionKind.sync => Icons.sync_rounded,
   };
+}
+
+abstract final class HealthFlowAction {
+  static const detail = 'detail';
+  static const register = 'register';
+  static const registerWeight = 'register-weight';
+  static const registerHeight = 'register-height';
+  static const success = 'success';
+  static const sync = 'sync';
+  static const history = 'history';
+  static const reports = 'reports';
+  static const export = 'export';
+  static const exported = 'exported';
+  static const observation = 'observation';
+  static const compare = 'compare';
 }
 
 class HealthSectionPage extends GoRoute {
-  HealthSectionPage({required HealthSectionKind kind, super.routes})
-    : super(
-        path: kind.relativePath,
-        pageBuilder: (context, state) => CupertinoPage<void>(
-          key: ValueKey('health-${kind.name}'),
-          name: 'Health${kind.name}',
-          child: _HealthSectionView(kind: kind),
-        ),
-      );
+  HealthSectionPage({
+    required HealthSectionKind kind,
+    required HealthFlowController controller,
+  }) : super(
+         path: kind.relativePath,
+         pageBuilder: (context, state) => CupertinoPage<void>(
+           key: ValueKey('health-${kind.name}'),
+           name: 'Health${kind.name}',
+           child: _HealthSectionView(
+             kind: kind,
+             controller: controller,
+             openFlow: (action) => _openFlow(context, kind, action),
+           ),
+         ),
+         routes: [
+           GoRoute(
+             path: ':action',
+             pageBuilder: (context, state) {
+               final action =
+                   state.pathParameters['action'] ?? HealthFlowAction.detail;
+               return CupertinoPage<void>(
+                 key: ValueKey('health-${kind.name}-$action'),
+                 name: 'Health${kind.name}-$action',
+                 child: HealthFlowDetailView(
+                   kind: kind,
+                   action: action,
+                   controller: controller,
+                   openFlow: (nextAction) =>
+                       _openFlow(context, kind, nextAction),
+                 ),
+               );
+             },
+           ),
+         ],
+       );
 
   static String locationFor(HealthSectionKind kind) =>
       '/health/${kind.relativePath}';
+
+  static String flowLocation(HealthSectionKind kind, String action) =>
+      '${locationFor(kind)}/$action';
+
+  static void _openFlow(
+    BuildContext context,
+    HealthSectionKind currentKind,
+    String action,
+  ) {
+    final targetKind = switch (action) {
+      HealthFlowAction.sync => HealthSectionKind.sync,
+      HealthFlowAction.history => HealthSectionKind.clinicalHistory,
+      HealthFlowAction.reports => HealthSectionKind.reports,
+      _ => currentKind,
+    };
+    final isSectionDestination =
+        action == HealthFlowAction.sync ||
+        action == HealthFlowAction.history ||
+        action == HealthFlowAction.reports;
+    final location = isSectionDestination
+        ? locationFor(targetKind)
+        : flowLocation(targetKind, action);
+    if (action == HealthFlowAction.success ||
+        action == HealthFlowAction.exported) {
+      context.pushReplacement(location);
+      return;
+    }
+    context.push(location);
+  }
 }
 
 class _HealthSectionView extends StatelessWidget {
-  const _HealthSectionView({required this.kind});
+  const _HealthSectionView({
+    required this.kind,
+    required this.controller,
+    required this.openFlow,
+  });
 
   final HealthSectionKind kind;
+  final HealthFlowController controller;
+  final HealthFlowNavigator openFlow;
 
   @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return ColoredBox(
-      color: colors.surface,
-      child: ListView(
-        padding: const EdgeInsets.all(24),
-        children: [
-          Icon(kind.icon, size: 56, color: colors.primary),
-          const SizedBox(height: 16),
-          Text(
-            kind.title,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _description,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyLarge,
-          ),
-          const SizedBox(height: 24),
-          Card(
-            child: Column(
-              children: [
-                ListTile(
-                  leading: Icon(kind.icon),
-                  title: Text(_primaryLabel),
-                  subtitle: const Text(
-                    'La información queda disponible incluso sin conexión.',
-                  ),
-                ),
-                const Divider(height: 1),
-                const ListTile(
-                  leading: Icon(Icons.sync_rounded),
-                  title: Text('Sincronización familiar'),
-                  subtitle: Text(
-                    'Los cuidadores autorizados verán las actualizaciones.',
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          OutlinedButton.icon(
-            onPressed: () {},
-            icon: const Icon(Icons.add_rounded),
-            label: Text('Agregar ${kind.title.toLowerCase()}'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String get _description => switch (kind) {
-    HealthSectionKind.vaccines =>
-      'Consulta las vacunas administradas y las próximas dosis.',
-    HealthSectionKind.controls =>
-      'Revisa controles pediátricos, resultados y recomendaciones.',
-    HealthSectionKind.growth =>
-      'Sigue la evolución de peso, talla y perímetro cefálico.',
-    HealthSectionKind.consultations =>
-      'Mantén las consultas médicas y sus indicaciones organizadas.',
-    HealthSectionKind.pediatricCare =>
-      'Accede rápidamente a la información relevante para una atención.',
-    HealthSectionKind.clinicalHistory =>
-      'Consulta cronológicamente los antecedentes de salud.',
-  };
-
-  String get _primaryLabel => switch (kind) {
-    HealthSectionKind.vaccines => 'Esquema de vacunación',
-    HealthSectionKind.controls => 'Próximo control',
-    HealthSectionKind.growth => 'Última medición',
-    HealthSectionKind.consultations => 'Consultas recientes',
-    HealthSectionKind.pediatricCare => 'Resumen pediátrico',
-    HealthSectionKind.clinicalHistory => 'Actividad clínica reciente',
+  Widget build(BuildContext context) => switch (kind) {
+    HealthSectionKind.vaccines => VaccinesSectionView(
+      controller: controller,
+      openFlow: openFlow,
+    ),
+    HealthSectionKind.controls => ControlsSectionView(
+      controller: controller,
+      openFlow: openFlow,
+    ),
+    HealthSectionKind.growth => GrowthSectionView(
+      controller: controller,
+      openFlow: openFlow,
+    ),
+    HealthSectionKind.consultations => ConsultationsSectionView(
+      controller: controller,
+      openFlow: openFlow,
+    ),
+    HealthSectionKind.pediatricCare => PediatricCareSectionView(
+      controller: controller,
+      openFlow: openFlow,
+    ),
+    HealthSectionKind.clinicalHistory => ClinicalHistorySectionView(
+      controller: controller,
+      openFlow: openFlow,
+    ),
+    HealthSectionKind.reports => ReportsSectionView(
+      controller: controller,
+      openFlow: openFlow,
+    ),
+    HealthSectionKind.sync => SyncSectionView(
+      controller: controller,
+      openFlow: openFlow,
+    ),
   };
 }

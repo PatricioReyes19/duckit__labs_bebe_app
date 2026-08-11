@@ -32,7 +32,7 @@ class _SplashBrandIntroState extends State<SplashBrandIntro>
     super.initState();
     _introController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 520),
+      duration: const Duration(milliseconds: 1200),
     )..addStatusListener(_handleIntroStatus);
     _ambientController = AnimationController(
       vsync: this,
@@ -47,7 +47,7 @@ class _SplashBrandIntroState extends State<SplashBrandIntro>
     if (_reduceMotion != reduceMotion) {
       _reduceMotion = reduceMotion;
       _introController.duration = Duration(
-        milliseconds: reduceMotion ? 140 : 520,
+        milliseconds: reduceMotion ? 160 : 1200,
       );
       if (reduceMotion) {
         _ambientController.stop();

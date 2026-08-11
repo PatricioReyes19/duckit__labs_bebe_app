@@ -22,6 +22,8 @@ class AgendaBloc extends Bloc<AgendaEvent, AgendaState> {
        // The public DI parameter intentionally omits the private underscore.
        // ignore: prefer_initializing_formals
        _syncService = syncService,
+       // El parámetro público omite intencionalmente el prefijo privado.
+       // ignore: prefer_initializing_formals
        _getFamilyOverview = getFamilyOverview,
        super(const AgendaState.initial()) {
     on<_Started>((event, emit) => _load(emit, showLoading: true));
@@ -60,8 +62,8 @@ class AgendaBloc extends Bloc<AgendaEvent, AgendaState> {
       unawaited(_syncService.synchronize());
     }
     try {
-      final resolvedBabyId = babyId ??
-          (await _getFamilyOverview?.call())?.activeBabyId;
+      final resolvedBabyId =
+          babyId ?? (await _getFamilyOverview?.call())?.activeBabyId;
       if (resolvedBabyId == null || resolvedBabyId.isEmpty) {
         throw StateError('No active baby is available for Agenda.');
       }

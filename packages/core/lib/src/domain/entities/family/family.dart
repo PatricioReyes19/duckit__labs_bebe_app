@@ -24,6 +24,10 @@ class FamilyMemberEntity {
     required this.role,
     required this.accessDescription,
     required this.status,
+    this.contact,
+    this.invitationCode,
+    this.invitedAt,
+    this.invitationExpiresAt,
   });
 
   final String id;
@@ -32,6 +36,14 @@ class FamilyMemberEntity {
   final String role;
   final String accessDescription;
   final FamilyMemberStatus status;
+  final String? contact;
+  final String? invitationCode;
+  final DateTime? invitedAt;
+  final DateTime? invitationExpiresAt;
+
+  bool get invitationExpired =>
+      status == FamilyMemberStatus.pending &&
+      invitationExpiresAt?.isBefore(DateTime.now()) == true;
 }
 
 class FamilyOverviewEntity {
@@ -95,4 +107,50 @@ class InitialFamilyDraft {
   final String ownerName;
   final String ownerEmail;
   final String? avatarAssetPath;
+}
+
+class FamilyInvitationDraft {
+  const FamilyInvitationDraft({
+    required this.familyId,
+    required this.babyId,
+    required this.babyName,
+    required this.name,
+    required this.contact,
+    required this.role,
+    required this.accessDescription,
+    required this.canWrite,
+  });
+
+  final String familyId;
+  final String babyId;
+  final String babyName;
+  final String name;
+  final String contact;
+  final String role;
+  final String accessDescription;
+  final bool canWrite;
+}
+
+class JoinedCareCircleDraft {
+  const JoinedCareCircleDraft({
+    required this.familyId,
+    required this.familyName,
+    required this.babyId,
+    required this.babyName,
+    required this.babyBirthDate,
+    required this.memberId,
+    required this.memberName,
+    required this.memberEmail,
+    this.memberRole = 'Cuidador/a',
+  });
+
+  final String familyId;
+  final String familyName;
+  final String babyId;
+  final String babyName;
+  final DateTime babyBirthDate;
+  final String memberId;
+  final String memberName;
+  final String memberEmail;
+  final String memberRole;
 }

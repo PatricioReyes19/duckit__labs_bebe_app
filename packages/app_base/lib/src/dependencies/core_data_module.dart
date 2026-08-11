@@ -10,8 +10,11 @@ abstract class CoreDataModule {
       );
 
   @lazySingleton
-  FamilyRepository familyRepository(BebeDatabase database) =>
-      SqliteFamilyRepository(database);
+  FamilyRepository familyRepository(
+    BebeDatabase database,
+    SupabaseRestClient remoteClient,
+  ) =>
+      SqliteFamilyRepository(database, remoteClient: remoteClient);
 
   @lazySingleton
   SqliteAgendaRepository localAgendaRepository(BebeDatabase database) =>
@@ -37,8 +40,9 @@ abstract class CoreDataModule {
   GetAgendaOverview getAgendaOverview(
     AgendaRepository repository,
     RegisterEventRepository registerRepository,
+    AppSettingsRepository settingsRepository,
   ) =>
-      GetAgendaOverview(repository, registerRepository);
+      GetAgendaOverview(repository, registerRepository, settingsRepository);
 
   @lazySingleton
   GetHealthOverview getHealthOverview(HealthRepository repository) =>

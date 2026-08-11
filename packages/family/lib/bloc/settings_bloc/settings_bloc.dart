@@ -18,10 +18,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
        _getCurrentSession = getCurrentSession,
        super(const SettingsState()) {
     on<SettingsStarted>(_onStarted);
-    on<SettingsThemeChanged>(
-      (event, emit) =>
-          _persist(AppSettingsPatch(theme: _domainTheme(event.value)), emit),
-    );
+    on<SettingsThemeChanged>(_onThemeChanged);
     on<SettingsAccountNameChanged>(
       (event, emit) => _persist(AppSettingsPatch(name: event.value), emit),
     );
@@ -93,6 +90,30 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     } on Object catch (error) {
       emit(
         state.copyWith(
+          errorMessage: 'No pudimos guardar la configuración: $error',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onThemeChanged(
+    SettingsThemeChanged event,
+    Emitter<SettingsState> emit,
+  ) async {
+    final previous = state;
+
+    // Refleja la selección antes de escribir en SQLite. Esto evita que el
+    // rebuild del Theme global devuelva el control a la posición anterior.
+    emit(state.copyWith(themeMode: event.value, errorMessage: null));
+
+    try {
+      final saved = await _updateAppSettings(
+        AppSettingsPatch(theme: _domainTheme(event.value)),
+      );
+      emit(_toState(saved));
+    } on Object catch (error) {
+      emit(
+        previous.copyWith(
           errorMessage: 'No pudimos guardar la configuración: $error',
         ),
       );

@@ -14,9 +14,9 @@ class RegisterEventView extends StatelessWidget {
     required this.form,
     required this.onSavePressed,
     required this.onCancelPressed,
-    this.babyName = 'Mateo Reyes',
-    this.babyAge = '2 meses',
-    this.familyContextLabel = '2 bebés en la familia',
+    this.babyName = 'Tu bebé',
+    this.babyAge = 'Perfil activo',
+    this.familyContextLabel = 'Tu familia',
     this.babyAvatar,
     this.onBackPressed,
     this.onNotificationsPressed,
@@ -128,8 +128,12 @@ class RegisterEventView extends StatelessWidget {
               items: _categories,
               selectedValue: selectedKind,
               onChanged: onKindChanged,
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: theme.spacing.spacingXl,
+              ),
             )
           : null,
+      fullBleedCategorySelector: true,
       subcategorySelector: subcategories.isEmpty
           ? null
           : BebeRegisterSubcategorySelector<String>(

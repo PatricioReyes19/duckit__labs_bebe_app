@@ -164,7 +164,7 @@ void main() {
       ),
     );
 
-    await tester.pump(const Duration(milliseconds: 139));
+    await tester.pump(const Duration(milliseconds: 159));
     expect(completed, 0);
     await tester.pump(const Duration(milliseconds: 2));
     await tester.pump();
@@ -186,7 +186,7 @@ void main() {
       onDestinationResolved: (value) => destination = value,
     );
 
-    await tester.pump(const Duration(milliseconds: 519));
+    await tester.pump(const Duration(milliseconds: 1199));
     expect(destination, isNull);
     await tester.pump(const Duration(milliseconds: 2));
     for (var frame = 0; frame < 5 && destination == null; frame++) {

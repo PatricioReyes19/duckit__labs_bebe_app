@@ -1,4 +1,5 @@
 import 'package:auth/auth.dart';
+import 'package:core/core.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -49,6 +50,18 @@ void main() {
       );
       expect(gateway.signUpCalls, 0);
     });
+
+    test('cierra sesión aunque falle la limpieza previa', () async {
+      final gateway = _FakeAuthGateway();
+      final service = AuthService(
+        gateway,
+        beforeSignOut: () => throw StateError('sin conexión'),
+      );
+
+      await service.signOut();
+
+      expect(gateway.signOutCalls, 1);
+    });
   });
 
   group('LocalAuthGateway', () {
@@ -91,6 +104,7 @@ void main() {
 
 class _FakeAuthGateway implements AuthGateway {
   int signUpCalls = 0;
+  int signOutCalls = 0;
   String? lastDisplayName;
   String? lastEmail;
 
@@ -120,7 +134,9 @@ class _FakeAuthGateway implements AuthGateway {
   }
 
   @override
-  Future<void> signOut() async {}
+  Future<void> signOut() async {
+    signOutCalls += 1;
+  }
 
   @override
   Future<AuthSession> signUp({

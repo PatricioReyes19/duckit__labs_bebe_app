@@ -66,6 +66,7 @@ abstract class StartupModule {
     @Named('startupPreferences') SharedPreferencesAsync preferences,
     AuthGateway authGateway,
     FamilyRepository familyRepository,
+    SupabaseRestClient remoteClient,
   ) =>
       LocalOnboardingRepository(
         preferences,
@@ -73,6 +74,7 @@ abstract class StartupModule {
             (await authGateway.currentSession())?.user.id,
         currentUser: () async => (await authGateway.currentSession())?.user,
         familyRepository: familyRepository,
+        remoteClient: remoteClient,
       );
 
   @lazySingleton

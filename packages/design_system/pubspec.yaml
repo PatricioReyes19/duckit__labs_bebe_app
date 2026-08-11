@@ -35,6 +35,7 @@ flutter:
   assets:
     - assets/json/bebe_theme.json
     - assets/branding/brand/
+    - assets/illustrations/
 
   fonts:
     - family: PlusJakartaSans

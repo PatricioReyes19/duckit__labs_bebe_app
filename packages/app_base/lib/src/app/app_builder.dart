@@ -21,6 +21,8 @@ class AppBuilder extends StatelessWidget {
         theme: themeBloc.state.theme.lightTheme(),
         darkTheme: themeBloc.state.theme.darkTheme(),
         themeMode: themeBloc.state.themeMode,
+        themeAnimationDuration: const Duration(milliseconds: 140),
+        themeAnimationCurve: Curves.easeOutCubic,
         home: preconditionView,
       );
     }

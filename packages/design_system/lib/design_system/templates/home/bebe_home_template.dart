@@ -12,6 +12,8 @@ class BebeHomeTemplate extends StatelessWidget {
     required this.quickActions,
     required this.upcomingHealth,
     required this.recentInformation,
+    this.isEmpty = false,
+    this.emptyState,
     this.isLoading = false,
     this.loadingState,
     this.errorMessage,
@@ -26,6 +28,8 @@ class BebeHomeTemplate extends StatelessWidget {
   final Widget quickActions;
   final Widget upcomingHealth;
   final Widget recentInformation;
+  final bool isEmpty;
+  final Widget? emptyState;
 
   final bool isLoading;
   final Widget? loadingState;
@@ -70,13 +74,18 @@ class BebeHomeTemplate extends StatelessWidget {
               children: [
                 activeBabyHeader,
                 SizedBox(height: spacing.spacing4xl),
-                todaySummary,
-                SizedBox(height: spacing.spacing4xl),
                 quickActions,
-                SizedBox(height: spacing.spacing4xl),
-                upcomingHealth,
-                SizedBox(height: spacing.spacing4xl),
-                recentInformation,
+                if (isEmpty) ...[
+                  SizedBox(height: spacing.spacing4xl),
+                  emptyState ?? const SizedBox.shrink(),
+                ] else ...[
+                  SizedBox(height: spacing.spacing4xl),
+                  todaySummary,
+                  SizedBox(height: spacing.spacing4xl),
+                  upcomingHealth,
+                  SizedBox(height: spacing.spacing4xl),
+                  recentInformation,
+                ],
               ],
             ),
           ),

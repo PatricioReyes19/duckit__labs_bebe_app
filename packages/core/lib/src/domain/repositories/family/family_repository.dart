@@ -10,4 +10,12 @@ abstract interface class FamilyRepository {
   Future<BabyEntity> createBaby(BabyDraft draft);
 
   Future<BabyEntity?> updateBaby(String id, BabyPatch patch);
+
+  Future<FamilyMemberEntity> sendInvitation(FamilyInvitationDraft draft);
+
+  Future<FamilyMemberEntity?> resendInvitation(String memberId);
+
+  Future<void> cancelInvitation(String memberId);
+
+  Future<FamilyOverviewEntity> joinCareCircle(JoinedCareCircleDraft draft);
 }

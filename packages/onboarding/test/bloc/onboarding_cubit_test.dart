@@ -34,9 +34,45 @@ void main() {
       expect(cubit.state.createdBaby?.name, 'Mateo');
     },
   );
+
+  blocTest<OnboardingCubit, OnboardingState>(
+    'rechaza una invitación y muestra una resolución explícita',
+    build: () => OnboardingCubit(
+      repository: _FakeOnboardingRepository(),
+      entry: OnboardingEntry.invitation,
+    ),
+    act: (cubit) async {
+      cubit.invitationCodeChanged('MATEO2026');
+      await cubit.invitationSubmitted();
+      await cubit.invitationDeclined();
+    },
+    verify: (cubit) {
+      expect(cubit.state.step, OnboardingStep.invitationDeclined);
+      expect(cubit.state.isLoading, isFalse);
+    },
+  );
+
+  final photoRepository = _FakeOnboardingRepository();
+  blocTest<OnboardingCubit, OnboardingState>(
+    'envía la foto seleccionada al crear el perfil',
+    build: () => OnboardingCubit(repository: photoRepository),
+    act: (cubit) async {
+      cubit.createBabySelected();
+      cubit.babyNameChanged('Emilia');
+      cubit.birthDateChanged(DateTime(2026, 2, 3));
+      cubit.sexReferenceChanged(SexReference.female);
+      cubit.babyPhotoChanged(r'C:\gallery\emilia.png');
+      await cubit.babySubmitted();
+    },
+    verify: (_) {
+      expect(photoRepository.lastDraft?.photoPath, r'C:\gallery\emilia.png');
+    },
+  );
 }
 
 class _FakeOnboardingRepository implements OnboardingRepository {
+  BabyDraft? lastDraft;
+
   @override
   Future<void> acceptInvitation(CareInvitation invitation) async {}
 
@@ -45,11 +81,13 @@ class _FakeOnboardingRepository implements OnboardingRepository {
 
   @override
   Future<BabyProfile> createBaby(BabyDraft draft) async {
+    lastDraft = draft;
     return BabyProfile(
       id: '1',
       name: draft.name,
       birthDate: draft.birthDate,
       sexReference: draft.sexReference,
+      photoPath: draft.photoPath,
     );
   }
 

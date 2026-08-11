@@ -14,6 +14,7 @@ class HealthView extends StatelessWidget {
     this.onPediatricCarePressed,
     this.onAgendaPressed,
     this.onClinicalHistoryPressed,
+    this.onReportsPressed,
     super.key,
   });
 
@@ -24,6 +25,7 @@ class HealthView extends StatelessWidget {
   final VoidCallback? onPediatricCarePressed;
   final VoidCallback? onAgendaPressed;
   final VoidCallback? onClinicalHistoryPressed;
+  final VoidCallback? onReportsPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -46,6 +48,7 @@ class HealthView extends StatelessWidget {
             onPediatricCarePressed: onPediatricCarePressed,
             onAgendaPressed: onAgendaPressed,
             onClinicalHistoryPressed: onClinicalHistoryPressed,
+            onReportsPressed: onReportsPressed,
           ),
         };
       },
@@ -64,6 +67,7 @@ class _HealthOverviewContent extends StatelessWidget {
     this.onPediatricCarePressed,
     this.onAgendaPressed,
     this.onClinicalHistoryPressed,
+    this.onReportsPressed,
   });
 
   final HealthOverviewVm overview;
@@ -75,6 +79,7 @@ class _HealthOverviewContent extends StatelessWidget {
   final VoidCallback? onPediatricCarePressed;
   final VoidCallback? onAgendaPressed;
   final VoidCallback? onClinicalHistoryPressed;
+  final VoidCallback? onReportsPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -140,12 +145,24 @@ class _HealthOverviewContent extends StatelessWidget {
         onVaccinesPressed: onVaccinesPressed,
         onGrowthPressed: onGrowthPressed,
       ),
-      historyAction: BebeDetailActionCard(
-        title: 'Ver historial clínico',
-        description: 'Consultas, vacunas y medicamentos en un solo lugar',
-        icon: const Icon(Icons.folder_outlined),
-        variant: BebeDetailActionCardVariant.information,
-        onPressed: onClinicalHistoryPressed ?? _emptyCallback,
+      historyAction: Column(
+        children: [
+          BebeDetailActionCard(
+            title: 'Ver historial clínico',
+            description: 'Consultas, vacunas y medicamentos en un solo lugar',
+            icon: const Icon(Icons.folder_outlined),
+            variant: BebeDetailActionCardVariant.information,
+            onPressed: onClinicalHistoryPressed ?? _emptyCallback,
+          ),
+          const SizedBox(height: 12),
+          BebeDetailActionCard(
+            title: 'Reportes de salud',
+            description: 'Tendencias, observaciones y exportación PDF o CSV',
+            icon: const Icon(Icons.insights_rounded),
+            variant: BebeDetailActionCardVariant.information,
+            onPressed: onReportsPressed ?? _emptyCallback,
+          ),
+        ],
       ),
     );
   }
@@ -330,8 +347,9 @@ class _QuickSummary extends StatelessWidget {
               final cards = [
                 BebeDetailActionCard(
                   title: 'Vacunas',
-                  description:
-                      '${vaccines.completed} al día · ${vaccines.pending} pendiente',
+                  description: vaccines.completed == 0 && vaccines.pending == 0
+                      ? 'Sin registros todavía'
+                      : '${vaccines.completed} al día · ${vaccines.pending} pendiente',
                   metadata: vaccines.nextVaccineLabel,
                   icon: const Icon(Icons.health_and_safety_outlined),
                   variant: BebeDetailActionCardVariant.brand,
@@ -339,7 +357,9 @@ class _QuickSummary extends StatelessWidget {
                 ),
                 BebeDetailActionCard(
                   title: 'Crecimiento',
-                  description: '${growth.weightKg.toStringAsFixed(2)} kg',
+                  description: growth.weightKg == null
+                      ? 'Sin mediciones todavía'
+                      : '${growth.weightKg!.toStringAsFixed(2)} kg',
                   metadata: growth.weightPercentile == null
                       ? growth.recordedAtLabel
                       : 'Percentil ${growth.weightPercentile}',
@@ -393,15 +413,21 @@ class _UpcomingEmpty extends StatelessWidget {
         ),
         child: Padding(
           padding: EdgeInsets.all(theme.spacing.spacingXl),
-          child: const Column(
+          child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.event_available_outlined, size: 32),
-              SizedBox(height: 12),
-              Text('No hay eventos próximos'),
-              SizedBox(height: 4),
-              Text(
-                'Las próximas vacunas y controles aparecerán aquí.',
+              Image.asset(
+                BebeIllustrationAssets.emptyHealth,
+                package: BebeIllustrationAssets.packageName,
+                height: 150,
+                fit: BoxFit.contain,
+                semanticLabel: 'Balanza infantil lista para una medición',
+              ),
+              const SizedBox(height: 12),
+              const Text('Aún no hay información de salud'),
+              const SizedBox(height: 4),
+              const Text(
+                'Las mediciones, vacunas y controles que registres aparecerán aquí.',
                 textAlign: TextAlign.center,
               ),
             ],

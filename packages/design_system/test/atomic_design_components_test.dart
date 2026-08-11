@@ -118,6 +118,58 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('section titles stay on one line', (tester) async {
+    await tester.pumpWidget(
+      _TestApp(
+        theme: bebeTheme.lightTheme(),
+        child: const SizedBox(
+          width: 260,
+          child: BebeTitleSection(title: 'Próximos en salud'),
+        ),
+      ),
+    );
+
+    final title = tester.widget<Text>(find.text('Próximos en salud'));
+    expect(title.maxLines, 1);
+    expect(title.softWrap, isFalse);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('carousel edge inset scrolls away with the first card', (
+    tester,
+  ) async {
+    const firstKey = Key('first-carousel-card');
+    const secondKey = Key('second-carousel-card');
+    await tester.pumpWidget(
+      _TestApp(
+        theme: bebeTheme.lightTheme(),
+        child: SizedBox(
+          width: 320,
+          child: BebeHorizontalCardCarousel(
+            height: 100,
+            viewportFraction: .82,
+            showPageIndicator: false,
+            children: const [
+              ColoredBox(key: firstKey, color: Colors.teal),
+              ColoredBox(key: secondKey, color: Colors.purple),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    final viewportLeft = tester.getTopLeft(find.byType(PageView)).dx;
+    final firstInset =
+        tester.getTopLeft(find.byKey(firstKey)).dx - viewportLeft;
+    await tester.drag(find.byType(PageView), const Offset(-280, 0));
+    await tester.pumpAndSettle();
+    final firstAfterScroll = tester.getTopLeft(find.byKey(firstKey)).dx;
+
+    expect(firstInset, greaterThan(0));
+    expect(firstAfterScroll, lessThan(viewportLeft));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('mockup-derived atomic components compose without overflow', (
     tester,
   ) async {

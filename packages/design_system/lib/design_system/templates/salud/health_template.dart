@@ -59,7 +59,9 @@ class BebeHealthOverviewTemplate extends StatelessWidget {
         physics: onRefresh != null
             ? const AlwaysScrollableScrollPhysics()
             : const ClampingScrollPhysics(),
-        padding: EdgeInsets.all(spacing.spacingXs),
+        // El eje horizontal queda libre para que los carruseles alcancen ambos
+        // bordes. Cada carrusel administra su primer/último inset desplazable.
+        padding: EdgeInsets.symmetric(vertical: spacing.spacingXs),
         child: BebeResponsiveContent(
           maxWidth: maximumContentWidth,
           child: Column(

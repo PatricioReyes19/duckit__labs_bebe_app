@@ -113,6 +113,42 @@ const appLayoutVisibilityPolicy = AppLayoutVisibilityPolicy(
       chrome: AppLayoutChromeConfig.subview(title: 'Historial clínico'),
     ),
     AppLayoutVisibilityRule.exact(
+      path: '/health/reports',
+      chrome: AppLayoutChromeConfig.subview(title: 'Reportes'),
+    ),
+    AppLayoutVisibilityRule.exact(
+      path: '/health/sync',
+      chrome: AppLayoutChromeConfig.subview(title: 'Sincronización'),
+    ),
+    AppLayoutVisibilityRule.prefix(
+      path: '/health/vaccines/',
+      chrome: AppLayoutChromeConfig.subview(title: 'Vacunas'),
+    ),
+    AppLayoutVisibilityRule.prefix(
+      path: '/health/controls/',
+      chrome: AppLayoutChromeConfig.subview(title: 'Controles'),
+    ),
+    AppLayoutVisibilityRule.prefix(
+      path: '/health/growth/',
+      chrome: AppLayoutChromeConfig.subview(title: 'Crecimiento'),
+    ),
+    AppLayoutVisibilityRule.prefix(
+      path: '/health/consultations/',
+      chrome: AppLayoutChromeConfig.subview(title: 'Consultas'),
+    ),
+    AppLayoutVisibilityRule.prefix(
+      path: '/health/pediatric-care/',
+      chrome: AppLayoutChromeConfig.subview(title: 'Atención pediátrica'),
+    ),
+    AppLayoutVisibilityRule.prefix(
+      path: '/health/clinical-history/',
+      chrome: AppLayoutChromeConfig.subview(title: 'Historial clínico'),
+    ),
+    AppLayoutVisibilityRule.prefix(
+      path: '/health/reports/',
+      chrome: AppLayoutChromeConfig.subview(title: 'Reportes'),
+    ),
+    AppLayoutVisibilityRule.exact(
       path: '/family',
       chrome: AppLayoutChromeConfig(
         title: 'BebéApp',

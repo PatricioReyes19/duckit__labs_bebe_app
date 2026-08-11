@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../../domain/entities/settings/app_settings.dart';
 import '../../domain/repositories/settings/app_settings_repository.dart';
 import '../local/bebe_database.dart';
@@ -5,9 +7,13 @@ import '../local/bebe_database_schema.dart';
 import '../models/app_settings_model.dart';
 
 class SqliteAppSettingsRepository implements AppSettingsRepository {
-  const SqliteAppSettingsRepository(this._database);
+  SqliteAppSettingsRepository(this._database);
 
   final BebeDatabase _database;
+  final _changes = StreamController<void>.broadcast();
+
+  @override
+  Stream<void> get changes => _changes.stream;
 
   @override
   Future<AppSettingsEntity> get() async {
@@ -50,6 +56,7 @@ class SqliteAppSettingsRepository implements AppSettingsRepository {
         where: 'id = ?',
         whereArgs: ['local'],
       );
+      if (!_changes.isClosed) _changes.add(null);
     }
     return get();
   }

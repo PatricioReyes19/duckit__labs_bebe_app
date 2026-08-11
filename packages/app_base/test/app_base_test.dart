@@ -123,6 +123,17 @@ void main() {
 
       expect(store.initialLocation, '/family/settings/privacy');
     });
+
+    test('cerrar sesión elimina la última ruta privada', () async {
+      SharedPreferences.setMockInitialValues({});
+      final preferences = await SharedPreferences.getInstance();
+      final store = NavigationSessionStore(preferences);
+
+      await store.remember(Uri.parse('/health'));
+      await store.clear();
+
+      expect(store.initialLocation, StartupPaths.splash);
+    });
   });
 
   group('AppLayoutVisibilityPolicy', () {

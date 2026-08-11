@@ -89,6 +89,10 @@ class FamilyMemberModel {
     required this.role,
     required this.accessDescription,
     required this.status,
+    this.contact,
+    this.invitationCode,
+    this.invitedAt,
+    this.invitationExpiresAt,
   });
 
   final String id;
@@ -97,6 +101,10 @@ class FamilyMemberModel {
   final String role;
   final String accessDescription;
   final FamilyMemberStatus status;
+  final String? contact;
+  final String? invitationCode;
+  final DateTime? invitedAt;
+  final DateTime? invitationExpiresAt;
 
   factory FamilyMemberModel.fromEntity(FamilyMemberEntity entity) =>
       FamilyMemberModel(
@@ -106,6 +114,10 @@ class FamilyMemberModel {
         role: entity.role,
         accessDescription: entity.accessDescription,
         status: entity.status,
+        contact: entity.contact,
+        invitationCode: entity.invitationCode,
+        invitedAt: entity.invitedAt,
+        invitationExpiresAt: entity.invitationExpiresAt,
       );
 
   factory FamilyMemberModel.fromRow(Map<String, Object?> row) =>
@@ -120,6 +132,10 @@ class FamilyMemberModel {
           'pending' => FamilyMemberStatus.pending,
           final value => throw FormatException('Unknown member status: $value'),
         },
+        contact: row['contact'] as String?,
+        invitationCode: row['invitation_code'] as String?,
+        invitedAt: _dateTimeFromEpoch(row['invited_at']),
+        invitationExpiresAt: _dateTimeFromEpoch(row['invitation_expires_at']),
       );
 
   Map<String, Object?> toRow() => {
@@ -129,6 +145,12 @@ class FamilyMemberModel {
     'role': role,
     'access_description': accessDescription,
     'status': status.name,
+    'contact': contact,
+    'invitation_code': invitationCode,
+    'invited_at': invitedAt?.toUtc().millisecondsSinceEpoch,
+    'invitation_expires_at': invitationExpiresAt
+        ?.toUtc()
+        .millisecondsSinceEpoch,
   };
 
   FamilyMemberEntity toEntity() => FamilyMemberEntity(
@@ -138,5 +160,13 @@ class FamilyMemberModel {
     role: role,
     accessDescription: accessDescription,
     status: status,
+    contact: contact,
+    invitationCode: invitationCode,
+    invitedAt: invitedAt,
+    invitationExpiresAt: invitationExpiresAt,
   );
+
+  static DateTime? _dateTimeFromEpoch(Object? value) => value is int
+      ? DateTime.fromMillisecondsSinceEpoch(value, isUtc: true)
+      : null;
 }

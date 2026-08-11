@@ -39,6 +39,7 @@ class FamilyOverviewVm {
             name: baby.name,
             ageLabel: _ageLabel(baby.birthDate, referenceDate),
             initials: _initials(baby.name),
+            avatarPath: baby.avatarAssetPath,
             avatarVariant: baby.id == entity.activeBabyId
                 ? FamilyAvatarVariant.brand
                 : FamilyAvatarVariant.accent,
@@ -113,6 +114,7 @@ class FamilyBabyVm {
     required this.ageLabel,
     required this.initials,
     required this.avatarVariant,
+    this.avatarPath,
   });
 
   final String id;
@@ -120,6 +122,7 @@ class FamilyBabyVm {
   final String ageLabel;
   final String initials;
   final FamilyAvatarVariant avatarVariant;
+  final String? avatarPath;
 }
 
 class FamilyMemberVm {
