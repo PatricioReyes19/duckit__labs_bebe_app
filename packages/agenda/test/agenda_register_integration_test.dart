@@ -42,6 +42,16 @@ void main() {
             startsAt: now.add(const Duration(hours: 2)),
             syncStatus: AgendaSyncStatus.synced,
           ),
+          for (var index = 0; index < 6; index++)
+            AgendaEventEntity(
+              id: 'upcoming-$index',
+              babyId: 'baby-1',
+              category: AgendaCategory.medication,
+              title: 'Dosis ${index + 1}',
+              description: 'Medicamento programado',
+              startsAt: now.add(Duration(days: index + 1)),
+              syncStatus: AgendaSyncStatus.synced,
+            ),
         ],
         remindersEnabled: true,
         isOffline: false,
@@ -92,6 +102,14 @@ void main() {
     expect(find.text('Registros del día'), findsOneWidget);
     expect(find.text('Alimentación'), findsOneWidget);
     expect(find.textContaining('90 mL'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('agenda-upcoming-scroll-viewport')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('agenda-upcoming-scroll-list')),
+      findsOneWidget,
+    );
 
     await tester.ensureVisible(find.text('Registrar evento ahora'));
     await tester.tap(find.text('Registrar evento ahora'));

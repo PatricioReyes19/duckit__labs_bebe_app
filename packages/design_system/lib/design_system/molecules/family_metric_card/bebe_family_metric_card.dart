@@ -169,9 +169,11 @@ class _FamilyMetricCardContent extends StatelessWidget {
         SizedBox(height: spacing.spacingXs),
         Text(
           label,
-          style: theme.typography.styles.body.sm.regular.copyWith(
-            color: palette.label,
-          ),
+          style:
+              (compact
+                      ? theme.typography.styles.label.sm.regular
+                      : theme.typography.styles.body.sm.regular)
+                  .copyWith(color: palette.label),
         ),
       ],
     );
@@ -182,7 +184,7 @@ class _FamilyMetricCardContent extends StatelessWidget {
     );
 
     return Padding(
-      padding: EdgeInsets.all(compact ? spacing.spacingS : spacing.spacingM),
+      padding: EdgeInsets.all(spacing.spacingM),
       child: compact
           ? interactive
                 ? Column(

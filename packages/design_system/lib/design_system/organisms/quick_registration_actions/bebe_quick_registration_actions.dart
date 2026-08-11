@@ -25,6 +25,7 @@ class BebeQuickRegistrationActions extends StatelessWidget {
     required this.onItemPressed,
     this.title = 'Registrar ahora',
     this.helperLabel = 'Desliza para ver más',
+    this.contentPadding = EdgeInsets.zero,
     super.key,
   });
 
@@ -32,6 +33,9 @@ class BebeQuickRegistrationActions extends StatelessWidget {
   final ValueChanged<String> onItemPressed;
   final String title;
   final String helperLabel;
+
+  /// Insets that scroll with the actions instead of reducing their viewport.
+  final EdgeInsetsGeometry contentPadding;
 
   static const int _maximumVisibleItems = 5;
   static const double _minimumTileWidth = 80;
@@ -55,14 +59,17 @@ class BebeQuickRegistrationActions extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          BebeTitleSection(
-            title: title,
-            trailing: BebeSectionHint(
-              label: helperLabel,
-              icon: Icon(
-                Icons.chevron_right_rounded,
-                size: 8,
-                color: colors.icons.neutralAlternative,
+          Padding(
+            padding: contentPadding,
+            child: BebeTitleSection(
+              title: title,
+              trailing: BebeSectionHint(
+                label: helperLabel,
+                icon: Icon(
+                  Icons.chevron_right_rounded,
+                  size: 8,
+                  color: colors.icons.neutralAlternative,
+                ),
               ),
             ),
           ),
@@ -70,6 +77,13 @@ class BebeQuickRegistrationActions extends StatelessWidget {
           LayoutBuilder(
             builder: (context, constraints) {
               final visibleItems = items.length.clamp(1, _maximumVisibleItems);
+              final resolvedPadding = contentPadding.resolve(
+                Directionality.of(context),
+              );
+              final availableWidth =
+                  constraints.maxWidth -
+                  resolvedPadding.left -
+                  resolvedPadding.right;
 
               final gap = spacing.spacingS;
 
@@ -80,12 +94,13 @@ class BebeQuickRegistrationActions extends StatelessWidget {
                   ? _accessibleTileWidth
                   : _minimumTileWidth;
               final fluidTileWidth =
-                  (constraints.maxWidth - totalSpacing) / visibleItems;
+                  (availableWidth - totalSpacing) / visibleItems;
               final tileWidth = math.max(minimumTileWidth, fluidTileWidth);
 
               return SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 physics: const BouncingScrollPhysics(),
+                padding: contentPadding,
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

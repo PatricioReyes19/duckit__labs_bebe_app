@@ -69,6 +69,7 @@ class HealthSectionPage extends GoRoute {
   HealthSectionPage({
     required HealthSectionKind kind,
     required HealthFlowController controller,
+    required void Function(BuildContext context) openMeasurementRegister,
   }) : super(
          path: kind.relativePath,
          pageBuilder: (context, state) => MaterialPage<void>(
@@ -77,7 +78,12 @@ class HealthSectionPage extends GoRoute {
            child: _HealthSectionView(
              kind: kind,
              controller: controller,
-             openFlow: (action) => _openFlow(context, kind, action),
+             openFlow: (action) => _openFlow(
+               context,
+               kind,
+               action,
+               openMeasurementRegister: openMeasurementRegister,
+             ),
            ),
          ),
          routes: [
@@ -93,8 +99,12 @@ class HealthSectionPage extends GoRoute {
                    kind: kind,
                    action: action,
                    controller: controller,
-                   openFlow: (nextAction) =>
-                       _openFlow(context, kind, nextAction),
+                   openFlow: (nextAction) => _openFlow(
+                     context,
+                     kind,
+                     nextAction,
+                     openMeasurementRegister: openMeasurementRegister,
+                   ),
                  ),
                );
              },
@@ -111,8 +121,16 @@ class HealthSectionPage extends GoRoute {
   static void _openFlow(
     BuildContext context,
     HealthSectionKind currentKind,
-    String action,
-  ) {
+    String action, {
+    required void Function(BuildContext context) openMeasurementRegister,
+  }) {
+    if (action == HealthFlowAction.registerWeight ||
+        action == HealthFlowAction.registerHeight ||
+        (currentKind == HealthSectionKind.growth &&
+            action == HealthFlowAction.register)) {
+      openMeasurementRegister(context);
+      return;
+    }
     final targetKind = switch (action) {
       HealthFlowAction.sync => HealthSectionKind.sync,
       HealthFlowAction.history => HealthSectionKind.clinicalHistory,

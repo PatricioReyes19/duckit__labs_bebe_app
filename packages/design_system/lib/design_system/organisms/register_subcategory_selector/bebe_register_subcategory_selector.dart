@@ -50,6 +50,11 @@ class BebeRegisterSubcategorySelector<T> extends StatelessWidget {
                     item: items[index],
                     selected: items[index].value == selectedValue,
                     showDivider: index > 0,
+                    borderRadius: _segmentBorderRadius(
+                      theme.borderRadius.xl,
+                      index: index,
+                      itemCount: items.length,
+                    ),
                     onPressed: onChanged == null || !items[index].enabled
                         ? null
                         : () => onChanged!(items[index].value),
@@ -61,6 +66,22 @@ class BebeRegisterSubcategorySelector<T> extends StatelessWidget {
       ),
     );
   }
+
+  BorderRadius _segmentBorderRadius(
+    BorderRadius outerRadius, {
+    required int index,
+    required int itemCount,
+  }) {
+    final isFirst = index == 0;
+    final isLast = index == itemCount - 1;
+
+    return BorderRadius.only(
+      topLeft: isFirst ? outerRadius.topLeft : Radius.zero,
+      bottomLeft: isFirst ? outerRadius.bottomLeft : Radius.zero,
+      topRight: isLast ? outerRadius.topRight : Radius.zero,
+      bottomRight: isLast ? outerRadius.bottomRight : Radius.zero,
+    );
+  }
 }
 
 class _RegisterSubcategorySegment<T> extends StatelessWidget {
@@ -68,12 +89,14 @@ class _RegisterSubcategorySegment<T> extends StatelessWidget {
     required this.item,
     required this.selected,
     required this.showDivider,
+    required this.borderRadius,
     required this.onPressed,
   });
 
   final BebeSegmentedItem<T> item;
   final bool selected;
   final bool showDivider;
+  final BorderRadius borderRadius;
   final VoidCallback? onPressed;
 
   @override
@@ -99,7 +122,7 @@ class _RegisterSubcategorySegment<T> extends StatelessWidget {
         child: Material(
           color: selected ? colors.background.brandSurface : Colors.transparent,
           shape: RoundedRectangleBorder(
-            borderRadius: theme.borderRadius.xl,
+            borderRadius: borderRadius,
             side: selected
                 ? BorderSide(color: colors.border.brandDefault, width: 1.5)
                 : BorderSide.none,

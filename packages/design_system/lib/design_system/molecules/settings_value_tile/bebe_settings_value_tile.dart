@@ -33,56 +33,78 @@ class BebeSettingsValueTile extends StatelessWidget {
     final effectiveDescription = _normalizeText(description);
     final effectiveSemanticLabel = _normalizeText(semanticLabel);
 
-    final content = Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: spacing.spacingL,
-        vertical: spacing.spacingM,
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  effectiveTitle,
-                  style: theme.typography.styles.title.sm.semibold.copyWith(
-                    color: colors.text.neutralTitle,
-                  ),
-                ),
-                if (effectiveDescription != null) ...[
-                  SizedBox(height: spacing.spacingXs),
-                  Text(
-                    effectiveDescription,
-                    style: theme.typography.styles.body.sm.regular.copyWith(
-                      color: colors.text.neutralBody,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          SizedBox(width: spacing.spacingM),
-          Flexible(
-            child: Text(
-              effectiveValue,
-              textAlign: TextAlign.end,
-              style: theme.typography.styles.body.sm.regular.copyWith(
-                color: colors.text.neutralBody,
+    final content = LayoutBuilder(
+      builder: (context, constraints) {
+        final textScale = MediaQuery.textScalerOf(context).scale(1);
+        final compact = constraints.maxWidth < 300 || textScale > 1.3;
+        final titleBlock = Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              effectiveTitle,
+              style: theme.typography.styles.title.sm.semibold.copyWith(
+                color: colors.text.neutralTitle,
               ),
             ),
-          ),
-          if (_isInteractive) ...[
-            SizedBox(width: spacing.spacingS),
-            Icon(
-              Icons.chevron_right_rounded,
-              size: _chevronSize,
-              color: colors.icons.neutralAlternative,
-            ),
+            if (effectiveDescription != null) ...[
+              SizedBox(height: spacing.spacingXs),
+              Text(
+                effectiveDescription,
+                style: theme.typography.styles.body.sm.regular.copyWith(
+                  color: colors.text.neutralBody,
+                ),
+              ),
+            ],
           ],
-        ],
-      ),
+        );
+        final valueBlock = Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            Flexible(
+              child: Text(
+                effectiveValue,
+                textAlign: TextAlign.end,
+                style: theme.typography.styles.body.sm.regular.copyWith(
+                  color: colors.text.neutralBody,
+                ),
+              ),
+            ),
+            if (_isInteractive) ...[
+              SizedBox(width: spacing.spacingS),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: _chevronSize,
+                color: colors.icons.neutralAlternative,
+              ),
+            ],
+          ],
+        );
+
+        return Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: spacing.spacingL,
+            vertical: spacing.spacingM,
+          ),
+          child: compact
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    titleBlock,
+                    SizedBox(height: spacing.spacingS),
+                    valueBlock,
+                  ],
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Flexible(flex: 3, child: titleBlock),
+                    SizedBox(width: spacing.spacingL),
+                    Flexible(flex: 2, child: valueBlock),
+                  ],
+                ),
+        );
+      },
     );
 
     final visual = _isInteractive

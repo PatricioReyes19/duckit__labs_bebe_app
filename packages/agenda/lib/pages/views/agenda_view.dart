@@ -3,6 +3,7 @@ import 'package:agenda/models/agenda_overview_vm.dart';
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show OverflowBoxFit;
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class AgendaView extends StatelessWidget {
@@ -371,6 +372,7 @@ class _AgendaFullBleed extends StatelessWidget {
         minWidth: width,
         maxWidth: width,
         alignment: Alignment.center,
+        fit: OverflowBoxFit.deferToChild,
         child: child,
       );
     },
@@ -392,6 +394,10 @@ class _AgendaEventGroup extends StatelessWidget {
   final bool scrollable;
   final ValueChanged<String>? onEventPressed;
 
+  static const _maximumVisibleItems = 5;
+  static const _compactCardHeight = 144.0;
+  static const _regularCardHeight = 96.0;
+
   @override
   Widget build(BuildContext context) {
     final spacing = context.theme.spacing;
@@ -403,22 +409,39 @@ class _AgendaEventGroup extends StatelessWidget {
         SizedBox(height: spacing.spacingL),
         if (events.isEmpty)
           _AgendaSectionEmptyState(message: emptyMessage)
-        else if (scrollable && events.length > 3)
-          SizedBox(
-            height: 410,
-            child: Scrollbar(
-              child: ListView.separated(
-                primary: false,
-                physics: const BouncingScrollPhysics(),
-                padding: EdgeInsets.only(right: spacing.spacingXs),
-                itemCount: events.length,
-                separatorBuilder: (_, __) => SizedBox(height: spacing.spacingM),
-                itemBuilder: (context, index) => _AgendaEventCard(
-                  event: events[index],
-                  onPressed: () => onEventPressed?.call(events[index].id),
+        else if (scrollable && events.length > _maximumVisibleItems)
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final textScale = MediaQuery.textScalerOf(
+                context,
+              ).scale(1).clamp(1.0, 1.4).toDouble();
+              final estimatedCardHeight = constraints.maxWidth < 360
+                  ? _compactCardHeight
+                  : _regularCardHeight;
+              final viewportHeight =
+                  estimatedCardHeight * _maximumVisibleItems * textScale +
+                  spacing.spacingM * (_maximumVisibleItems - 1);
+
+              return SizedBox(
+                key: const ValueKey('agenda-upcoming-scroll-viewport'),
+                height: viewportHeight,
+                child: Scrollbar(
+                  child: ListView.separated(
+                    key: const ValueKey('agenda-upcoming-scroll-list'),
+                    primary: false,
+                    physics: const BouncingScrollPhysics(),
+                    padding: EdgeInsets.only(right: spacing.spacingXs),
+                    itemCount: events.length,
+                    separatorBuilder: (_, _) =>
+                        SizedBox(height: spacing.spacingM),
+                    itemBuilder: (context, index) => _AgendaEventCard(
+                      event: events[index],
+                      onPressed: () => onEventPressed?.call(events[index].id),
+                    ),
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
           )
         else
           for (var index = 0; index < events.length; index++) ...[

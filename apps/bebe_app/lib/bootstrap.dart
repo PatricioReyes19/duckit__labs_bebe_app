@@ -11,6 +11,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:notifications/notifications.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import 'firebase_options.dart';
 import 'dependencies/dependencies.dart' hide getIt;
@@ -24,6 +25,8 @@ Future<void> bootstrap() async {
       // splash nativo no permanece visible durante Firebase, DI y servicios.
       runApp(const _BootstrapSplashHandoff());
       await WidgetsBinding.instance.endOfFrame;
+
+      await initializeDateFormatting('es_CL');
 
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,

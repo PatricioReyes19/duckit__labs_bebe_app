@@ -29,3 +29,4 @@ export 'responsive_form_grid/responsive_form_grid.dart';
 export 'metrics_overview/metrics_overview.dart';
 export 'state_panel/state_panel.dart';
 export 'timeline/timeline.dart';
+export 'bottom_sheet/bottom_sheet.dart';

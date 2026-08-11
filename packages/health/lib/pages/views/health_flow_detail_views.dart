@@ -132,8 +132,6 @@ class _VaccinationFormState extends State<_VaccinationForm> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
         children: [
-          HealthBabyBanner(controller: widget.controller),
-          const SizedBox(height: 20),
           const HealthSectionHeading(
             title: 'Registrar aplicación',
             subtitle: 'Completa los datos del comprobante de vacunación.',
@@ -290,8 +288,6 @@ class _MeasurementFormState extends State<_MeasurementForm> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
         children: [
-          HealthBabyBanner(controller: widget.controller),
-          const SizedBox(height: 22),
           HealthSurface(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1028,56 +1024,114 @@ class _HealthRecordDetailView extends StatelessWidget {
     ),
   ];
 
-  List<Widget> _measurementDetail(BuildContext context) => [
-    HealthSurface(
-      child: Row(
-        children: [
-          Icon(
-            Icons.monitor_weight_outlined,
-            size: 64,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-          const SizedBox(width: 18),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Peso', style: TextStyle(fontSize: 18)),
-                Text(
-                  '7,25 kg',
-                  style: TextStyle(fontSize: 34, fontWeight: FontWeight.w800),
+  List<Widget> _measurementDetail(BuildContext context) {
+    final measurements =
+        <(HealthMeasurementType, double, DateTime, RegisterSyncStatus, String)>[
+          for (final event in controller.measurementRecords)
+            if (event.details['value'] is num &&
+                HealthMeasurementType.values.any(
+                  (type) => type.name == event.details['measurement_type'],
+                ))
+              (
+                HealthMeasurementType.values.firstWhere(
+                  (type) => type.name == event.details['measurement_type'],
                 ),
-                Text('Percentil P41'),
-              ],
+                (event.details['value']! as num).toDouble(),
+                event.occurredAt,
+                event.syncStatus,
+                'Registro de actividad',
+              ),
+          for (final measurement
+              in controller.overview?.measurements ?? const [])
+            (
+              measurement.type,
+              measurement.value,
+              measurement.recordedAt,
+              RegisterSyncStatus.synced,
+              measurement.source.trim().isEmpty
+                  ? 'Registro de salud'
+                  : measurement.source,
+            ),
+        ]..sort((a, b) => b.$3.compareTo(a.$3));
+    if (measurements.isEmpty) {
+      return [
+        const HealthSurface(
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Center(
+              child: Text(
+                'Todavía no hay mediciones registradas.',
+                textAlign: TextAlign.center,
+              ),
             ),
           ),
-        ],
+        ),
+      ];
+    }
+
+    final measurement = measurements.first;
+    final isWeight = measurement.$1 == HealthMeasurementType.weight;
+    final unit = isWeight ? 'kg' : 'cm';
+    final value = measurement.$2.toStringAsFixed(isWeight ? 2 : 1);
+    return [
+      HealthSurface(
+        child: Row(
+          children: [
+            Icon(
+              isWeight
+                  ? Icons.monitor_weight_outlined
+                  : Icons.straighten_rounded,
+              size: 64,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(width: 18),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isWeight ? 'Peso' : 'Talla',
+                    style: const TextStyle(fontSize: 18),
+                  ),
+                  Text(
+                    '$value $unit',
+                    style: const TextStyle(
+                      fontSize: 34,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const Text('Medición registrada'),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
-    const SizedBox(height: 12),
-    const HealthActionRow(
-      icon: Icons.calendar_today_outlined,
-      title: 'Fecha y hora',
-      subtitle: '16 may 2025 · 10:30',
-    ),
-    const SizedBox(height: 10),
-    const HealthActionRow(
-      icon: Icons.person_outline_rounded,
-      title: 'Registrado por',
-      subtitle: 'Mamá',
-    ),
-    const SizedBox(height: 10),
-    HealthActionRow(
-      icon: Icons.sync_rounded,
-      title: 'Estado de sincronización',
-      subtitle: 'Revisa el respaldo de este registro',
-      onTap: () => openFlow(HealthFlowAction.sync),
-    ),
-  ];
+      const SizedBox(height: 12),
+      HealthActionRow(
+        icon: Icons.calendar_today_outlined,
+        title: 'Fecha y hora',
+        subtitle:
+            '${healthDateLabel(measurement.$3)} · ${healthTimeLabel(measurement.$3)}',
+      ),
+      const SizedBox(height: 10),
+      HealthActionRow(
+        icon: Icons.person_outline_rounded,
+        title: 'Origen del registro',
+        subtitle: measurement.$5,
+      ),
+      const SizedBox(height: 10),
+      HealthActionRow(
+        icon: Icons.sync_rounded,
+        title: 'Estado de sincronización',
+        subtitle: 'Revisa el respaldo de este registro',
+        trailing: HealthSyncBadge(status: measurement.$4, compact: true),
+        onTap: () => openFlow(HealthFlowAction.sync),
+      ),
+    ];
+  }
 
   List<Widget> _consultationDetail(BuildContext context) => [
-    HealthBabyBanner(controller: controller),
-    const SizedBox(height: 14),
     const HealthActionRow(
       icon: Icons.person_outline_rounded,
       title: 'Dra. Valeria Ruiz',
@@ -1184,8 +1238,6 @@ class _HealthRecordDetailView extends StatelessWidget {
   ];
 
   List<Widget> _clinicalDetail(BuildContext context) => [
-    HealthBabyBanner(controller: controller),
-    const SizedBox(height: 14),
     const HealthActionRow(
       icon: Icons.note_alt_outlined,
       title: 'Observación clínica',

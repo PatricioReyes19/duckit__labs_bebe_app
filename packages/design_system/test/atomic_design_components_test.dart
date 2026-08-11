@@ -53,6 +53,38 @@ void main() {
                   ),
                 ),
                 const SizedBox(height: 16),
+                const BebeSettingsValueTile(
+                  title: 'Formato de horario de los registros',
+                  value: '24 horas',
+                  description: 'Se aplica en toda la aplicación',
+                ),
+                const SizedBox(height: 16),
+                BebeMetricsOverview(
+                  minimumItemWidth: 96,
+                  maximumColumnCount: 3,
+                  children: [
+                    BebeCompactMetricCard(
+                      label: 'Alimentación',
+                      value: '720',
+                      unit: 'mL',
+                      supportingText: '6 tomas',
+                      icon: Icon(Icons.local_drink_outlined),
+                    ),
+                    BebeCompactMetricCard(
+                      label: 'Sueño',
+                      value: '8',
+                      supportingText: 'registros',
+                      icon: Icon(Icons.bedtime_outlined),
+                    ),
+                    BebeCompactMetricCard(
+                      label: 'Pañales',
+                      value: '5',
+                      supportingText: 'cambios',
+                      icon: Icon(Icons.water_drop_outlined),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
                 BebeBabyProfileCard(
                   name: 'Nombre compuesto del bebé sin abreviar',
                   supportingText:

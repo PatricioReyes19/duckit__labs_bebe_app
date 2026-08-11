@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
@@ -18,9 +20,25 @@ class AppThemeBloc extends Bloc<AppThemeEvent, AppThemeState> {
       ) {
     on<_UpdateAppThemeEvent>(_onUpdateTheme);
     on<_UpdateThemeModeEvent>(_onUpdateThemeMode);
+    unawaited(_restoreStoredThemeMode());
   }
 
   final ThemeStorage? themeStorage;
+  bool _receivedThemeUpdate = false;
+
+  Future<void> _restoreStoredThemeMode() async {
+    final storedMode = await themeStorage?.getThemeMode();
+    if (_receivedThemeUpdate || storedMode == null) return;
+
+    final restored = switch (storedMode) {
+      'dark' => ThemeMode.dark,
+      'system' => ThemeMode.system,
+      _ => ThemeMode.light,
+    };
+    if (restored != state.themeMode && !isClosed) {
+      add(AppThemeEvent.updateThemeMode(themeMode: restored));
+    }
+  }
 
   Future<void> _onUpdateTheme(
     _UpdateAppThemeEvent event,
@@ -33,6 +51,7 @@ class AppThemeBloc extends Bloc<AppThemeEvent, AppThemeState> {
     _UpdateThemeModeEvent event,
     Emitter<AppThemeState> emit,
   ) async {
+    _receivedThemeUpdate = true;
     emit(state.copyWith(themeMode: event.themeMode));
 
     final storage = themeStorage;

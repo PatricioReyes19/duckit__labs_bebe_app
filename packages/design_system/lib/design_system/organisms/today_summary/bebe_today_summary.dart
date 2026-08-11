@@ -9,6 +9,7 @@ class BebeTodaySummary extends StatelessWidget {
     this.onActionPressed,
     this.historyActionLabel = 'Ver historial',
     this.onHistoryPressed,
+    this.contentPadding = EdgeInsets.zero,
     super.key,
   }) : assert(
          onActionPressed == null || onHistoryPressed == null,
@@ -36,6 +37,9 @@ class BebeTodaySummary extends StatelessWidget {
   /// Etiqueta mostrada cuando [onHistoryPressed] está disponible.
   final String historyActionLabel;
 
+  /// Insets that scroll with the cards instead of reducing their viewport.
+  final EdgeInsetsGeometry contentPadding;
+
   static const int _maximumInlineItems = 3;
 
   /// Ancho mínimo que necesita una métrica para conservar el layout inline.
@@ -62,15 +66,21 @@ class BebeTodaySummary extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          BebeTitleSection(
-            title: title,
-            actionLabel: effectiveActionLabel,
-            onActionPressed: effectiveAction,
+          Padding(
+            padding: contentPadding,
+            child: BebeTitleSection(
+              title: title,
+              actionLabel: effectiveActionLabel,
+              onActionPressed: effectiveAction,
+            ),
           ),
           SizedBox(height: spacing.spacingL),
           LayoutBuilder(
             builder: (context, constraints) {
               final textScale = MediaQuery.textScalerOf(context).scale(1);
+              final resolvedPadding = contentPadding.resolve(
+                Directionality.of(context),
+              );
 
               final inlineCount = items.length
                   .clamp(1, _maximumInlineItems)
@@ -78,7 +88,11 @@ class BebeTodaySummary extends StatelessWidget {
 
               final totalSpacing = spacing.spacingL * (inlineCount - 1);
 
-              final availableWidth = constraints.maxWidth - totalSpacing;
+              final availableWidth =
+                  constraints.maxWidth -
+                  resolvedPadding.left -
+                  resolvedPadding.right -
+                  totalSpacing;
               final inlineCardWidth = availableWidth / inlineCount;
 
               final shouldUseHorizontalList =
@@ -87,10 +101,16 @@ class BebeTodaySummary extends StatelessWidget {
                   textScale > _maximumInlineTextScale;
 
               if (shouldUseHorizontalList) {
-                return _TodayMetricsHorizontalList(items: items);
+                return _TodayMetricsHorizontalList(
+                  items: items,
+                  contentPadding: contentPadding,
+                );
               }
 
-              return _TodayMetricsInlineRow(items: items);
+              return _TodayMetricsInlineRow(
+                items: items,
+                contentPadding: contentPadding,
+              );
             },
           ),
         ],
@@ -100,9 +120,13 @@ class BebeTodaySummary extends StatelessWidget {
 }
 
 class _TodayMetricsInlineRow extends StatelessWidget {
-  const _TodayMetricsInlineRow({required this.items});
+  const _TodayMetricsInlineRow({
+    required this.items,
+    required this.contentPadding,
+  });
 
   final List<BebeTodayMetricData> items;
+  final EdgeInsetsGeometry contentPadding;
 
   @override
   Widget build(BuildContext context) {
@@ -111,6 +135,7 @@ class _TodayMetricsInlineRow extends StatelessWidget {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       physics: const BouncingScrollPhysics(),
+      padding: contentPadding,
       child: IntrinsicHeight(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -130,9 +155,13 @@ class _TodayMetricsInlineRow extends StatelessWidget {
 }
 
 class _TodayMetricsHorizontalList extends StatelessWidget {
-  const _TodayMetricsHorizontalList({required this.items});
+  const _TodayMetricsHorizontalList({
+    required this.items,
+    required this.contentPadding,
+  });
 
   final List<BebeTodayMetricData> items;
+  final EdgeInsetsGeometry contentPadding;
 
   @override
   Widget build(BuildContext context) {
@@ -141,6 +170,7 @@ class _TodayMetricsHorizontalList extends StatelessWidget {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       physics: const BouncingScrollPhysics(),
+      padding: contentPadding,
       child: IntrinsicHeight(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,

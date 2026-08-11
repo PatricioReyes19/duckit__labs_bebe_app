@@ -93,10 +93,12 @@ abstract class BlocsModule {
 
   HealthBloc healthBloc(
     GetHealthOverview getHealthOverview,
+    GetRegisterEvents getRegisterEvents,
     GetFamilyOverview getFamilyOverview,
   ) {
     return HealthBloc(
       getHealthOverview: getHealthOverview,
+      getRegisterEvents: getRegisterEvents,
       getFamilyOverview: getFamilyOverview,
     );
   }

@@ -1,5 +1,8 @@
+import 'dart:math' as math;
+
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:health/models/health_flow_controller.dart';
 import 'package:health/pages/health_section_page.dart';
@@ -46,8 +49,6 @@ class _VaccinesSectionViewState extends State<VaccinesSectionView> {
           _ => all,
         };
         return [
-          HealthBabyBanner(controller: widget.controller),
-          const SizedBox(height: 18),
           SegmentedButton<int>(
             segments: const [
               ButtonSegment(value: 0, label: Text('Todas')),
@@ -134,8 +135,6 @@ class ControlsSectionView extends StatelessWidget {
                 .toList(growable: false) ??
             const <HealthEventEntity>[];
         return [
-          HealthBabyBanner(controller: controller),
-          const SizedBox(height: 24),
           const HealthSectionHeading(
             title: 'Próximos controles',
             subtitle: 'Seguimiento del desarrollo y la salud del bebé',
@@ -158,6 +157,7 @@ class ControlsSectionView extends StatelessWidget {
               ),
               const SizedBox(height: 12),
             ],
+          if (controls.isEmpty) const SizedBox(height: 12),
           const HealthActionRow(
             icon: Icons.restaurant_outlined,
             title: 'Control de crecimiento',
@@ -206,13 +206,10 @@ class _GrowthSectionViewState extends State<GrowthSectionView> {
       builder: (context) {
         final measurements = _measurements(widget.controller, type);
         final latest = measurements.isEmpty ? null : measurements.first;
-        final value =
-            latest?.$1 ?? (type == HealthMeasurementType.weight ? 7.25 : 65.0);
+        final value = latest?.$1;
         final unit = type == HealthMeasurementType.weight ? 'kg' : 'cm';
         final color = Theme.of(context).colorScheme.primary;
         return [
-          HealthBabyBanner(controller: widget.controller),
-          const SizedBox(height: 18),
           SegmentedButton<HealthMeasurementType>(
             segments: const [
               ButtonSegment(
@@ -262,52 +259,55 @@ class _GrowthSectionViewState extends State<GrowthSectionView> {
                             style: Theme.of(context).textTheme.titleMedium,
                           ),
                           Text(
-                            '${value.toStringAsFixed(type == HealthMeasurementType.weight ? 2 : 1)} $unit',
+                            value == null
+                                ? 'Sin mediciones'
+                                : '${value.toStringAsFixed(type == HealthMeasurementType.weight ? 2 : 1)} $unit',
                             style: Theme.of(context).textTheme.headlineMedium
                                 ?.copyWith(fontWeight: FontWeight.w800),
                           ),
                         ],
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(18),
+                    if (latest != null)
+                      Flexible(
+                        child: Text(
+                          healthDateLabel(latest.$2),
+                          textAlign: TextAlign.end,
+                          style: Theme.of(context).textTheme.labelMedium
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
+                        ),
                       ),
-                      child: const Column(
-                        children: [
-                          Text(
-                            'P41',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          Text('Percentil'),
-                        ],
-                      ),
-                    ),
                   ],
                 ),
                 const SizedBox(height: 18),
-                SizedBox(
-                  height: 190,
-                  width: double.infinity,
-                  child: CustomPaint(
-                    painter: _GrowthChartPainter(
-                      color: color,
-                      unit: unit,
-                      values: measurements.isEmpty
-                          ? (type == HealthMeasurementType.weight
-                                ? const [3.2, 4.8, 6.1, 7.25]
-                                : const [50.0, 55.0, 60.0, 65.0])
-                          : measurements.reversed
-                                .map((measurement) => measurement.$1)
-                                .toList(growable: false),
+                if (measurements.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 32),
+                    child: Center(
+                      child: Text(
+                        'Registra una medición para comenzar la curva de crecimiento.',
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  )
+                else
+                  SizedBox(
+                    height: 190,
+                    width: double.infinity,
+                    child: CustomPaint(
+                      painter: _GrowthChartPainter(
+                        color: color,
+                        unit: unit,
+                        values: measurements.reversed
+                            .map((measurement) => measurement.$1)
+                            .toList(growable: false),
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
           ),
@@ -319,14 +319,16 @@ class _GrowthSectionViewState extends State<GrowthSectionView> {
             child: Column(
               children: [
                 if (measurements.isEmpty)
-                  for (final item in _sampleMeasurements(type))
-                    _MeasurementRow(
-                      value: item.$1,
-                      unit: unit,
-                      date: item.$2,
-                      status: RegisterSyncStatus.synced,
-                      onTap: () => widget.openFlow(HealthFlowAction.detail),
-                    )
+                  const Padding(
+                    padding: EdgeInsets.all(20),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: Text(
+                        'Todavía no hay mediciones registradas.',
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  )
                 else
                   for (final item in measurements)
                     _MeasurementRow(
@@ -392,8 +394,6 @@ class ConsultationsSectionView extends StatelessWidget {
             )
             .toList(growable: false);
         return [
-          HealthBabyBanner(controller: controller),
-          const SizedBox(height: 20),
           HealthSurface(
             color: Theme.of(context).colorScheme.primaryContainer,
             child: Row(
@@ -497,6 +497,7 @@ class PediatricCareSectionView extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         HealthSurface(
+          onTap: () => openFlow(HealthFlowAction.detail),
           child: Column(
             children: [
               Row(
@@ -621,8 +622,6 @@ class ClinicalHistorySectionView extends StatelessWidget {
             ),
         ]..sort((a, b) => b.occurredAt.compareTo(a.occurredAt));
         return [
-          HealthBabyBanner(controller: controller),
-          const SizedBox(height: 20),
           const HealthSectionHeading(
             title: 'Historial clínico',
             subtitle: 'Vacunas, consultas, mediciones y observaciones',
@@ -753,7 +752,7 @@ class ReportsSectionView extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           BebeMetricsOverview(
-            minimumItemWidth: 112,
+            minimumItemWidth: 96,
             maximumColumnCount: 3,
             semanticLabel: 'Resumen del reporte',
             children: [
@@ -793,19 +792,13 @@ class ReportsSectionView extends StatelessWidget {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 14),
-                SizedBox(
-                  height: 190,
-                  width: double.infinity,
-                  child: CustomPaint(
-                    painter: _ReportsChartPainter(
-                      primary: colors.primary,
-                      secondary: colors.secondary,
-                      tertiary: colors.tertiary,
-                      feeding: feedingTrend,
-                      sleep: sleepTrend,
-                      diaper: diaperTrend,
-                    ),
-                  ),
+                _ReportsTrendChart(
+                  primary: colors.primary,
+                  secondary: colors.secondary,
+                  tertiary: colors.tertiary,
+                  feeding: feedingTrend,
+                  sleep: sleepTrend,
+                  diaper: diaperTrend,
                 ),
                 const SizedBox(height: 12),
                 Wrap(
@@ -1120,13 +1113,6 @@ List<(double, DateTime, RegisterSyncStatus)> _measurements(
   return result;
 }
 
-List<(double, DateTime)> _sampleMeasurements(HealthMeasurementType type) {
-  final now = DateTime.now();
-  return type == HealthMeasurementType.weight
-      ? [(7.25, now), (6.65, now.subtract(const Duration(days: 30)))]
-      : [(65.0, now), (61.8, now.subtract(const Duration(days: 30)))];
-}
-
 String _detailText(RegisteredEvent event, String key, String fallback) {
   final value = event.details[key];
   return value is String && value.trim().isNotEmpty ? value.trim() : fallback;
@@ -1189,9 +1175,7 @@ List<double> _dailyTrend(
         .length
         .toDouble();
   });
-  final maximum = counts.fold<double>(0, (a, b) => a > b ? a : b);
-  if (maximum == 0) return counts;
-  return counts.map((value) => .12 + value / maximum * .72).toList();
+  return counts;
 }
 
 class _ChartLegend extends StatelessWidget {
@@ -1384,8 +1368,8 @@ class _GrowthChartPainter extends CustomPainter {
       oldDelegate.unit != unit;
 }
 
-class _ReportsChartPainter extends CustomPainter {
-  const _ReportsChartPainter({
+class _ReportsTrendChart extends StatelessWidget {
+  const _ReportsTrendChart({
     required this.primary,
     required this.secondary,
     required this.tertiary,
@@ -1402,60 +1386,155 @@ class _ReportsChartPainter extends CustomPainter {
   final List<double> diaper;
 
   @override
-  void paint(Canvas canvas, Size size) {
-    final grid = Paint()
-      ..color = primary.withValues(alpha: 0.10)
-      ..strokeWidth = 1;
-    for (var i = 0; i <= 4; i++) {
-      final y = size.height * i / 4;
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), grid);
-    }
-    void line(Color color, List<double> points) {
-      if (points.isEmpty) return;
-      final paint = Paint()
-        ..color = color
-        ..strokeWidth = 3
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round;
-      final path = Path();
-      for (var i = 0; i < points.length; i++) {
-        final x = points.length == 1
-            ? size.width / 2
-            : size.width * i / (points.length - 1);
-        final y = size.height * (1 - points[i]);
-        if (i == 0) {
-          path.moveTo(x, y);
-        } else {
-          path.lineTo(x, y);
-        }
-      }
-      canvas.drawPath(path, paint);
-      final dot = Paint()..color = color;
-      for (var i = 0; i < points.length; i++) {
-        canvas.drawCircle(
-          Offset(
-            points.length == 1
-                ? size.width / 2
-                : size.width * i / (points.length - 1),
-            size.height * (1 - points[i]),
+  Widget build(BuildContext context) {
+    final seriesLength = math.max(
+      feeding.length,
+      math.max(sleep.length, diaper.length),
+    );
+    final allValues = [...feeding, ...sleep, ...diaper];
+    final maximum = allValues.fold<double>(
+      0,
+      (current, value) => math.max(current, value),
+    );
+    if (seriesLength == 0 || maximum == 0) {
+      return const SizedBox(
+        height: 220,
+        child: Center(
+          child: Text(
+            'Sin datos para graficar en este período.',
+            textAlign: TextAlign.center,
           ),
-          4,
-          dot,
-        );
-      }
+        ),
+      );
     }
 
-    line(primary, feeding);
-    line(secondary, sleep);
-    line(tertiary, diaper);
-  }
+    final colors = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final yInterval = math.max(1, (maximum / 4).ceil()).toDouble();
+    final maxY = math.max(yInterval * 4, maximum);
+    final xStep = seriesLength <= 7
+        ? 1
+        : math.max(1, ((seriesLength - 1) / 5).ceil());
+    const names = ['Alimentación', 'Sueño', 'Pañales'];
 
-  @override
-  bool shouldRepaint(covariant _ReportsChartPainter oldDelegate) =>
-      oldDelegate.primary != primary ||
-      oldDelegate.secondary != secondary ||
-      oldDelegate.tertiary != tertiary ||
-      oldDelegate.feeding != feeding ||
-      oldDelegate.sleep != sleep ||
-      oldDelegate.diaper != diaper;
+    String dayLabel(int index) {
+      if (index < 0 || index >= seriesLength) return '';
+      if (seriesLength == 1) return 'Hoy';
+      final date = DateTime.now().subtract(
+        Duration(days: seriesLength - index - 1),
+      );
+      return '${date.day}/${date.month}';
+    }
+
+    LineChartBarData bar(List<double> values, Color color) {
+      return LineChartBarData(
+        spots: [
+          for (var index = 0; index < values.length; index++)
+            FlSpot(index.toDouble(), values[index]),
+        ],
+        isCurved: values.length > 2,
+        preventCurveOverShooting: true,
+        color: color,
+        barWidth: 3,
+        isStrokeCapRound: true,
+        dotData: FlDotData(show: seriesLength <= 7),
+        belowBarData: BarAreaData(
+          show: true,
+          color: color.withValues(alpha: 0.08),
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 240,
+      width: double.infinity,
+      child: LineChart(
+        LineChartData(
+          minX: 0,
+          maxX: math.max(1, seriesLength - 1).toDouble(),
+          minY: 0,
+          maxY: maxY,
+          gridData: FlGridData(
+            drawVerticalLine: false,
+            horizontalInterval: yInterval,
+            getDrawingHorizontalLine: (_) => FlLine(
+              color: colors.outlineVariant.withValues(alpha: 0.55),
+              strokeWidth: 1,
+            ),
+          ),
+          borderData: FlBorderData(show: false),
+          titlesData: FlTitlesData(
+            topTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            rightTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            leftTitles: AxisTitles(
+              axisNameWidget: Text('Cantidad', style: textTheme.labelSmall),
+              axisNameSize: 22,
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 34,
+                interval: yInterval,
+                getTitlesWidget: (value, meta) => Text(
+                  value.round().toString(),
+                  style: textTheme.labelSmall?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ),
+            bottomTitles: AxisTitles(
+              axisNameWidget: Text('Día', style: textTheme.labelSmall),
+              axisNameSize: 22,
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 32,
+                interval: 1,
+                getTitlesWidget: (value, meta) {
+                  final index = value.round();
+                  if (value != index ||
+                      (index % xStep != 0 && index != seriesLength - 1)) {
+                    return const SizedBox.shrink();
+                  }
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(
+                      dayLabel(index),
+                      style: textTheme.labelSmall?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+          lineTouchData: LineTouchData(
+            touchTooltipData: LineTouchTooltipData(
+              getTooltipColor: (_) => colors.surfaceContainerHighest,
+              getTooltipItems: (spots) => spots
+                  .map(
+                    (spot) => LineTooltipItem(
+                      '${names[spot.barIndex]}\n${spot.y.round()} registros',
+                      textTheme.labelSmall!.copyWith(
+                        color: colors.onSurface,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  )
+                  .toList(growable: false),
+            ),
+          ),
+          lineBarsData: [
+            bar(feeding, primary),
+            bar(sleep, secondary),
+            bar(diaper, tertiary),
+          ],
+        ),
+        duration: Duration.zero,
+      ),
+    );
+  }
 }

@@ -116,6 +116,144 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('home carousels use a full-width viewport with scrolling inset', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    const activeHeaderKey = Key('active-header');
+
+    await tester.pumpWidget(
+      _TestApp(
+        theme: bebeTheme.lightTheme(),
+        child: Builder(
+          builder: (context) {
+            final contentPadding = EdgeInsets.symmetric(
+              horizontal: context.theme.spacing.spacing2xl,
+            );
+
+            return BebeHomeTemplate(
+              activeBabyHeader: const SizedBox(key: activeHeaderKey, height: 8),
+              todaySummary: BebeTodaySummary(
+                title: 'Actividad del día',
+                contentPadding: contentPadding,
+                items: const [
+                  ..._metrics,
+                  BebeTodayMetricData(
+                    variant: BebeMetricCardVariant.information,
+                    label: 'Medición',
+                    value: '1',
+                    lastLabel: 'Última hace',
+                    lastValue: '1 h',
+                    icon: Icon(Icons.straighten_outlined),
+                  ),
+                ],
+              ),
+              quickActions: BebeQuickRegistrationActions(
+                contentPadding: contentPadding,
+                items: const [
+                  BebeQuickActionData(
+                    id: 'feeding',
+                    type: BebeQuickActionType.feeding,
+                    label: 'Alimentación',
+                    icon: Icon(Icons.local_drink_outlined),
+                  ),
+                  BebeQuickActionData(
+                    id: 'sleep',
+                    type: BebeQuickActionType.sleep,
+                    label: 'Sueño',
+                    icon: Icon(Icons.bedtime_outlined),
+                  ),
+                  BebeQuickActionData(
+                    id: 'diaper',
+                    type: BebeQuickActionType.diaper,
+                    label: 'Pañal',
+                    icon: Icon(Icons.child_friendly_outlined),
+                  ),
+                  BebeQuickActionData(
+                    id: 'observation',
+                    type: BebeQuickActionType.observation,
+                    label: 'Observación',
+                    icon: Icon(Icons.edit_outlined),
+                  ),
+                  BebeQuickActionData(
+                    id: 'medicine',
+                    type: BebeQuickActionType.medicine,
+                    label: 'Medicina',
+                    icon: Icon(Icons.medication_outlined),
+                  ),
+                  BebeQuickActionData(
+                    id: 'measurement',
+                    type: BebeQuickActionType.measurement,
+                    label: 'Medición',
+                    icon: Icon(Icons.straighten_outlined),
+                  ),
+                ],
+                onItemPressed: (_) {},
+              ),
+              upcomingHealth: const SizedBox(height: 8),
+              recentInformation: const SizedBox(height: 8),
+            );
+          },
+        ),
+      ),
+    );
+
+    final today = find.byType(BebeTodaySummary);
+    final quickActions = find.byType(BebeQuickRegistrationActions);
+    final horizontalScroll = find.byWidgetPredicate(
+      (widget) =>
+          widget is SingleChildScrollView &&
+          widget.scrollDirection == Axis.horizontal,
+    );
+    final todayScroll = find.descendant(of: today, matching: horizontalScroll);
+    final quickActionsScroll = find.descendant(
+      of: quickActions,
+      matching: horizontalScroll,
+    );
+    final firstMetric = find
+        .descendant(of: today, matching: find.byType(BebeMetricCard))
+        .first;
+    final firstAction = find
+        .descendant(
+          of: quickActions,
+          matching: find.byType(BebeCategoryActionTile),
+        )
+        .first;
+    final gutter = tester
+        .element(find.byKey(activeHeaderKey))
+        .theme
+        .spacing
+        .spacing2xl;
+
+    expect(tester.getSize(todayScroll).width, 390);
+    expect(tester.getSize(quickActionsScroll).width, 390);
+    expect(tester.getTopLeft(find.byKey(activeHeaderKey)).dx, gutter);
+    expect(tester.getSize(find.byKey(activeHeaderKey)).width, 390 - gutter * 2);
+    expect(
+      tester.getTopLeft(firstMetric).dx - tester.getTopLeft(todayScroll).dx,
+      gutter,
+    );
+    expect(
+      tester.getTopLeft(firstAction).dx -
+          tester.getTopLeft(quickActionsScroll).dx,
+      gutter,
+    );
+
+    final todayViewportLeft = tester.getTopLeft(todayScroll).dx;
+    await tester.drag(todayScroll, const Offset(-220, 0));
+    await tester.pumpAndSettle();
+    expect(tester.getTopLeft(firstMetric).dx, lessThan(todayViewportLeft));
+
+    final actionsViewportLeft = tester.getTopLeft(quickActionsScroll).dx;
+    await tester.drag(quickActionsScroll, const Offset(-220, 0));
+    await tester.pumpAndSettle();
+    expect(tester.getTopLeft(firstAction).dx, lessThan(actionsViewportLeft));
+    expect(tester.takeException(), isNull);
+  });
 }
 
 const _metrics = <BebeTodayMetricData>[

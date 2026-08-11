@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:register/register.dart';
@@ -271,7 +270,10 @@ Widget _registerContent({
         babyAge: babyAge,
         familyContextLabel: familyContextLabel,
         babyAvatar: babyAvatar,
-        onKindChanged: (nextKind) => _openKind(pageContext, kind, nextKind),
+        // Las categorías se comportan como tabs locales. Navegar por cada
+        // cambio recreaba la página, repetía la carga del perfil activo y
+        // dejaba un frame blanco entre formularios.
+        onKindChanged: (_) {},
         onSaved: (event) => onSaved(pageContext, event),
         onCancel: () => onCancel(pageContext),
         onNotificationsPressed: onNotificationsPressed == null
@@ -336,26 +338,4 @@ String _babyAge(DateTime birthDate, DateTime referenceDate) {
   if (referenceDate.day < birth.day) months--;
   if (months <= 0) return 'Menos de un mes';
   return months == 1 ? '1 mes' : '$months meses';
-}
-
-void _openKind(
-  BuildContext context,
-  RegisterEventKind currentKind,
-  RegisterEventKind nextKind,
-) {
-  if (currentKind == nextKind) {
-    return;
-  }
-
-  if (currentKind == RegisterEventKind.feeding) {
-    context.push(RegisterPage.locationFor(nextKind));
-    return;
-  }
-
-  if (nextKind == RegisterEventKind.feeding) {
-    context.pop();
-    return;
-  }
-
-  context.replace(RegisterPage.locationFor(nextKind));
 }

@@ -61,7 +61,21 @@ class _RegisterPageViewState extends State<RegisterPageView> {
   final _imagePicker = ImagePicker();
   final Map<String, Uint8List> _photoPreviews = {};
 
-  late final RegisterEventKind _kind = widget.initialKind;
+  late RegisterEventKind _kind;
+
+  @override
+  void initState() {
+    super.initState();
+    _kind = widget.initialKind;
+  }
+
+  @override
+  void didUpdateWidget(covariant RegisterPageView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialKind != widget.initialKind) {
+      _kind = widget.initialKind;
+    }
+  }
 
   @override
   void dispose() {
@@ -288,6 +302,9 @@ class _RegisterPageViewState extends State<RegisterPageView> {
           title: 'Nueva observación clínica',
           showEventContext: false,
           useFormSurface: false,
+          onBackPressed: _kind == widget.initialKind
+              ? null
+              : () => _onKindChanged(widget.initialKind),
           onSave: cubit.submit,
           form: ClinicalObservationRegisterForm(
             observationType: cubit.observationType,
@@ -444,11 +461,12 @@ class _RegisterPageViewState extends State<RegisterPageView> {
     ValueChanged<String>? onSubcategoryChanged,
     String? contextTitle,
     String? contextDescription,
+    VoidCallback? onBackPressed,
   }) {
     return RegisterEventView(
       title: title,
       selectedKind: kind,
-      onKindChanged: widget.onKindChanged,
+      onKindChanged: _onKindChanged,
       babyName: widget.babyName,
       babyAge: widget.babyAge,
       familyContextLabel: widget.familyContextLabel,
@@ -464,12 +482,19 @@ class _RegisterPageViewState extends State<RegisterPageView> {
           contextTitle == null ? null : const Icon(Icons.info_outline_rounded),
       onNotificationsPressed: widget.onNotificationsPressed,
       form: form,
-      onBackPressed: widget.onCancel,
+      onBackPressed: onBackPressed ?? widget.onCancel,
       onSavePressed: state.isSaving ? null : onSave,
       onCancelPressed: state.isSaving ? null : widget.onCancel,
       isSaving: state.isSaving,
       errorMessage: state.message,
     );
+  }
+
+  void _onKindChanged(RegisterEventKind nextKind) {
+    if (_kind == nextKind) return;
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() => _kind = nextKind);
+    widget.onKindChanged(nextKind);
   }
 
   Future<void> _pickDate(

@@ -14,3 +14,4 @@ export 'calendar_makers.dart';
 export 'brand/brand.dart';
 export 'illustration/bebe_illustration_assets.dart';
 export 'rating_star/rating_star.dart';
+export 'skeleton/skeleton.dart';

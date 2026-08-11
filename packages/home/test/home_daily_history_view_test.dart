@@ -92,6 +92,14 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Tomó leche con calma.'), findsOneWidget);
+    final screenHeight =
+        tester.view.physicalSize.height / tester.view.devicePixelRatio;
+    final sheetHeight = tester
+        .getSize(find.byKey(const ValueKey('bebe-bottom-sheet-surface')))
+        .height;
+    expect(find.byType(BebeBottomSheet), findsOneWidget);
+    expect(sheetHeight, lessThanOrEqualTo(screenHeight * .68 + 1));
+    expect(sheetHeight, lessThan(screenHeight));
     expect(tester.takeException(), isNull);
   });
 

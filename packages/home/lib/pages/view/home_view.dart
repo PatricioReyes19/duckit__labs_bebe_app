@@ -78,6 +78,9 @@ class _LoadedHome extends StatelessWidget {
     final baby = overview.activeBaby;
     final health = overview.upcomingHealth;
     final recent = overview.recentInformation;
+    final scrollContentPadding = EdgeInsets.symmetric(
+      horizontal: context.theme.spacing.spacing2xl,
+    );
 
     return BebeHomeTemplate(
       onRefresh: () async {
@@ -112,10 +115,12 @@ class _LoadedHome extends StatelessWidget {
         title: 'Actividad del día',
         items: overview.todayMetrics.map(_metric).toList(growable: false),
         onHistoryPressed: () => openTodayHistory(context),
+        contentPadding: scrollContentPadding,
       ),
       quickActions: BebeQuickRegistrationActions(
         items: overview.quickActions.map(_action).toList(growable: false),
         onItemPressed: (itemId) => openRegister(context, itemId),
+        contentPadding: scrollContentPadding,
       ),
       upcomingHealth: BebeUpcomingHealthSection(
         data: BebeUpcomingHealthData(

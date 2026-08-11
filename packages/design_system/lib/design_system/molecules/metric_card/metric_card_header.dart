@@ -53,44 +53,30 @@ class MetricCardHeader extends StatelessWidget {
       ),
     );
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth < 140) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  leading,
-                  if (trailing != null) ...[
-                    SizedBox(width: spacing.spacingS),
-                    Expanded(
-                      child: Align(
-                        alignment: Alignment.centerRight,
-                        child: trailing!,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-              SizedBox(height: spacing.spacingM),
-              copy,
-            ],
-          );
-        }
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
+    // Este encabezado vive dentro de cards que se igualan con IntrinsicHeight.
+    // LayoutBuilder no puede participar en el cálculo intrínseco y dejaba toda
+    // la vista Home sin layout ni hit-testing. La composición vertical además
+    // entrega el ancho completo a etiquetas largas como "Alimentación".
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
           children: [
             leading,
-            SizedBox(width: spacing.spacingM),
-            Expanded(child: copy),
             if (trailing != null) ...[
-              SizedBox(width: spacing.spacingM),
-              Flexible(fit: FlexFit.loose, child: trailing!),
+              SizedBox(width: spacing.spacingS),
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: trailing!,
+                ),
+              ),
             ],
           ],
-        );
-      },
+        ),
+        SizedBox(height: spacing.spacingM),
+        copy,
+      ],
     );
   }
 }

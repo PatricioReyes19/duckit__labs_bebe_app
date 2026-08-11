@@ -135,12 +135,10 @@ class _SettingsContent extends StatelessWidget {
                 state.themeMode == BebeThemeModeOption.dark ||
                 (state.themeMode == BebeThemeModeOption.system &&
                     Theme.of(context).brightness == Brightness.dark),
-            followsSystem: state.themeMode == BebeThemeModeOption.system,
             onChanged: (isDark) => _changeTheme(
               bloc,
               isDark ? BebeThemeModeOption.dark : BebeThemeModeOption.light,
             ),
-            onUseSystem: () => _changeTheme(bloc, BebeThemeModeOption.system),
           ),
           BebeSettingsSwitchTile(
             title: 'Contraste aumentado',

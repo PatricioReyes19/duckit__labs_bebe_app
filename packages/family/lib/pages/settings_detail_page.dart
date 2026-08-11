@@ -1,7 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:family/family.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -342,12 +341,10 @@ class _AppearanceEditor extends StatelessWidget {
           children: [
             BabyDayNightThemeSwitch(
               isDark: isDark,
-              followsSystem: state.themeMode == BebeThemeModeOption.system,
               onChanged: (value) => _change(
                 bloc,
                 value ? BebeThemeModeOption.dark : BebeThemeModeOption.light,
               ),
-              onUseSystem: () => _change(bloc, BebeThemeModeOption.system),
             ),
           ],
         ),

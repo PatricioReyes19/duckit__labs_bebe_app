@@ -202,6 +202,11 @@ GoRouter createAppRouter({
                         HealthSectionPage(
                           kind: kind,
                           controller: healthFlowController,
+                          openMeasurementRegister: (context) =>
+                              RegisterPage.open(
+                            context,
+                            kind: RegisterEventKind.measurement,
+                          ),
                         ),
                     ],
                   ),

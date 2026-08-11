@@ -92,6 +92,52 @@ void main() {
   });
 
   testWidgets(
+    'register subcategory selector only rounds the outside group corners',
+    (tester) async {
+      await tester.pumpWidget(
+        _TestApp(
+          theme: bebeTheme.lightTheme(),
+          child: BebeRegisterSubcategorySelector<String>(
+            items: const [
+              BebeSegmentedItem(value: 'bottle', label: 'Mamadera'),
+              BebeSegmentedItem(value: 'middle', label: 'Intermedio'),
+              BebeSegmentedItem(value: 'formula', label: 'Relleno'),
+            ],
+            selectedValue: 'bottle',
+            onChanged: (_) {},
+          ),
+        ),
+      );
+
+      final selector = find.byType(BebeRegisterSubcategorySelector<String>);
+      final materials = tester
+          .widgetList<Material>(
+            find.descendant(of: selector, matching: find.byType(Material)),
+          )
+          .toList(growable: false);
+
+      expect(materials, hasLength(3));
+
+      final first = materials[0].shape! as RoundedRectangleBorder;
+      final middle = materials[1].shape! as RoundedRectangleBorder;
+      final last = materials[2].shape! as RoundedRectangleBorder;
+      final firstRadius = first.borderRadius as BorderRadius;
+      final middleRadius = middle.borderRadius as BorderRadius;
+      final lastRadius = last.borderRadius as BorderRadius;
+
+      expect(firstRadius.topLeft, isNot(Radius.zero));
+      expect(firstRadius.bottomLeft, isNot(Radius.zero));
+      expect(firstRadius.topRight, Radius.zero);
+      expect(firstRadius.bottomRight, Radius.zero);
+      expect(middleRadius, BorderRadius.zero);
+      expect(lastRadius.topLeft, Radius.zero);
+      expect(lastRadius.bottomLeft, Radius.zero);
+      expect(lastRadius.topRight, isNot(Radius.zero));
+      expect(lastRadius.bottomRight, isNot(Radius.zero));
+    },
+  );
+
+  testWidgets(
     'register categories use semantic clinical palette in dark mode',
     (tester) async {
       await tester.pumpWidget(

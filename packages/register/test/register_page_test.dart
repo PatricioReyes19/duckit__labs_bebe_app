@@ -49,13 +49,17 @@ void main() {
     expect(find.byType(FeedingRegisterForm), findsNothing);
   });
 
-  testWidgets('observation is a child route and back returns to register', (
+  testWidgets('tabs switch in place without rebuilding the register page', (
     tester,
   ) async {
     final repository = _MemoryRepository();
+    final getFamilyOverview = GetFamilyOverview(
+      _FamilyRepository(_familyOverview()),
+    );
     final router = _router(
       repository: repository,
       initialLocation: RegisterPage.fullPath,
+      getFamilyOverview: getFamilyOverview,
     );
     addTearDown(router.dispose);
 
@@ -78,9 +82,10 @@ void main() {
 
     final observationForm = find.byType(ClinicalObservationRegisterForm);
     expect(observationForm, findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
     expect(
       GoRouterState.of(tester.element(observationForm)).uri.path,
-      '/register/observation',
+      RegisterPage.fullPath,
     );
 
     final back = find.byWidgetPredicate(
@@ -164,12 +169,15 @@ GoRouter _router({
   required _MemoryRepository repository,
   required String initialLocation,
   ValueChanged<RegisteredEvent>? onSaved,
+  GetFamilyOverview? getFamilyOverview,
 }) {
   return GoRouter(
     initialLocation: initialLocation,
     routes: [
       RegisterPage(
         saveRegisterEvent: (_) => SaveRegisterEvent(repository),
+        getFamilyOverview:
+            getFamilyOverview == null ? null : (_) => getFamilyOverview,
         onSaved: (_, event) => onSaved?.call(event),
         onCancel: (context) {
           if (context.canPop()) {
@@ -179,6 +187,32 @@ GoRouter _router({
       ),
     ],
   );
+}
+
+FamilyOverviewEntity _familyOverview() {
+  final now = DateTime.now();
+  final baby = BabyEntity(
+    id: 'baby-1',
+    familyId: 'family-1',
+    name: 'Mateo',
+    birthDate: DateTime(now.year, now.month - 2, now.day),
+  );
+  return FamilyOverviewEntity(
+    id: 'family-1',
+    name: 'Familia Mateo',
+    activeBabyId: baby.id,
+    babies: [baby],
+    members: const [],
+  );
+}
+
+class _FamilyRepository extends Fake implements FamilyRepository {
+  _FamilyRepository(this.overview);
+
+  final FamilyOverviewEntity overview;
+
+  @override
+  Future<FamilyOverviewEntity> getCurrent() async => overview;
 }
 
 class _MemoryRepository implements RegisterEventRepository {

@@ -125,67 +125,63 @@ class HomeDailyHistoryView extends StatelessWidget {
     RegisteredEvent event,
     _EventPresentation presentation,
   ) {
-    final spacing = context.theme.spacing;
-    return showModalBottomSheet<void>(
+    return showBebeBottomSheet<void>(
       context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: BebeResponsiveContent(
-          maxWidth: BebeLayout.formContentMaxWidth,
-          child: SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(
-              spacing.spacingXl,
-              spacing.spacingM,
-              spacing.spacingXl,
-              spacing.spacing2xl,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                BebeTitleSection(
-                  title: presentation.title,
-                  description:
-                      '${_dateLabel(event.occurredAt)} · ${_timeLabel(event.occurredAt)}',
-                ),
-                SizedBox(height: spacing.spacingL),
-                BebeDetailSummaryCard(
-                  semanticLabel: 'Detalle del registro',
-                  items: [
-                    for (final detail in event.details.entries)
-                      BebeDetailSummaryItem(
-                        icon: const Icon(Icons.info_outline_rounded),
-                        label: _detailLabel(detail.key),
-                        value: _detailValue(detail.value),
-                      ),
-                  ],
-                ),
-                if (event.notes?.trim().isNotEmpty ?? false) ...[
-                  SizedBox(height: spacing.spacingL),
-                  BebeInfoBanner(
-                    icon: const Icon(Icons.notes_rounded),
-                    title: 'Notas',
-                    description: event.notes!,
+      variant: BebeBottomSheetVariant.dynamic,
+      maximumHeightFactor: .68,
+      semanticLabel: 'Información del evento ${presentation.title}',
+      headerBuilder: (_) => BebeTitleSection(
+        title: presentation.title,
+        description:
+            '${_dateLabel(event.occurredAt)} · ${_timeLabel(event.occurredAt)}',
+      ),
+      bodyBuilder: (sheetContext) {
+        final spacing = sheetContext.theme.spacing;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            BebeDetailSummaryCard(
+              semanticLabel: 'Detalle del registro',
+              items: [
+                for (final detail in event.details.entries)
+                  BebeDetailSummaryItem(
+                    icon: const Icon(Icons.info_outline_rounded),
+                    label: _detailLabel(detail.key),
+                    value: _detailValue(detail.value),
                   ),
-                ],
-                SizedBox(height: spacing.spacing2xl),
-                BebeButton(
-                  label: 'Eliminar registro',
-                  onPressed: () => _confirmDelete(context, event),
-                  variant: BebeButtonVariant.destructive,
-                  leading: const Icon(Icons.delete_outline_rounded),
-                ),
-                SizedBox(height: spacing.spacingM),
-                BebeButton(
-                  label: 'Cerrar',
-                  onPressed: () => Navigator.of(context).pop(),
-                  variant: BebeButtonVariant.secondary,
-                ),
               ],
             ),
-          ),
-        ),
-      ),
+            if (event.notes?.trim().isNotEmpty ?? false) ...[
+              SizedBox(height: spacing.spacingL),
+              BebeInfoBanner(
+                icon: const Icon(Icons.notes_rounded),
+                title: 'Notas',
+                description: event.notes!,
+              ),
+            ],
+          ],
+        );
+      },
+      footerBuilder: (sheetContext) {
+        final spacing = sheetContext.theme.spacing;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            BebeButton(
+              label: 'Eliminar registro',
+              onPressed: () => _confirmDelete(sheetContext, event),
+              variant: BebeButtonVariant.destructive,
+              leading: const Icon(Icons.delete_outline_rounded),
+            ),
+            SizedBox(height: spacing.spacingM),
+            BebeButton(
+              label: 'Cerrar',
+              onPressed: () => Navigator.of(sheetContext).pop(),
+              variant: BebeButtonVariant.secondary,
+            ),
+          ],
+        );
+      },
     );
   }
 

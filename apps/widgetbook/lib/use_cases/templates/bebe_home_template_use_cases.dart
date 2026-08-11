@@ -9,6 +9,10 @@ import 'package:widgetbook_annotation/widgetbook_annotation.dart' as widgetbook;
   path: '[Templates]/Home',
 )
 Widget homeTemplateDefault(BuildContext context) {
+  final scrollContentPadding = EdgeInsets.symmetric(
+    horizontal: context.theme.spacing.spacing2xl,
+  );
+
   return BebeHomeTemplate(
     activeBabyHeader: const BebeActiveBabyHeader(
       name: 'Mateo Reyes',
@@ -27,8 +31,8 @@ Widget homeTemplateDefault(BuildContext context) {
         )
       ],
     ),
-    todaySummary: const BebeTodaySummary(
-      items: [
+    todaySummary: BebeTodaySummary(
+      items: const [
         BebeTodayMetricData(
           variant: BebeMetricCardVariant.feeding,
           label: 'Alimentación',
@@ -58,6 +62,7 @@ Widget homeTemplateDefault(BuildContext context) {
         ),
       ],
       title: 'Actividad del día',
+      contentPadding: scrollContentPadding,
     ),
     quickActions: BebeQuickRegistrationActions(
       items: const [
@@ -93,6 +98,7 @@ Widget homeTemplateDefault(BuildContext context) {
         ),
       ],
       onItemPressed: (_) {},
+      contentPadding: scrollContentPadding,
     ),
     upcomingHealth: BebeUpcomingHealthSection(
       data: const BebeUpcomingHealthData(

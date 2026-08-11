@@ -54,6 +54,12 @@ class BebeHomeTemplate extends StatelessWidget {
     }
 
     final spacing = context.theme.spacing;
+    final horizontalPadding = spacing.spacing2xl;
+
+    Widget padded(Widget child) => Padding(
+      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+      child: child,
+    );
 
     return SafeArea(
       top: false,
@@ -67,28 +73,25 @@ class BebeHomeTemplate extends StatelessWidget {
               parent: BouncingScrollPhysics(),
             ),
             keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-            padding: EdgeInsets.symmetric(
-              horizontal: spacing.spacing2xl,
-              vertical: spacing.spacingXl,
-            ),
+            padding: EdgeInsets.symmetric(vertical: spacing.spacingXl),
             child: BebeResponsiveContent(
               maxWidth: maximumContentWidth,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  activeBabyHeader,
+                  padded(activeBabyHeader),
                   if (isEmpty) ...[
                     SizedBox(height: spacing.spacing4xl),
-                    emptyState ?? const SizedBox.shrink(),
+                    padded(emptyState ?? const SizedBox.shrink()),
                   ] else ...[
                     SizedBox(height: spacing.spacing4xl),
                     todaySummary,
                     SizedBox(height: spacing.spacing4xl),
                     quickActions,
                     SizedBox(height: spacing.spacing4xl),
-                    upcomingHealth,
+                    padded(upcomingHealth),
                     SizedBox(height: spacing.spacing4xl),
-                    recentInformation,
+                    padded(recentInformation),
                   ],
                 ],
               ),

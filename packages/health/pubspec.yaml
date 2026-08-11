@@ -13,6 +13,7 @@ dependencies:
   connectivity_plus: ^7.3.1
   core:
   design_system: ^0.0.1
+  fl_chart: ^1.2.0
   flutter:
     sdk: flutter
   flutter_bloc: ^9.1.1

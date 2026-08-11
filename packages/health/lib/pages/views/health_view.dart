@@ -342,65 +342,46 @@ class _QuickSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final spacing = context.theme.spacing;
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const BebeTitleSection(title: 'Resumen rápido'),
-          SizedBox(height: spacing.spacingL),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final singleColumn = constraints.maxWidth < 332;
-              final cards = [
-                BebeDetailActionCard(
-                  title: 'Vacunas',
-                  description: vaccines.completed == 0 && vaccines.pending == 0
-                      ? 'Sin registros todavía'
-                      : '${vaccines.completed} al día · ${vaccines.pending} pendiente',
-                  metadata: vaccines.nextVaccineLabel,
-                  icon: const Icon(Icons.health_and_safety_outlined),
-                  variant: BebeDetailActionCardVariant.brand,
-                  onPressed: onVaccinesPressed ?? _emptyCallback,
-                ),
-                BebeDetailActionCard(
-                  title: 'Crecimiento',
-                  description: growth.weightKg == null
-                      ? 'Sin mediciones todavía'
-                      : '${growth.weightKg!.toStringAsFixed(2)} kg',
-                  metadata: growth.weightPercentile == null
-                      ? growth.recordedAtLabel
-                      : 'Percentil ${growth.weightPercentile}',
-                  icon: const Icon(Icons.monitor_weight_outlined),
-                  variant: BebeDetailActionCardVariant.success,
-                  onPressed: onGrowthPressed ?? _emptyCallback,
-                ),
-              ];
-
-              if (singleColumn) {
-                return Column(
-                  children: [
-                    SizedBox(height: 136, child: cards.first),
-                    SizedBox(height: spacing.spacingM),
-                    SizedBox(height: 136, child: cards.last),
-                  ],
-                );
-              }
-
-              return SizedBox(
-                height: 136,
-                child: Row(
-                  children: [
-                    Expanded(child: cards.first),
-                    SizedBox(width: spacing.spacingM),
-                    Expanded(child: cards.last),
-                  ],
-                ),
-              );
-            },
-          ),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const BebeTitleSection(title: 'Resumen rápido'),
+        SizedBox(height: spacing.spacingL),
+        BebeMetricsOverview(
+          minimumItemWidth: 136,
+          maximumColumnCount: 2,
+          semanticLabel: 'Resumen rápido de salud',
+          children: [
+            BebeCompactMetricCard(
+              label: 'Vacunas',
+              value: vaccines.completed == 0 && vaccines.pending == 0
+                  ? '—'
+                  : '${vaccines.completed}',
+              unit: vaccines.completed == 0 && vaccines.pending == 0
+                  ? null
+                  : 'al día',
+              supportingText: vaccines.completed == 0 && vaccines.pending == 0
+                  ? 'Sin registros'
+                  : '${vaccines.pending} pendientes',
+              icon: const Icon(Icons.health_and_safety_outlined),
+              variant: BebeMetricCardVariant.brand,
+              onPressed: onVaccinesPressed ?? _emptyCallback,
+            ),
+            BebeCompactMetricCard(
+              label: 'Crecimiento',
+              value: growth.weightKg == null
+                  ? '—'
+                  : growth.weightKg!.toStringAsFixed(2),
+              unit: growth.weightKg == null ? null : 'kg',
+              supportingText: growth.recordedAtLabel ?? 'Sin mediciones',
+              icon: const Icon(Icons.monitor_weight_outlined),
+              variant: BebeMetricCardVariant.success,
+              onPressed: onGrowthPressed ?? _emptyCallback,
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

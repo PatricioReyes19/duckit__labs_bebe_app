@@ -106,69 +106,6 @@ class HealthFlowError extends StatelessWidget {
   }
 }
 
-class HealthBabyBanner extends StatelessWidget {
-  const HealthBabyBanner({required this.controller, super.key});
-
-  final HealthFlowController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    final baby = controller.activeBaby;
-    final colors = Theme.of(context).colorScheme;
-    return HealthSurface(
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 26,
-            backgroundColor: colors.primaryContainer,
-            child: Icon(Icons.child_care_rounded, color: colors.primary),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  baby?.name ?? 'Bebé',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  _ageLabel(baby?.birthDate),
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: colors.primary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          HealthSyncBadge(
-            status: controller.offlineMode
-                ? RegisterSyncStatus.pending
-                : _registerStatus(controller.syncState),
-            compact: true,
-          ),
-        ],
-      ),
-    );
-  }
-
-  static String _ageLabel(DateTime? birthDate) {
-    if (birthDate == null) return 'Perfil activo';
-    final now = DateTime.now();
-    var months = (now.year - birthDate.year) * 12 + now.month - birthDate.month;
-    if (now.day < birthDate.day) months--;
-    if (months <= 0) {
-      final days = now.difference(birthDate).inDays.clamp(0, 31);
-      return '$days días';
-    }
-    return months == 1 ? '1 mes' : '$months meses';
-  }
-}
-
 class HealthSurface extends StatelessWidget {
   const HealthSurface({
     required this.child,
@@ -312,8 +249,6 @@ class HealthActionRow extends StatelessWidget {
                   const SizedBox(height: 3),
                   Text(
                     subtitle!,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: colors.onSurfaceVariant,
                     ),
@@ -519,16 +454,6 @@ class HealthMetricTile extends StatelessWidget {
 }
 
 RegisterSyncStatus registerStatusFor(RegisteredEvent event) => event.syncStatus;
-
-RegisterSyncStatus _registerStatus(RegisterSyncState state) =>
-    switch (state.phase) {
-      RegisterSyncPhase.syncing => RegisterSyncStatus.syncing,
-      RegisterSyncPhase.synced => RegisterSyncStatus.synced,
-      RegisterSyncPhase.failed => RegisterSyncStatus.failed,
-      RegisterSyncPhase.disabled ||
-      RegisterSyncPhase.waitingForAuthentication ||
-      RegisterSyncPhase.idle => RegisterSyncStatus.pending,
-    };
 
 String healthDateLabel(DateTime value) {
   const months = [

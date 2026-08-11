@@ -10,6 +10,7 @@ part 'health_state.dart';
 class HealthBloc extends Bloc<HealthEvent, HealthState> {
   HealthBloc({
     required this._getHealthOverview,
+    required this._getRegisterEvents,
     GetFamilyOverview? getFamilyOverview,
     this.babyId,
   }) : super(const HealthState.initial()) {
@@ -19,6 +20,7 @@ class HealthBloc extends Bloc<HealthEvent, HealthState> {
   }
 
   final GetHealthOverview _getHealthOverview;
+  final GetRegisterEvents _getRegisterEvents;
   late final GetFamilyOverview? _getFamilyOverview;
   final String? babyId;
 
@@ -30,8 +32,18 @@ class HealthBloc extends Bloc<HealthEvent, HealthState> {
       if (resolvedBabyId == null || resolvedBabyId.isEmpty) {
         throw StateError('No active baby is available for Health.');
       }
-      final entity = await _getHealthOverview(resolvedBabyId);
-      emit(HealthState.loaded(overview: HealthOverviewVm.fromEntity(entity)));
+      final results = await Future.wait([
+        _getHealthOverview(resolvedBabyId),
+        _getRegisterEvents(resolvedBabyId, type: RegisterEventType.measurement),
+      ]);
+      emit(
+        HealthState.loaded(
+          overview: HealthOverviewVm.fromEntity(
+            results[0] as HealthOverviewEntity,
+            registerEvents: results[1] as List<RegisteredEvent>,
+          ),
+        ),
+      );
     } on Object catch (error) {
       emit(
         HealthState.failure(

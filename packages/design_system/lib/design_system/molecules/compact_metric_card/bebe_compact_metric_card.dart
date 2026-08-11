@@ -42,87 +42,105 @@ class BebeCompactMetricCard extends StatelessWidget {
     final normalizedUnit = _normalize(unit);
     final normalizedSupporting = _normalize(supportingText);
 
-    final content = ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: _minimumHeight),
-      child: Padding(
-        padding: EdgeInsets.all(spacing.spacingL),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+    final content = LayoutBuilder(
+      builder: (context, constraints) {
+        final textScale = MediaQuery.textScalerOf(context).scale(1);
+        final compact = constraints.maxWidth < 124 || textScale > 1.3;
+        final iconContainerSize = compact ? 32.0 : _iconContainerSize;
+        final iconSize = compact ? 18.0 : _iconSize;
+        return ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: _minimumHeight),
+          child: Padding(
+            padding: EdgeInsets.all(
+              compact ? spacing.spacingM : spacing.spacingL,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox.square(
-                  dimension: _iconContainerSize,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: palette.iconSurface,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: IconTheme(
-                        data: IconThemeData(
-                          size: _iconSize,
-                          color: palette.content,
+                Row(
+                  children: [
+                    SizedBox.square(
+                      dimension: iconContainerSize,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: palette.iconSurface,
+                          shape: BoxShape.circle,
                         ),
-                        child: icon,
+                        child: Center(
+                          child: IconTheme(
+                            data: IconThemeData(
+                              size: iconSize,
+                              color: palette.content,
+                            ),
+                            child: icon,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                    if (status != null) ...[
+                      SizedBox(width: spacing.spacingS),
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.centerRight,
+                          child: status!,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-                if (status != null) ...[
-                  SizedBox(width: spacing.spacingS),
-                  Expanded(
-                    child: Align(
-                      alignment: Alignment.centerRight,
-                      child: status!,
+                SizedBox(height: compact ? spacing.spacingS : spacing.spacingM),
+                Text(
+                  label,
+                  style:
+                      (compact
+                              ? theme.typography.styles.label.sm.semibold
+                              : theme.typography.styles.label.md.semibold)
+                          .copyWith(color: palette.content),
+                ),
+                SizedBox(height: spacing.spacingXs),
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.end,
+                  spacing: spacing.spacingXs,
+                  children: [
+                    Text(
+                      value,
+                      style:
+                          (compact
+                                  ? theme.typography.styles.title.md.bold
+                                  : theme.typography.styles.title.lg.bold)
+                              .copyWith(color: colors.text.neutralTitle),
                     ),
+                    if (normalizedUnit != null)
+                      Padding(
+                        padding: EdgeInsets.only(bottom: spacing.spacingXs),
+                        child: Text(
+                          normalizedUnit,
+                          style: theme.typography.styles.label.sm.regular
+                              .copyWith(color: colors.text.neutralBody),
+                        ),
+                      ),
+                  ],
+                ),
+                if (normalizedSupporting != null) ...[
+                  SizedBox(height: spacing.spacingS),
+                  Text(
+                    normalizedSupporting,
+                    style:
+                        (compact
+                                ? theme.typography.styles.label.sm.regular
+                                : theme.typography.styles.body.sm.regular)
+                            .copyWith(color: colors.text.neutralBody),
                   ),
+                ],
+                if (trend != null) ...[
+                  SizedBox(height: spacing.spacingS),
+                  trend!,
                 ],
               ],
             ),
-            SizedBox(height: spacing.spacingM),
-            Text(
-              label,
-              style: theme.typography.styles.label.md.semibold.copyWith(
-                color: palette.content,
-              ),
-            ),
-            SizedBox(height: spacing.spacingXs),
-            Wrap(
-              crossAxisAlignment: WrapCrossAlignment.end,
-              spacing: spacing.spacingXs,
-              children: [
-                Text(
-                  value,
-                  style: theme.typography.styles.title.lg.bold.copyWith(
-                    color: colors.text.neutralTitle,
-                  ),
-                ),
-                if (normalizedUnit != null)
-                  Padding(
-                    padding: EdgeInsets.only(bottom: spacing.spacingXs),
-                    child: Text(
-                      normalizedUnit,
-                      style: theme.typography.styles.label.sm.regular.copyWith(
-                        color: colors.text.neutralBody,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            if (normalizedSupporting != null) ...[
-              SizedBox(height: spacing.spacingS),
-              Text(
-                normalizedSupporting,
-                style: theme.typography.styles.body.sm.regular.copyWith(
-                  color: colors.text.neutralBody,
-                ),
-              ),
-            ],
-            if (trend != null) ...[SizedBox(height: spacing.spacingS), trend!],
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
 
     final card = Material(

@@ -52,13 +52,11 @@ class HealthGrowthSummaryVm {
   const HealthGrowthSummaryVm({
     this.weightKg,
     this.heightCm,
-    this.weightPercentile,
     this.recordedAtLabel,
   });
 
   final double? weightKg;
   final double? heightCm;
-  final int? weightPercentile;
   final String? recordedAtLabel;
 }
 
@@ -73,18 +71,25 @@ class HealthOverviewVm {
   final HealthVaccinesSummaryVm vaccinesSummary;
   final HealthGrowthSummaryVm growthSummary;
 
-  factory HealthOverviewVm.fromEntity(HealthOverviewEntity entity) {
+  factory HealthOverviewVm.fromEntity(
+    HealthOverviewEntity entity, {
+    List<RegisteredEvent> registerEvents = const [],
+  }) {
     final scheduled =
         entity.events
             .where((event) => event.status == HealthEventStatus.scheduled)
             .toList(growable: false)
           ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
-    final weights = entity.measurements
-        .where((item) => item.type == HealthMeasurementType.weight)
-        .toList(growable: false);
-    final heights = entity.measurements
-        .where((item) => item.type == HealthMeasurementType.height)
-        .toList(growable: false);
+    final weights = _measurementValues(
+      entity,
+      registerEvents,
+      HealthMeasurementType.weight,
+    );
+    final heights = _measurementValues(
+      entity,
+      registerEvents,
+      HealthMeasurementType.height,
+    );
     final vaccineEvents = scheduled
         .where((event) => event.type == HealthEventType.vaccine)
         .toList(growable: false);
@@ -119,11 +124,28 @@ class HealthOverviewVm {
             : 'Próxima: ${_dateLabel(nextVaccine.startsAt)}',
       ),
       growthSummary: HealthGrowthSummaryVm(
-        weightKg: weights.isEmpty ? null : weights.first.value,
-        heightCm: heights.isEmpty ? null : heights.first.value,
+        weightKg: weights.isEmpty ? null : weights.first.$1,
+        heightCm: heights.isEmpty ? null : heights.first.$1,
         recordedAtLabel: weights.isEmpty ? null : 'Último registro disponible',
       ),
     );
+  }
+
+  static List<(double, DateTime)> _measurementValues(
+    HealthOverviewEntity entity,
+    List<RegisteredEvent> registerEvents,
+    HealthMeasurementType type,
+  ) {
+    final values = <(double, DateTime)>[
+      for (final item in entity.measurements)
+        if (item.type == type) (item.value, item.recordedAt),
+      for (final event in registerEvents)
+        if (event.type == RegisterEventType.measurement &&
+            event.details['measurement_type'] == type.name &&
+            event.details['value'] is num)
+          ((event.details['value']! as num).toDouble(), event.occurredAt),
+    ]..sort((a, b) => b.$2.compareTo(a.$2));
+    return values;
   }
 
   static String _dateLabel(DateTime value) {

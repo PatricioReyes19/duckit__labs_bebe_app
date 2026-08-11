@@ -21,9 +21,7 @@ void main() {
     bebeTheme = BebeTheme.fromJson(json);
   });
 
-  testWidgets('uses awake and sleeping baby labels and changes mode', (
-    tester,
-  ) async {
+  testWidgets('shows theme, sun, switch and moon in one row', (tester) async {
     bool? requestedDark;
 
     await tester.pumpWidget(
@@ -32,26 +30,30 @@ void main() {
         home: Scaffold(
           body: BabyDayNightThemeSwitch(
             isDark: false,
-            followsSystem: false,
             onChanged: (value) => requestedDark = value,
-            onUseSystem: () {},
           ),
         ),
       ),
     );
 
-    expect(find.text('Despierto'), findsOneWidget);
-    expect(find.text('Dormido'), findsOneWidget);
-    expect(find.textContaining('pantalla clara'), findsOneWidget);
+    expect(find.byType(Switch), findsOneWidget);
+    expect(find.text('Tema'), findsOneWidget);
+    expect(find.byIcon(Icons.light_mode_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.dark_mode_outlined), findsOneWidget);
+    expect(find.textContaining('Usar tema del sistema'), findsNothing);
 
-    await tester.tap(find.byType(InkWell).first);
+    final labelCenter = tester.getCenter(find.text('Tema'));
+    final sunCenter = tester.getCenter(find.byIcon(Icons.light_mode_outlined));
+    final switchCenter = tester.getCenter(find.byType(Switch));
+    final moonCenter = tester.getCenter(find.byIcon(Icons.dark_mode_outlined));
+
+    expect(labelCenter.dx, lessThan(sunCenter.dx));
+    expect(sunCenter.dx, lessThan(switchCenter.dx));
+    expect(switchCenter.dx, lessThan(moonCenter.dx));
+
+    await tester.tap(find.byKey(const ValueKey('theme-mode-switch')));
     await tester.pump();
 
     expect(requestedDark, isTrue);
-    expect(
-      tester.widget<AnimatedAlign>(find.byType(AnimatedAlign)).alignment,
-      Alignment.centerRight,
-    );
-    await tester.pump(const Duration(milliseconds: 200));
   });
 }

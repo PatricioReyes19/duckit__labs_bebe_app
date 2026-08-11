@@ -98,11 +98,6 @@ extension GetItInjectableX on _i174.GetIt {
         ));
     gh.lazySingleton<_i494.BebeDatabase>(
         () => coreDataModule.bebeDatabase(gh<_i494.GetCurrentSession>()));
-    gh.lazySingleton<_i494.FamilyRepository>(
-        () => coreDataModule.familyRepository(
-              gh<_i494.BebeDatabase>(),
-              gh<_i494.SupabaseRestClient>(),
-            ));
     gh.lazySingleton<_i494.SqliteAgendaRepository>(
         () => coreDataModule.localAgendaRepository(gh<_i494.BebeDatabase>()));
     gh.lazySingleton<_i494.HealthRepository>(
@@ -116,13 +111,6 @@ extension GetItInjectableX on _i174.GetIt {
               gh<_i494.SupabaseConfiguration>(),
               gh<_i494.AccessTokenProvider>(),
             ));
-    gh.lazySingleton<_i706.OnboardingRepository>(() =>
-        startupModule.onboardingRepository(
-          gh<_i460.SharedPreferencesAsync>(instanceName: 'startupPreferences'),
-          gh<_i662.AuthGateway>(),
-          gh<_i494.FamilyRepository>(),
-          gh<_i494.SupabaseRestClient>(),
-        ));
     gh.lazySingleton<_i494.GetHealthOverview>(
         () => coreDataModule.getHealthOverview(gh<_i494.HealthRepository>()));
     gh.lazySingleton<_i494.PushDeviceRepository>(() =>
@@ -135,14 +123,6 @@ extension GetItInjectableX on _i174.GetIt {
         () => coreDataModule.getAppSettings(gh<_i494.AppSettingsRepository>()));
     gh.lazySingleton<_i494.UpdateAppSettings>(() =>
         coreDataModule.updateAppSettings(gh<_i494.AppSettingsRepository>()));
-    gh.lazySingleton<_i494.GetFamilyOverview>(
-        () => coreDataModule.getFamilyOverview(gh<_i494.FamilyRepository>()));
-    gh.lazySingleton<_i494.SetActiveFamilyBaby>(
-        () => coreDataModule.setActiveFamilyBaby(gh<_i494.FamilyRepository>()));
-    gh.factory<_i1027.FamilyBloc>(() => blocsModule.familyBloc(
-          gh<_i494.GetFamilyOverview>(),
-          gh<_i494.SetActiveFamilyBaby>(),
-        ));
     gh.lazySingleton<_i494.AgendaEventSyncService>(
         () => registerModule.agendaEventSyncService(
               gh<_i494.SqliteAgendaRepository>(),
@@ -150,10 +130,10 @@ extension GetItInjectableX on _i174.GetIt {
             ));
     gh.lazySingleton<_i327.NotificationService>(() =>
         startupModule.notificationService(gh<_i494.PushDeviceRepository>()));
-    gh.lazySingleton<_i494.ResolveEntryDestination>(
-        () => startupModule.resolveEntryDestination(
-              gh<_i662.AuthGateway>(),
-              gh<_i706.OnboardingRepository>(),
+    gh.lazySingleton<_i494.FamilyRepository>(
+        () => coreDataModule.familyRepository(
+              gh<_i494.BebeDatabase>(),
+              gh<_i494.SupabaseRestClient>(),
             ));
     gh.factory<_i1027.SettingsBloc>(() => blocsModule.settingsBloc(
           gh<_i494.GetAppSettings>(),
@@ -165,10 +145,6 @@ extension GetItInjectableX on _i174.GetIt {
               gh<_i494.SqliteRegisterEventRepository>(),
               gh<_i494.RegisterEventRemoteDataSource>(),
             ));
-    gh.factory<_i237.HealthBloc>(() => blocsModule.healthBloc(
-          gh<_i494.GetHealthOverview>(),
-          gh<_i494.GetFamilyOverview>(),
-        ));
     gh.lazySingleton<_i494.SupabaseRealtimeSyncCoordinator>(
         () => registerModule.realtimeSyncCoordinator(
               gh<_i494.SupabaseConfiguration>(),
@@ -196,16 +172,35 @@ extension GetItInjectableX on _i174.GetIt {
               gh<_i494.SqliteRegisterEventRepository>(),
               gh<_i494.RegisterEventSyncService>(),
             ));
+    gh.lazySingleton<_i494.GetFamilyOverview>(
+        () => coreDataModule.getFamilyOverview(gh<_i494.FamilyRepository>()));
+    gh.lazySingleton<_i494.SetActiveFamilyBaby>(
+        () => coreDataModule.setActiveFamilyBaby(gh<_i494.FamilyRepository>()));
+    gh.factory<_i1027.FamilyBloc>(() => blocsModule.familyBloc(
+          gh<_i494.GetFamilyOverview>(),
+          gh<_i494.SetActiveFamilyBaby>(),
+        ));
+    gh.lazySingleton<_i706.OnboardingRepository>(() =>
+        startupModule.onboardingRepository(
+          gh<_i460.SharedPreferencesAsync>(instanceName: 'startupPreferences'),
+          gh<_i662.AuthGateway>(),
+          gh<_i494.FamilyRepository>(),
+          gh<_i494.SupabaseRestClient>(),
+        ));
     gh.lazySingleton<_i494.CreateAgendaEvent>(
         () => registerModule.createAgendaEvent(gh<_i494.AgendaRepository>()));
     gh.lazySingleton<_i494.UpdateAgendaEvent>(
         () => registerModule.updateAgendaEvent(gh<_i494.AgendaRepository>()));
-    gh.lazySingleton<_i494.GetAgendaOverview>(
-        () => coreDataModule.getAgendaOverview(
-              gh<_i494.AgendaRepository>(),
-              gh<_i494.RegisterEventRepository>(),
-              gh<_i494.AppSettingsRepository>(),
+    gh.lazySingleton<_i494.ResolveEntryDestination>(
+        () => startupModule.resolveEntryDestination(
+              gh<_i662.AuthGateway>(),
+              gh<_i706.OnboardingRepository>(),
             ));
+    gh.factory<_i237.HealthBloc>(() => blocsModule.healthBloc(
+          gh<_i494.GetHealthOverview>(),
+          gh<_i494.GetRegisterEvents>(),
+          gh<_i494.GetFamilyOverview>(),
+        ));
     gh.lazySingleton<_i494.SaveRegisterEvent>(() =>
         registerModule.saveRegisterEvent(gh<_i494.RegisterEventRepository>()));
     gh.lazySingleton<_i494.GetRegisterEvents>(() =>
@@ -214,18 +209,26 @@ extension GetItInjectableX on _i174.GetIt {
         .deleteRegisterEvent(gh<_i494.RegisterEventRepository>()));
     gh.lazySingleton<_i494.UpdateRegisterEvent>(() => registerModule
         .updateRegisterEvent(gh<_i494.RegisterEventRepository>()));
+    gh.lazySingleton<_i494.GetAgendaOverview>(
+        () => coreDataModule.getAgendaOverview(
+              gh<_i494.AgendaRepository>(),
+              gh<_i494.RegisterEventRepository>(),
+              gh<_i494.AppSettingsRepository>(),
+            ));
     gh.lazySingleton<_i494.GetHomeOverview>(
         () => coreDataModule.getHomeOverview(
               gh<_i494.FamilyRepository>(),
               gh<_i494.RegisterEventRepository>(),
               gh<_i494.HealthRepository>(),
             ));
-    gh.factory<_i1024.HomeBloc>(
-        () => blocsModule.homeBloc(gh<_i494.GetHomeOverview>()));
     gh.factory<_i914.AgendaBloc>(() => blocsModule.agendaBloc(
           gh<_i494.GetAgendaOverview>(),
           gh<_i494.GetFamilyOverview>(),
           gh<_i494.AgendaEventSyncService>(),
+        ));
+    gh.factory<_i1024.HomeBloc>(() => blocsModule.homeBloc(
+          gh<_i494.GetHomeOverview>(),
+          gh<_i494.RegisterEventSyncService>(),
         ));
     return this;
   }
