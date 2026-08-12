@@ -1,13 +1,20 @@
+import '../../config/app_environment.dart';
+
 class SupabaseConfiguration {
   const SupabaseConfiguration({
     required this.url,
     required this.publishableKey,
   });
 
-  static const fromEnvironment = SupabaseConfiguration(
-    url: String.fromEnvironment('SUPABASE_URL'),
-    publishableKey: String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY'),
+  factory SupabaseConfiguration.fromAppEnvironment(
+    AppEnvironment environment,
+  ) => SupabaseConfiguration(
+    url: environment.supabaseUrl,
+    publishableKey: environment.supabasePublishableKey,
   );
+
+  static SupabaseConfiguration get fromEnvironment =>
+      SupabaseConfiguration.fromAppEnvironment(AppEnvironment.current);
 
   final String url;
   final String publishableKey;

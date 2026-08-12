@@ -1,3 +1,5 @@
+import groovy.json.JsonSlurper
+
 plugins {
     id("com.android.application")
     // START: FlutterFire Configuration
@@ -7,10 +9,33 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+val developmentEnvironmentFile = rootProject.file(
+    "../config/development.env.json",
+)
+check(developmentEnvironmentFile.isFile) {
+    "Falta el archivo de entorno: ${developmentEnvironmentFile.path}"
+}
+val developmentEnvironment = JsonSlurper().parseText(
+    developmentEnvironmentFile.readText(),
+) as Map<*, *>
+fun developmentEnvironmentValue(key: String): String =
+    developmentEnvironment[key]?.toString()?.trim().orEmpty()
+
+check(developmentEnvironmentValue("APP_ENVIRONMENT") == "development") {
+    "development.env.json debe declarar APP_ENVIRONMENT=development"
+}
+check(developmentEnvironmentValue("APP_DISPLAY_NAME").isNotEmpty()) {
+    "development.env.json debe declarar APP_DISPLAY_NAME"
+}
+
 android {
     namespace = "com.duckitlabs.bebeapp"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
+
+    buildFeatures {
+        resValues = true
+    }
 
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
@@ -28,6 +53,24 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         multiDexEnabled = true
+    }
+
+    flavorDimensions += "environment"
+    productFlavors {
+        create("development") {
+            dimension = "environment"
+            // Se conserva el applicationId registrado en Firebase. Cuando se
+            // registre una app Firebase de desarrollo, se podrá agregar el
+            // sufijo junto con su google-services.json específico.
+            versionNameSuffix = "-development"
+            resValue(
+                "string",
+                "app_name",
+                developmentEnvironmentValue("APP_DISPLAY_NAME"),
+            )
+            manifestPlaceholders["appEnvironment"] =
+                developmentEnvironmentValue("APP_ENVIRONMENT")
+        }
     }
 
     buildTypes {

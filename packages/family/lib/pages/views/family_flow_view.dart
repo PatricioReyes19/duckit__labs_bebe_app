@@ -1389,7 +1389,7 @@ Future<void> _copyMemberInvitation(
 Future<void> _copyCodeInvitation(BuildContext context, String code) async {
   await Clipboard.setData(
     ClipboardData(
-      text: 'Código: $code\nhttps://bebe.app/invitation?code=$code',
+      text: 'Código: $code\n${AppEnvironment.current.invitationUri(code)}',
     ),
   );
   if (context.mounted) {

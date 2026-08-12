@@ -1,0 +1,4 @@
+#include "Debug.xcconfig"
+
+APP_DISPLAY_NAME=BebéApp Dev
+APP_ENVIRONMENT=development

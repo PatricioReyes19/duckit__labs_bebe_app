@@ -23,10 +23,11 @@ data/
   network/             # Dio, token Firebase y errores HTTP
 ```
 
-La app queda operativa en modo local si faltan las variables de Supabase. Para
-conectarla a un proyecto real todavía se deben proporcionar la URL y la
-publishable key y desplegar las migraciones; esos secretos no se incluyen en
-el repositorio.
+La app queda operativa en modo local si faltan ambas variables de Supabase. La
+URL y la publishable key de desarrollo están centralizadas en
+`apps/bebe_app/config/development.env.json`; la publishable key es pública y no
+otorga privilegios de servidor. Las claves secret/service-role nunca se
+incluyen en la aplicación.
 
 ## Matriz GET / POST / PATCH
 
@@ -180,29 +181,28 @@ secret/service-role key jamás debe compilarse en Flutter.
 
 ### 3. Configurar la app
 
-```powershell
-Copy-Item apps/bebe_app/config/supabase.dart-defines.example.json `
-  apps/bebe_app/config/supabase.local.json
-```
-
-Editar el archivo ignorado por Git:
+Editar la fuente de configuración del flavor:
 
 ```json
 {
+  "APP_ENVIRONMENT": "development",
+  "APP_DISPLAY_NAME": "BebéApp Dev",
   "SUPABASE_URL": "https://PROJECT_REF.supabase.co",
-  "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_..."
+  "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_...",
+  "INVITATION_BASE_URL": "https://bebe.app",
+  "ENABLE_VERBOSE_LOGS": true
 }
 ```
 
-Ejecutar:
+Ejecutar desde `apps/bebe_app`:
 
 ```powershell
-flutter run -d android `
-  --dart-define-from-file=apps/bebe_app/config/supabase.local.json
+flutter run -d android --flavor development `
+  --dart-define-from-file=config/development.env.json
 ```
 
-En este checkout `supabase.local.json` no existe; es correcto que no se
-versione, pero debe crearse en cada entorno de ejecución.
+La clase `AppEnvironment` de `core` es la única encargada de leer y validar
+estas variables. El detalle completo está en `docs/environment_configuration.md`.
 
 ### 4. Verificar RLS y Realtime
 
@@ -264,7 +264,8 @@ antes de recibir FCM.
 ## Checklist de aceptación
 
 - [ ] `supabase db push --dry-run` no informa errores.
-- [ ] Las seis migraciones figuran aplicadas en `supabase migration list`.
+- [ ] Las siete migraciones figuran aplicadas en `supabase migration list`,
+      incluida `202608120001_improve_care_circle_activity_alerts.sql`.
 - [ ] Firebase Third-Party Auth y claim `role: authenticated` funcionan.
 - [ ] Registro, Agenda, Salud, Familia y Preferencias convergen en dos equipos.
 - [ ] Un usuario ajeno no puede leer ni escribir datos.

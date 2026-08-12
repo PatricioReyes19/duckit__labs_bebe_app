@@ -13,7 +13,10 @@ abstract interface class FamilyRemoteDataSource {
 
   Future<void> createInvitation(Map<String, Object?> parameters);
 
-  Future<void> resendInvitation({required String code, required String newCode});
+  Future<void> resendInvitation({
+    required String code,
+    required String newCode,
+  });
 
   Future<void> revokeInvitation(String code);
 }
@@ -62,9 +65,7 @@ class SupabaseFamilyRemoteDataSource implements FamilyRemoteDataSource {
               id: baby['id']! as String,
               familyId: familyId,
               name: baby['display_name']! as String,
-              birthDate: DateTime.parse(
-                baby['birth_date']! as String,
-              ).toUtc(),
+              birthDate: DateTime.parse(baby['birth_date']! as String).toUtc(),
             ),
           )
           .toList(growable: false);
@@ -94,16 +95,18 @@ class SupabaseFamilyRemoteDataSource implements FamilyRemoteDataSource {
           ),
         );
       }
-      snapshots.add(FamilySyncSnapshot(
-        overview: FamilyOverviewEntity(
-          id: familyId,
-          name: family['name']! as String,
-          activeBabyId: familyBabies.first.id,
-          babies: familyBabies,
-          members: members,
+      snapshots.add(
+        FamilySyncSnapshot(
+          overview: FamilyOverviewEntity(
+            id: familyId,
+            name: family['name']! as String,
+            activeBabyId: familyBabies.first.id,
+            babies: familyBabies,
+            members: members,
+          ),
+          updatedAt: DateTime.parse(family['updated_at']! as String).toUtc(),
         ),
-        updatedAt: DateTime.parse(family['updated_at']! as String).toUtc(),
-      ));
+      );
     }
     return List.unmodifiable(snapshots);
   }
@@ -126,10 +129,7 @@ class SupabaseFamilyRemoteDataSource implements FamilyRemoteDataSource {
 
   @override
   Future<void> revokeInvitation(String code) async {
-    await _client.rpc(
-      'revoke_care_invitation',
-      parameters: {'p_code': code},
-    );
+    await _client.rpc('revoke_care_invitation', parameters: {'p_code': code});
   }
 
   static String _roleLabel(String? role) => switch (role) {

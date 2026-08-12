@@ -26,13 +26,17 @@ Future<void> bootstrap() async {
       runApp(const _BootstrapSplashHandoff());
       await WidgetsBinding.instance.endOfFrame;
 
+      const environment = AppEnvironment.current;
+      environment.ensureValid(platformFlavor: appFlavor);
+
       await initializeDateFormatting('es_CL');
 
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
       );
 
-      const supabaseConfiguration = SupabaseConfiguration.fromEnvironment;
+      final supabaseConfiguration =
+          SupabaseConfiguration.fromAppEnvironment(environment);
       if (supabaseConfiguration.isConfigured) {
         await Supabase.initialize(
           url: supabaseConfiguration.url,
@@ -189,7 +193,7 @@ class _BootstrapSplashHandoffState extends State<_BootstrapSplashHandoff>
                     ),
                     const SizedBox(height: 14),
                     Text(
-                      'BebéApp',
+                      AppEnvironment.current.appDisplayName,
                       style:
                           Theme.of(context).textTheme.headlineMedium?.copyWith(
                                 color: isDark

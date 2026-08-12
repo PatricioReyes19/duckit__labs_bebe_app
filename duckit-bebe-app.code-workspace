@@ -10,7 +10,7 @@
         },
         {
             "name": "👨🏼‍🎨 Widgetbook",
-            "path": "apps/widgetbook_app"
+            "path": "apps/widgetbook"
         },
         {
             "name": "🧩 App Base",
@@ -30,7 +30,7 @@
         },
         {
             "name": "Agenda",
-            "path": "packages/agenda",
+            "path": "packages/agenda"
         }
     ],
     "settings": {
@@ -58,7 +58,12 @@
                 "request": "launch",
                 "type": "dart",
                 "program": "lib/main.dart",
-                "args": []
+                "flutterMode": "debug",
+                "toolArgs": [
+                    "--flavor",
+                    "development",
+                    "--dart-define-from-file=config/development.env.json"
+                ]
             },
             {
                 "name": "📱 BebéApp iOS",
@@ -66,7 +71,12 @@
                 "request": "launch",
                 "type": "dart",
                 "program": "lib/main.dart",
-                "args": []
+                "flutterMode": "debug",
+                "toolArgs": [
+                    "--flavor",
+                    "development",
+                    "--dart-define-from-file=config/development.env.json"
+                ]
             },
             {
                 "name": "👨🏼‍🎨 Widgetbook",

@@ -67,10 +67,7 @@ class FamilySyncService {
     try {
       if (pending != null) {
         final accepted = await _remote.push(pending);
-        await _local.markSnapshotSynced(
-          attempted: pending,
-          accepted: accepted,
-        );
+        await _local.markSnapshotSynced(attempted: pending, accepted: accepted);
       }
       await _local.mergeRemote(await _remote.pull());
       return _emit(

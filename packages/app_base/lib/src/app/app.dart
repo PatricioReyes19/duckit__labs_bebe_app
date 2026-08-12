@@ -3,6 +3,7 @@ import 'package:app_base/src/app/app_listeners.dart';
 import 'package:app_base/src/app/app_providers.dart';
 import 'package:app_base/src/app/app_wrappers.dart';
 import 'package:app_base/src/dependencies/dependencies.dart';
+import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -36,7 +37,7 @@ class App extends StatelessWidget {
 
             return AppLifecycleObserver(
               child: MaterialApp.router(
-                title: 'DuckIT BebéApp',
+                title: AppEnvironment.current.appDisplayName,
                 debugShowCheckedModeBanner: false,
                 scaffoldMessengerKey: appScaffoldMessengerKey,
                 routerConfig: router,

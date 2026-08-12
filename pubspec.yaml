@@ -30,17 +30,14 @@ melos:
   scripts:
 
     build_runner:
-      description: Generate source code.
-      run: >
-        melos exec
-        --depends-on=build_runner
-        --
-        dart run build_runner build
-        --delete-conflicting-outputs
-
-    list:
-      description: List packages.
-      run: melos list
+      description: Generate source code in selected packages.
+      exec:
+        command: dart run build_runner build --delete-conflicting-outputs
+        concurrency: 1
+        failFast: true
+      packageFilters:
+        dependsOn:
+          - build_runner
 
     analyze:
       description: Analyze packages.
@@ -48,12 +45,12 @@ melos:
 
     run:app:
       description: Run BebéApp.
-      run: melos exec --scope=bebe_app -- flutter run
+      run: melos exec --scope=bebe_app -- flutter run --flavor development --dart-define-from-file=config/development.env.json
 
     run:app:android:
       description: Run BebéApp Android.
-      run: melos exec --scope=bebe_app -- flutter run -d android
+      run: melos exec --scope=bebe_app -- flutter run -d android --flavor development --dart-define-from-file=config/development.env.json
 
     run:app:ios:
       description: Run BebéApp iOS.
-      run: melos exec --scope=bebe_app -- flutter run -d ios
+      run: melos exec --scope=bebe_app -- flutter run -d ios --flavor development --dart-define-from-file=config/development.env.json

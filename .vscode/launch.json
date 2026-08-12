@@ -2,12 +2,17 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "BebéApp - Debug",
+            "name": "BebéApp development",
             "request": "launch",
             "type": "dart",
             "program": "${workspaceFolder}/apps/bebe_app/lib/main.dart",
             "cwd": "${workspaceFolder}/apps/bebe_app",
-            "flutterMode": "debug"
+            "flutterMode": "debug",
+            "toolArgs": [
+                "--flavor",
+                "development",
+                "--dart-define-from-file=config/development.env.json"
+            ]
         },
         {
             "name": "Widgetbook - Debug",
@@ -51,7 +56,7 @@
         {
             "name": "BebéApp + Widgetbook",
             "configurations": [
-                "BebéApp - Debug",
+                "BebéApp development",
                 "Widgetbook - Chrome"
             ],
             "stopAll": true
