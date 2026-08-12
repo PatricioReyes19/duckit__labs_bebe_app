@@ -1,7 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 
 abstract final class BebeDatabaseSchema {
-  static const version = 6;
+  static const version = 7;
 
   static const registerEvents = 'register_events';
   static const families = 'families';
@@ -33,7 +33,8 @@ CREATE TABLE IF NOT EXISTS $registerEvents (
   details_json TEXT NOT NULL,
   sync_status TEXT NOT NULL DEFAULT 'pending',
   sync_error TEXT,
-  schema_version INTEGER NOT NULL DEFAULT 1
+  schema_version INTEGER NOT NULL DEFAULT 1,
+  FOREIGN KEY (baby_id) REFERENCES $babies(id) ON DELETE CASCADE
 )
 ''');
     await database.execute('''
@@ -205,7 +206,9 @@ CREATE TABLE IF NOT EXISTS $agendaEvents (
   sync_status TEXT NOT NULL DEFAULT 'pending',
   sync_error TEXT,
   FOREIGN KEY (baby_id) REFERENCES $babies(id) ON DELETE CASCADE,
-  FOREIGN KEY (caregiver_id) REFERENCES $familyMembers(id) ON DELETE SET NULL
+  FOREIGN KEY (caregiver_id) REFERENCES $familyMembers(id) ON DELETE SET NULL,
+  FOREIGN KEY (source_register_event_id)
+    REFERENCES $registerEvents(id) ON DELETE SET NULL
 )
 ''');
     await database.execute('''
@@ -372,4 +375,157 @@ ON $familyMembers (invitation_code)
 WHERE invitation_code IS NOT NULL
 ''');
   }
+
+  /// Rebuilds the two event tables because SQLite cannot add foreign-key
+  /// constraints with `ALTER TABLE ... ADD CONSTRAINT`.
+  ///
+  /// `onUpgrade` is executed by sqflite inside its schema transaction. Every
+  /// preflight runs before the first destructive statement, so an orphan
+  /// aborts the upgrade and preserves the complete v6 database, including
+  /// pending offline mutations.
+  static Future<void> upgradeCoreRelationsV7(Database database) async {
+    final orphanRegisters = await database.rawQuery('''
+SELECT event.id, event.baby_id AS missing_reference
+FROM $registerEvents event
+LEFT JOIN $babies baby ON baby.id = event.baby_id
+WHERE baby.id IS NULL
+LIMIT 20
+''');
+    final orphanAgendaBabies = await database.rawQuery('''
+SELECT event.id, event.baby_id AS missing_reference
+FROM $agendaEvents event
+LEFT JOIN $babies baby ON baby.id = event.baby_id
+WHERE baby.id IS NULL
+LIMIT 20
+''');
+    final orphanAgendaSources = await database.rawQuery('''
+SELECT event.id, event.source_register_event_id AS missing_reference
+FROM $agendaEvents event
+LEFT JOIN $registerEvents source
+  ON source.id = event.source_register_event_id
+WHERE event.source_register_event_id IS NOT NULL
+  AND source.id IS NULL
+LIMIT 20
+''');
+
+    final integrityErrors = <String>[
+      if (orphanRegisters.isNotEmpty)
+        'register_events.baby_id: ${_orphanSummary(orphanRegisters)}',
+      if (orphanAgendaBabies.isNotEmpty)
+        'agenda_events.baby_id: ${_orphanSummary(orphanAgendaBabies)}',
+      if (orphanAgendaSources.isNotEmpty)
+        'agenda_events.source_register_event_id: '
+            '${_orphanSummary(orphanAgendaSources)}',
+    ];
+    if (integrityErrors.isNotEmpty) {
+      throw StateError(
+        'SQLite v7 migration aborted; orphan references must be repaired '
+        'without deleting offline data. ${integrityErrors.join(' | ')}',
+      );
+    }
+
+    const registerEventsV7 = 'register_events_v7';
+    const agendaEventsV7 = 'agenda_events_v7';
+    await database.execute('''
+CREATE TABLE $registerEventsV7 (
+  id TEXT PRIMARY KEY,
+  baby_id TEXT NOT NULL,
+  event_type TEXT NOT NULL,
+  occurred_at INTEGER NOT NULL,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  deleted_at INTEGER,
+  caregiver_id TEXT,
+  notes TEXT,
+  details_json TEXT NOT NULL,
+  sync_status TEXT NOT NULL DEFAULT 'pending',
+  sync_error TEXT,
+  schema_version INTEGER NOT NULL DEFAULT 1,
+  FOREIGN KEY (baby_id) REFERENCES $babies(id) ON DELETE CASCADE
+)
+''');
+    await database.execute('''
+INSERT INTO $registerEventsV7 (
+  id, baby_id, event_type, occurred_at, created_at, updated_at, deleted_at,
+  caregiver_id, notes, details_json, sync_status, sync_error, schema_version
+)
+SELECT
+  id, baby_id, event_type, occurred_at, created_at, updated_at, deleted_at,
+  caregiver_id, notes, details_json, sync_status, sync_error, schema_version
+FROM $registerEvents
+''');
+
+    await database.execute('''
+CREATE TABLE $agendaEventsV7 (
+  id TEXT PRIMARY KEY,
+  baby_id TEXT NOT NULL,
+  category TEXT NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  starts_at INTEGER NOT NULL,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  deleted_at INTEGER,
+  caregiver_id TEXT,
+  source_register_event_id TEXT,
+  sync_status TEXT NOT NULL DEFAULT 'pending',
+  sync_error TEXT,
+  FOREIGN KEY (baby_id) REFERENCES $babies(id) ON DELETE CASCADE,
+  FOREIGN KEY (caregiver_id) REFERENCES $familyMembers(id) ON DELETE SET NULL,
+  FOREIGN KEY (source_register_event_id)
+    REFERENCES $registerEventsV7(id) ON DELETE SET NULL
+)
+''');
+    await database.execute('''
+INSERT INTO $agendaEventsV7 (
+  id, baby_id, category, title, description, starts_at, created_at, updated_at,
+  deleted_at, caregiver_id, source_register_event_id, sync_status, sync_error
+)
+SELECT
+  id, baby_id, category, title, description, starts_at, created_at, updated_at,
+  deleted_at, caregiver_id, source_register_event_id, sync_status, sync_error
+FROM $agendaEvents
+''');
+
+    await database.execute('DROP TABLE $agendaEvents');
+    await database.execute('DROP TABLE $registerEvents');
+    await database.execute(
+      'ALTER TABLE $registerEventsV7 RENAME TO $registerEvents',
+    );
+    await database.execute(
+      'ALTER TABLE $agendaEventsV7 RENAME TO $agendaEvents',
+    );
+
+    await database.execute('''
+CREATE INDEX idx_register_events_baby_occurred
+ON $registerEvents (baby_id, occurred_at DESC)
+''');
+    await database.execute('''
+CREATE INDEX idx_register_events_type ON $registerEvents (event_type)
+''');
+    await database.execute('''
+CREATE INDEX idx_register_events_sync
+ON $registerEvents (sync_status, updated_at)
+''');
+    await database.execute('''
+CREATE INDEX idx_agenda_baby_starts ON $agendaEvents (baby_id, starts_at)
+''');
+    await database.execute('''
+CREATE INDEX idx_agenda_sync ON $agendaEvents (sync_status, updated_at)
+''');
+    await database.execute('''
+CREATE INDEX idx_agenda_source_register
+ON $agendaEvents (source_register_event_id)
+''');
+
+    final violations = await database.rawQuery('PRAGMA foreign_key_check');
+    if (violations.isNotEmpty) {
+      throw StateError(
+        'SQLite v7 migration failed foreign_key_check: $violations',
+      );
+    }
+  }
+
+  static String _orphanSummary(List<Map<String, Object?>> rows) =>
+      rows.map((row) => '${row['id']}->${row['missing_reference']}').join(', ');
 }

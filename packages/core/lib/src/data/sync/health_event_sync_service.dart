@@ -8,11 +8,14 @@ class HealthEventSyncService {
   HealthEventSyncService(
     this._local,
     this._remote, {
+    ParentSyncBarrier? parentSyncBarrier,
     DateTime Function()? clock,
-  }) : _clock = clock ?? DateTime.now;
+  }) : _parentSyncBarrier = parentSyncBarrier,
+       _clock = clock ?? DateTime.now;
 
   final SqliteHealthRepository _local;
   final HealthEventRemoteDataSource _remote;
+  final ParentSyncBarrier? _parentSyncBarrier;
   final DateTime Function() _clock;
   final _states = StreamController<RegisterSyncState>.broadcast();
   RegisterSyncState _state = const RegisterSyncState.idle();
@@ -57,6 +60,9 @@ class HealthEventSyncService {
         ),
       );
     }
+
+    final blockedByParent = await waitForParentSync(_parentSyncBarrier);
+    if (blockedByParent != null) return _emit(blockedByParent);
 
     final pending = await _local.listPending();
     _emit(

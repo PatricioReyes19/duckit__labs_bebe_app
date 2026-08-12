@@ -56,8 +56,13 @@ abstract class CoreDataModule {
   HealthEventSyncService healthEventSyncService(
     SqliteHealthRepository local,
     HealthEventRemoteDataSource remote,
+    FamilySyncService familySyncService,
   ) =>
-      HealthEventSyncService(local, remote);
+      HealthEventSyncService(
+        local,
+        remote,
+        parentSyncBarrier: familySyncService.synchronize,
+      );
 
   @lazySingleton
   HealthRepository healthRepository(

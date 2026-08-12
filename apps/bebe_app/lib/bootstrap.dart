@@ -64,13 +64,9 @@ Future<void> bootstrap() async {
 
       try {
         await setupDependencies();
-        getIt<RegisterAgendaCoordinator>().start();
-        await getIt<SupabaseRealtimeSyncCoordinator>().start();
-        unawaited(getIt<RegisterEventSyncService>().synchronize());
-        unawaited(getIt<AgendaEventSyncService>().synchronize());
-        unawaited(getIt<HealthEventSyncService>().synchronize());
-        unawaited(getIt<AppSettingsSyncService>().synchronize());
-        unawaited(getIt<FamilySyncService>().synchronize());
+        await getIt<InitialDataSyncCoordinator>().synchronize(
+          startRealtime: getIt<SupabaseRealtimeSyncCoordinator>().start,
+        );
 
         PaintingBinding.instance.imageCache.maximumSizeBytes = 300 << 20;
 

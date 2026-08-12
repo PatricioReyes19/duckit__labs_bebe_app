@@ -30,15 +30,55 @@ class RegisterSyncState {
   final String? message;
 }
 
+typedef ParentSyncBarrier = Future<RegisterSyncState> Function();
+
+/// Prevents Baby-owned data from reaching Supabase before the canonical
+/// Family/Baby aggregate. Local rows remain pending and are retried later.
+Future<RegisterSyncState?> waitForParentSync(
+  ParentSyncBarrier? parentSyncBarrier,
+) async {
+  if (parentSyncBarrier == null) return null;
+  try {
+    final parent = await parentSyncBarrier();
+    if (parent.phase == RegisterSyncPhase.synced) return null;
+    if (parent.phase == RegisterSyncPhase.waitingForAuthentication) {
+      return const RegisterSyncState(
+        phase: RegisterSyncPhase.waitingForAuthentication,
+        message: 'Inicia sesión para sincronizar el perfil del bebé.',
+      );
+    }
+    return RegisterSyncState(
+      phase: RegisterSyncPhase.failed,
+      failedCount: 1,
+      message:
+          'Primero debe sincronizarse el perfil del bebé. '
+                  'Los cambios locales se conservaron para reintentarlos. '
+                  '${parent.message ?? ''}'
+              .trim(),
+    );
+  } on Object catch (error) {
+    return RegisterSyncState(
+      phase: RegisterSyncPhase.failed,
+      failedCount: 1,
+      message:
+          'No se pudo confirmar el perfil del bebé. '
+          'Los cambios locales se conservaron para reintentarlos. $error',
+    );
+  }
+}
+
 class RegisterEventSyncService {
   RegisterEventSyncService(
     this._local,
     this._remote, {
+    ParentSyncBarrier? parentSyncBarrier,
     DateTime Function()? clock,
-  }) : _clock = clock ?? DateTime.now;
+  }) : _parentSyncBarrier = parentSyncBarrier,
+       _clock = clock ?? DateTime.now;
 
   final SqliteRegisterEventRepository _local;
   final RegisterEventRemoteDataSource _remote;
+  final ParentSyncBarrier? _parentSyncBarrier;
   final DateTime Function() _clock;
   final _states = StreamController<RegisterSyncState>.broadcast();
   RegisterSyncState _state = const RegisterSyncState.idle();
@@ -83,6 +123,9 @@ class RegisterEventSyncService {
         ),
       );
     }
+
+    final blockedByParent = await waitForParentSync(_parentSyncBarrier);
+    if (blockedByParent != null) return _emit(blockedByParent);
 
     final pending = await _local.listPending();
     _emit(

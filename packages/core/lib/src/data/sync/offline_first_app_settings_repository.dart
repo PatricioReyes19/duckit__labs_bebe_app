@@ -1,9 +1,8 @@
-import 'dart:async';
-
 import '../../domain/entities/settings/app_settings.dart';
 import '../../domain/repositories/settings/app_settings_repository.dart';
 import '../repositories/sqlite_app_settings_repository.dart';
 import 'app_settings_sync_service.dart';
+import 'background_sync.dart';
 
 class OfflineFirstAppSettingsRepository implements AppSettingsRepository {
   const OfflineFirstAppSettingsRepository(this._local, this._syncService);
@@ -20,7 +19,10 @@ class OfflineFirstAppSettingsRepository implements AppSettingsRepository {
   @override
   Future<AppSettingsEntity> update(AppSettingsPatch patch) async {
     final updated = await _local.update(patch);
-    unawaited(_syncService.synchronize());
+    scheduleBackgroundSync(
+      _syncService.synchronize,
+      operation: 'Preferences background synchronization',
+    );
     return updated;
   }
 }

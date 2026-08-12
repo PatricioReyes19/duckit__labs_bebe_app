@@ -57,14 +57,14 @@ class FamilySyncService {
       );
     }
 
-    final pending = await _local.readPendingSnapshot();
-    _emit(
-      RegisterSyncState(
-        phase: RegisterSyncPhase.syncing,
-        pendingCount: pending == null ? 0 : 1,
-      ),
-    );
     try {
+      final pending = await _local.readPendingSnapshot();
+      _emit(
+        RegisterSyncState(
+          phase: RegisterSyncPhase.syncing,
+          pendingCount: pending == null ? 0 : 1,
+        ),
+      );
       if (pending != null) {
         final accepted = await _remote.push(pending);
         await _local.markSnapshotSynced(attempted: pending, accepted: accepted);

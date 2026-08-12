@@ -53,8 +53,13 @@ abstract class RegisterModule {
   RegisterEventSyncService registerEventSyncService(
     SqliteRegisterEventRepository local,
     RegisterEventRemoteDataSource remote,
+    FamilySyncService familySyncService,
   ) =>
-      RegisterEventSyncService(local, remote);
+      RegisterEventSyncService(
+        local,
+        remote,
+        parentSyncBarrier: familySyncService.synchronize,
+      );
 
   @lazySingleton
   AgendaEventRemoteDataSource agendaEventRemoteDataSource(
@@ -66,27 +71,24 @@ abstract class RegisterModule {
   AgendaEventSyncService agendaEventSyncService(
     SqliteAgendaRepository local,
     AgendaEventRemoteDataSource remote,
+    FamilySyncService familySyncService,
   ) =>
-      AgendaEventSyncService(local, remote);
+      AgendaEventSyncService(
+        local,
+        remote,
+        parentSyncBarrier: familySyncService.synchronize,
+      );
 
   @lazySingleton
   SupabaseRealtimeSyncCoordinator realtimeSyncCoordinator(
     SupabaseConfiguration configuration,
     SessionRepository sessionRepository,
-    RegisterEventSyncService registerSyncService,
-    AgendaEventSyncService agendaSyncService,
-    HealthEventSyncService healthSyncService,
-    AppSettingsSyncService appSettingsSyncService,
-    FamilySyncService familySyncService,
+    InitialDataSyncCoordinator initialDataSyncCoordinator,
   ) =>
       SupabaseRealtimeSyncCoordinator(
         configuration,
         sessionRepository,
-        registerSyncService,
-        agendaSyncService,
-        healthSyncService: healthSyncService,
-        appSettingsSyncService: appSettingsSyncService,
-        familySyncService: familySyncService,
+        initialDataSyncCoordinator,
       );
 
   @lazySingleton
@@ -101,11 +103,35 @@ abstract class RegisterModule {
     SqliteRegisterEventRepository registerRepository,
     SqliteAgendaRepository agendaRepository,
     AgendaEventSyncService syncService,
+    SqliteFamilyRepository familyRepository,
   ) =>
       RegisterAgendaCoordinator(
         registerRepository,
         agendaRepository,
         syncService,
+        familyRepository: familyRepository,
+      );
+
+  @lazySingleton
+  InitialDataSyncCoordinator initialDataSyncCoordinator(
+    SessionRepository sessionRepository,
+    ProfileRemoteDataSource profileRemoteDataSource,
+    FamilySyncService familySyncService,
+    RegisterEventSyncService registerSyncService,
+    AgendaEventSyncService agendaSyncService,
+    HealthEventSyncService healthSyncService,
+    AppSettingsSyncService appSettingsSyncService,
+    RegisterAgendaCoordinator registerAgendaCoordinator,
+  ) =>
+      InitialDataSyncCoordinator(
+        sessionRepository,
+        profileRemoteDataSource,
+        familySyncService,
+        registerSyncService,
+        agendaSyncService,
+        healthSyncService,
+        appSettingsSyncService,
+        registerAgendaCoordinator,
       );
 
   @lazySingleton

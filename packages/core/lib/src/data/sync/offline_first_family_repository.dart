@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import '../../domain/entities/family/family.dart';
 import '../../domain/repositories/family/family_repository.dart';
 import '../repositories/sqlite_family_repository.dart';
@@ -27,21 +25,21 @@ class OfflineFirstFamilyRepository implements FamilyRepository {
     InitialFamilyDraft draft,
   ) async {
     final result = await _local.createInitialFamily(draft);
-    unawaited(_syncService.synchronize());
+    await _syncService.synchronize();
     return result;
   }
 
   @override
   Future<BabyEntity> createBaby(BabyDraft draft) async {
     final result = await _local.createBaby(draft);
-    unawaited(_syncService.synchronize());
+    await _syncService.synchronize();
     return result;
   }
 
   @override
   Future<BabyEntity?> updateBaby(String id, BabyPatch patch) async {
     final result = await _local.updateBaby(id, patch);
-    unawaited(_syncService.synchronize());
+    await _syncService.synchronize();
     return result;
   }
 

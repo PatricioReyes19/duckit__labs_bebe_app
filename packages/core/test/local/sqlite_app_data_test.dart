@@ -94,6 +94,55 @@ void main() {
   );
 
   test(
+    'a repeated onboarding repairs the existing Baby instead of discarding data',
+    () async {
+      final productionDatabase = BebeDatabase(
+        databaseFactory: databaseFactoryFfi,
+        databasePath: inMemoryDatabasePath,
+      );
+      addTearDown(productionDatabase.close);
+      final repository = SqliteFamilyRepository(
+        productionDatabase,
+        idGenerator: (prefix) => '$prefix-existing',
+      );
+      final placeholder = await repository.createInitialFamily(
+        InitialFamilyDraft(
+          familyName: 'Mi familia',
+          babyName: 'Bebé',
+          birthDate: DateTime.utc(2025),
+          ownerName: 'Cuidador',
+          ownerEmail: 'old@example.com',
+        ),
+      );
+      final initialSnapshot = (await repository.readPendingSnapshot())!;
+      await repository.markSnapshotSynced(
+        attempted: initialSnapshot,
+        accepted: initialSnapshot,
+      );
+
+      final repaired = await repository.createInitialFamily(
+        InitialFamilyDraft(
+          familyName: 'Familia de Emilia',
+          babyName: 'Emilia',
+          birthDate: DateTime.utc(2026, 2, 3),
+          ownerName: 'Paula Pérez',
+          ownerEmail: 'paula@example.com',
+        ),
+      );
+      final pending = await repository.readPendingSnapshot();
+
+      expect(repaired.id, placeholder.id);
+      expect(repaired.activeBabyId, placeholder.activeBabyId);
+      expect(repaired.name, 'Familia de Emilia');
+      expect(repaired.activeBaby.name, 'Emilia');
+      expect(repaired.activeBaby.birthDate, DateTime.utc(2026, 2, 3));
+      expect(repaired.members.single.name, 'Paula Pérez');
+      expect(pending, isNotNull);
+      expect(pending!.overview.activeBaby.name, 'Emilia');
+    },
+  );
+
+  test(
     'seeds the local application graph and resolves relationships',
     () async {
       final family = await families.getCurrent();

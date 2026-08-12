@@ -1,8 +1,7 @@
-import 'dart:async';
-
 import '../../domain/entities/register/register.dart';
 import '../../domain/repositories/register_event/register_event.dart';
 import '../register/sqlite_register_event_repository.dart';
+import 'background_sync.dart';
 import 'register_event_sync_service.dart';
 
 class OfflineFirstRegisterEventRepository implements RegisterEventRepository {
@@ -17,7 +16,7 @@ class OfflineFirstRegisterEventRepository implements RegisterEventRepository {
   @override
   Future<RegisteredEvent> save(RegisterEventDraft draft) async {
     final saved = await _local.save(draft);
-    unawaited(_syncService.synchronize());
+    _scheduleSync();
     return saved;
   }
 
@@ -41,13 +40,18 @@ class OfflineFirstRegisterEventRepository implements RegisterEventRepository {
   @override
   Future<RegisteredEvent?> update(String id, RegisterEventPatch patch) async {
     final updated = await _local.update(id, patch);
-    if (updated != null) unawaited(_syncService.synchronize());
+    if (updated != null) _scheduleSync();
     return updated;
   }
 
   @override
   Future<void> delete(String id) async {
     await _local.delete(id);
-    unawaited(_syncService.synchronize());
+    _scheduleSync();
   }
+
+  void _scheduleSync() => scheduleBackgroundSync(
+    _syncService.synchronize,
+    operation: 'Register background synchronization',
+  );
 }

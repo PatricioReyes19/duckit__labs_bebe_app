@@ -1,14 +1,11 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../domain/entities/session/auth_session.dart';
 import '../../domain/repositories/session_repository/session_repository.dart';
-import 'agenda_event_sync_service.dart';
-import 'app_settings_sync_service.dart';
-import 'health_event_sync_service.dart';
-import 'family_sync_service.dart';
-import 'register_event_sync_service.dart';
+import 'initial_data_sync_coordinator.dart';
 import 'supabase_configuration.dart';
 
 /// Converts authorized remote database changes into local pull operations.
@@ -20,24 +17,13 @@ class SupabaseRealtimeSyncCoordinator {
   SupabaseRealtimeSyncCoordinator(
     this._configuration,
     this._sessionRepository,
-    this._registerSyncService,
-    this._agendaSyncService, {
-    required HealthEventSyncService healthSyncService,
-    required AppSettingsSyncService appSettingsSyncService,
-    required FamilySyncService familySyncService,
+    this._initialDataSyncCoordinator, {
     SupabaseClient? client,
-  }) : _healthSyncService = healthSyncService,
-       _appSettingsSyncService = appSettingsSyncService,
-       _familySyncService = familySyncService,
-       _clientOverride = client;
+  }) : _clientOverride = client;
 
   final SupabaseConfiguration _configuration;
   final SessionRepository _sessionRepository;
-  final RegisterEventSyncService _registerSyncService;
-  final AgendaEventSyncService _agendaSyncService;
-  final HealthEventSyncService _healthSyncService;
-  final AppSettingsSyncService _appSettingsSyncService;
-  final FamilySyncService _familySyncService;
+  final InitialDataSyncCoordinator _initialDataSyncCoordinator;
   final SupabaseClient? _clientOverride;
 
   StreamSubscription<AuthSession?>? _sessionSubscription;
@@ -47,10 +33,12 @@ class SupabaseRealtimeSyncCoordinator {
   SupabaseClient get _client => _clientOverride ?? Supabase.instance.client;
 
   Future<void> start() async {
-    if (!_configuration.isConfigured || _sessionSubscription != null) return;
-    _sessionSubscription = _sessionRepository.sessionChanges().listen(
-      (session) => unawaited(_replaceSubscription(session)),
+    if (!_configuration.isConfigured) return;
+    _sessionSubscription ??= _sessionRepository.sessionChanges().listen(
+      _handleSessionChange,
     );
+    // Authenticated sessions are subscribed only through this explicit call,
+    // made by InitialDataSyncCoordinator after parent/child hydration.
     await _replaceSubscription(await _sessionRepository.currentSession());
   }
 
@@ -71,45 +59,71 @@ class SupabaseRealtimeSyncCoordinator {
           event: PostgresChangeEvent.all,
           schema: 'public',
           table: 'register_events',
-          callback: (_) => unawaited(_registerSyncService.synchronize()),
+          callback: (_) => _scheduleSync(RealtimeSyncTarget.register),
         )
         .onPostgresChanges(
           event: PostgresChangeEvent.all,
           schema: 'public',
           table: 'agenda_events',
-          callback: (_) => unawaited(_agendaSyncService.synchronize()),
+          callback: (_) => _scheduleSync(RealtimeSyncTarget.agenda),
         )
         .onPostgresChanges(
           event: PostgresChangeEvent.all,
           schema: 'public',
           table: 'health_events',
-          callback: (_) => unawaited(_healthSyncService.synchronize()),
+          callback: (_) => _scheduleSync(RealtimeSyncTarget.health),
         )
         .onPostgresChanges(
           event: PostgresChangeEvent.all,
           schema: 'public',
           table: 'user_preferences',
-          callback: (_) => unawaited(_appSettingsSyncService.synchronize()),
+          callback: (_) => _scheduleSync(RealtimeSyncTarget.preferences),
         )
         .onPostgresChanges(
           event: PostgresChangeEvent.all,
           schema: 'public',
           table: 'families',
-          callback: (_) => unawaited(_familySyncService.synchronize()),
+          callback: (_) => _scheduleSync(RealtimeSyncTarget.family),
         )
         .onPostgresChanges(
           event: PostgresChangeEvent.all,
           schema: 'public',
           table: 'babies',
-          callback: (_) => unawaited(_familySyncService.synchronize()),
+          callback: (_) => _scheduleSync(RealtimeSyncTarget.family),
         )
         .onPostgresChanges(
           event: PostgresChangeEvent.all,
           schema: 'public',
           table: 'baby_caregivers',
-          callback: (_) => unawaited(_familySyncService.synchronize()),
+          callback: (_) => _scheduleSync(RealtimeSyncTarget.family),
         )
         .subscribe();
+  }
+
+  void _handleSessionChange(AuthSession? session) {
+    // Logout stops delivery immediately. A later login intentionally waits
+    // until InitialDataSyncCoordinator invokes start() after Family sync.
+    if (session != null) return;
+    unawaited(
+      _replaceSubscription(session).then<void>((_) {}, onError: _reportError),
+    );
+  }
+
+  void _scheduleSync(RealtimeSyncTarget target) {
+    unawaited(
+      _initialDataSyncCoordinator
+          .synchronizeFromRealtime(target)
+          .then<void>((_) {}, onError: _reportError),
+    );
+  }
+
+  static void _reportError(Object error, StackTrace stackTrace) {
+    developer.log(
+      'Realtime synchronization callback failed',
+      name: 'bebeapp.sync',
+      error: error,
+      stackTrace: stackTrace,
+    );
   }
 
   Future<void> close() async {

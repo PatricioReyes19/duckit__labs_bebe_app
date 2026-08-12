@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 
 import '../../domain/entities/agenda/agenda.dart';
 import '../../domain/entities/register/register.dart';
 import '../register/sqlite_register_event_repository.dart';
 import '../repositories/sqlite_agenda_repository.dart';
+import '../repositories/sqlite_family_repository.dart';
 import 'agenda_event_sync_service.dart';
 
 /// Projects medication records into future agenda actions.
@@ -16,15 +18,18 @@ class RegisterAgendaCoordinator {
     this._registerRepository,
     this._agendaRepository,
     this._agendaSyncService, {
+    required SqliteFamilyRepository familyRepository,
     DateTime Function()? clock,
-  }) : _clock = clock ?? DateTime.now;
+  }) : _familyRepository = familyRepository,
+       _clock = clock ?? DateTime.now;
 
   final SqliteRegisterEventRepository _registerRepository;
   final SqliteAgendaRepository _agendaRepository;
   final AgendaEventSyncService _agendaSyncService;
+  final SqliteFamilyRepository _familyRepository;
   final DateTime Function() _clock;
   StreamSubscription<void>? _subscription;
-  Future<void>? _running;
+  Future<bool>? _running;
   bool _rerunRequested = false;
 
   /// Ventana móvil para tratamientos sin término explícito. Se repone en cada
@@ -33,14 +38,18 @@ class RegisterAgendaCoordinator {
   static const openEndedHorizon = Duration(days: 90);
   static const maximumGeneratedDoses = 1024;
 
-  void start() {
+  /// Enables projection of future local/Realtime register changes.
+  ///
+  /// The initial reconciliation is deliberately controlled by
+  /// [InitialDataSyncCoordinator] after Family/Babies and remote events have
+  /// been hydrated.
+  void startListening() {
     _subscription ??= _registerRepository.changes.listen((_) {
-      unawaited(reconcile());
+      _scheduleReconciliation();
     });
-    unawaited(reconcile());
   }
 
-  Future<void> reconcile() {
+  Future<bool> reconcile() {
     _rerunRequested = true;
     final running = _running;
     if (running != null) return running;
@@ -49,18 +58,23 @@ class RegisterAgendaCoordinator {
     return operation.whenComplete(() => _running = null);
   }
 
-  Future<void> _drainReconciliationQueue() async {
+  Future<bool> _drainReconciliationQueue() async {
+    var changed = false;
     while (_rerunRequested) {
       _rerunRequested = false;
-      await _reconcileOnce();
+      changed = await _reconcileOnce() || changed;
     }
+    return changed;
   }
 
-  Future<void> _reconcileOnce() async {
+  Future<bool> _reconcileOnce() async {
     final medicationEvents = await _registerRepository
         .listByTypeIncludingDeleted(RegisterEventType.medication);
     var changed = false;
     for (final medication in medicationEvents) {
+      if (!await _familyRepository.containsBaby(medication.babyId)) {
+        continue;
+      }
       final desired = _desiredDoses(medication);
       for (final draft in desired) {
         final before = await _agendaRepository.findByIdIncludingDeleted(
@@ -79,7 +93,24 @@ class RegisterAgendaCoordinator {
         changed = true;
       }
     }
-    if (changed) unawaited(_agendaSyncService.synchronize());
+    if (changed) await _agendaSyncService.synchronize();
+    return changed;
+  }
+
+  void _scheduleReconciliation() {
+    unawaited(
+      reconcile().then<void>(
+        (_) {},
+        onError: (Object error, StackTrace stackTrace) {
+          developer.log(
+            'Register → Agenda reconciliation failed',
+            name: 'bebeapp.sync',
+            error: error,
+            stackTrace: stackTrace,
+          );
+        },
+      ),
+    );
   }
 
   List<AgendaEventDraft> _desiredDoses(RegisteredEvent event) {
@@ -135,5 +166,8 @@ class RegisterAgendaCoordinator {
     _ => null,
   };
 
-  Future<void> close() async => _subscription?.cancel();
+  Future<void> close() async {
+    await _subscription?.cancel();
+    _subscription = null;
+  }
 }

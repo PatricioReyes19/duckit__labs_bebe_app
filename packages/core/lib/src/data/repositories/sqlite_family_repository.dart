@@ -32,6 +32,18 @@ class SqliteFamilyRepository implements FamilyRepository {
   @override
   Stream<String> get activeBabyChanges => _activeBabyChanges.stream;
 
+  Future<bool> containsBaby(String babyId) async {
+    final database = await _database.database;
+    final rows = await database.query(
+      BebeDatabaseSchema.babies,
+      columns: const ['id'],
+      where: 'id = ?',
+      whereArgs: [babyId],
+      limit: 1,
+    );
+    return rows.isNotEmpty;
+  }
+
   @override
   Future<FamilyOverviewEntity> getCurrent() async {
     final database = await _database.database;
@@ -83,6 +95,22 @@ class SqliteFamilyRepository implements FamilyRepository {
   Future<FamilyOverviewEntity> createInitialFamily(
     InitialFamilyDraft draft,
   ) async {
+    final babyName = draft.babyName.trim();
+    final familyName = draft.familyName.trim();
+    if (babyName.isEmpty) {
+      throw ArgumentError.value(
+        draft.babyName,
+        'babyName',
+        'No puede estar vacío.',
+      );
+    }
+    if (familyName.isEmpty) {
+      throw ArgumentError.value(
+        draft.familyName,
+        'familyName',
+        'No puede estar vacío.',
+      );
+    }
     final database = await _database.database;
     final existingRows = await database.query(
       BebeDatabaseSchema.families,
@@ -90,7 +118,62 @@ class SqliteFamilyRepository implements FamilyRepository {
       limit: 1,
     );
     if (existingRows.isNotEmpty) {
-      return _overview(database, FamilyModel.fromRow(existingRows.single));
+      final existingFamily = FamilyModel.fromRow(existingRows.single);
+      await database.transaction((transaction) async {
+        final babyRows = await transaction.query(
+          BebeDatabaseSchema.babies,
+          where: 'id = ? AND family_id = ?',
+          whereArgs: [existingFamily.activeBabyId, existingFamily.id],
+          limit: 1,
+        );
+        if (babyRows.isEmpty) {
+          throw StateError(
+            'La familia local ${existingFamily.id} no contiene a su bebé activo '
+            '${existingFamily.activeBabyId}.',
+          );
+        }
+        await transaction.update(
+          BebeDatabaseSchema.families,
+          {'name': familyName},
+          where: 'id = ?',
+          whereArgs: [existingFamily.id],
+        );
+        await transaction.update(
+          BebeDatabaseSchema.babies,
+          {
+            'name': babyName,
+            'birth_date': draft.birthDate.toUtc().millisecondsSinceEpoch,
+            if (draft.avatarAssetPath != null)
+              'avatar_asset_path': draft.avatarAssetPath,
+          },
+          where: 'id = ?',
+          whereArgs: [existingFamily.activeBabyId],
+        );
+        await transaction.update(
+          BebeDatabaseSchema.familyMembers,
+          {'name': draft.ownerName.trim()},
+          where: 'family_id = ? AND status = ?',
+          whereArgs: [existingFamily.id, FamilyMemberStatus.active.name],
+        );
+        await transaction.update(
+          BebeDatabaseSchema.appSettings,
+          {
+            'account_name': draft.ownerName.trim(),
+            'account_email': draft.ownerEmail.trim().toLowerCase(),
+          },
+          where: 'id = ?',
+          whereArgs: ['local'],
+        );
+        await _markSnapshotPending(transaction);
+      });
+      return _overview(
+        database,
+        FamilyModel(
+          id: existingFamily.id,
+          name: familyName,
+          activeBabyId: existingFamily.activeBabyId,
+        ),
+      );
     }
 
     final familyId = _idGenerator('family');
@@ -98,13 +181,13 @@ class SqliteFamilyRepository implements FamilyRepository {
     final ownerId = _idGenerator('member');
     final family = FamilyModel(
       id: familyId,
-      name: draft.familyName.trim(),
+      name: familyName,
       activeBabyId: babyId,
     );
     final baby = BabyModel(
       id: babyId,
       familyId: familyId,
-      name: draft.babyName.trim(),
+      name: babyName,
       birthDate: draft.birthDate.toUtc(),
       avatarAssetPath: draft.avatarAssetPath,
     );
@@ -418,6 +501,12 @@ class SqliteFamilyRepository implements FamilyRepository {
     final pendingAt = await _readSyncMetadata(database, _familyPendingAtKey);
     final syncedAt = await _readSyncMetadata(database, _familySyncedAtKey);
     if (pendingAt == null && syncedAt != null) return null;
+    final localFamilies = await database.query(
+      BebeDatabaseSchema.families,
+      columns: const ['id'],
+      limit: 1,
+    );
+    if (localFamilies.isEmpty) return null;
     final overview = await getCurrent();
     final updatedAt = pendingAt == null
         ? _clock().toUtc()

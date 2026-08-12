@@ -1,9 +1,8 @@
-import 'dart:async';
-
 import '../../domain/entities/agenda/agenda.dart';
 import '../../domain/repositories/agenda/agenda_repository.dart';
 import '../repositories/sqlite_agenda_repository.dart';
 import 'agenda_event_sync_service.dart';
+import 'background_sync.dart';
 
 class OfflineFirstAgendaRepository implements AgendaRepository {
   const OfflineFirstAgendaRepository(this._local, this._syncService);
@@ -28,20 +27,25 @@ class OfflineFirstAgendaRepository implements AgendaRepository {
   @override
   Future<AgendaEventEntity> create(AgendaEventDraft draft) async {
     final saved = await _local.create(draft);
-    unawaited(_syncService.synchronize());
+    _scheduleSync();
     return saved;
   }
 
   @override
   Future<AgendaEventEntity?> update(String id, AgendaEventPatch patch) async {
     final updated = await _local.update(id, patch);
-    if (updated != null) unawaited(_syncService.synchronize());
+    if (updated != null) _scheduleSync();
     return updated;
   }
 
   @override
   Future<void> delete(String id) async {
     await _local.delete(id);
-    unawaited(_syncService.synchronize());
+    _scheduleSync();
   }
+
+  void _scheduleSync() => scheduleBackgroundSync(
+    _syncService.synchronize,
+    operation: 'Agenda background synchronization',
+  );
 }

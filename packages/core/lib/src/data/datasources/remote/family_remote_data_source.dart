@@ -52,20 +52,44 @@ class SupabaseFamilyRemoteDataSource implements FamilyRemoteDataSource {
     final memberships = await _client.select('baby_caregivers');
     final profiles = await _client.select('profiles');
     final profileById = {
-      for (final profile in profiles) profile['id'] as String: profile,
+      for (final profile in profiles)
+        _requiredText(profile, 'id', entity: 'perfil'): profile,
     };
+
+    // Do not hydrate child tables from an incomplete parent graph. A local
+    // pending snapshot is pushed before this pull and can repair the same Baby
+    // id; any remaining invalid row needs an explicit server-side repair.
+    for (final baby in babies) {
+      final babyId = _requiredText(baby, 'id', entity: 'bebé');
+      _requiredText(baby, 'family_id', entity: 'bebé $babyId');
+      _requiredText(baby, 'display_name', entity: 'bebé $babyId');
+      _requiredDateTime(baby, 'birth_date', entity: 'bebé $babyId');
+    }
 
     final snapshots = <FamilySyncSnapshot>[];
     for (final family in families) {
-      final familyId = family['id']! as String;
+      final familyId = _requiredText(family, 'id', entity: 'familia');
+      final familyName = _requiredText(
+        family,
+        'name',
+        entity: 'familia $familyId',
+      );
       final familyBabies = babies
           .where((baby) => baby['family_id'] == familyId)
           .map(
             (baby) => BabyEntity(
-              id: baby['id']! as String,
+              id: _requiredText(baby, 'id', entity: 'bebé'),
               familyId: familyId,
-              name: baby['display_name']! as String,
-              birthDate: DateTime.parse(baby['birth_date']! as String).toUtc(),
+              name: _requiredText(
+                baby,
+                'display_name',
+                entity: 'bebé ${baby['id']}',
+              ),
+              birthDate: _requiredDateTime(
+                baby,
+                'birth_date',
+                entity: 'bebé ${baby['id']}',
+              ),
             ),
           )
           .toList(growable: false);
@@ -99,12 +123,16 @@ class SupabaseFamilyRemoteDataSource implements FamilyRemoteDataSource {
         FamilySyncSnapshot(
           overview: FamilyOverviewEntity(
             id: familyId,
-            name: family['name']! as String,
+            name: familyName,
             activeBabyId: familyBabies.first.id,
             babies: familyBabies,
             members: members,
           ),
-          updatedAt: DateTime.parse(family['updated_at']! as String).toUtc(),
+          updatedAt: _requiredDateTime(
+            family,
+            'updated_at',
+            entity: 'familia $familyId',
+          ),
         ),
       );
     }
@@ -137,4 +165,31 @@ class SupabaseFamilyRemoteDataSource implements FamilyRemoteDataSource {
     'viewer' => 'Observador/a',
     _ => 'Cuidador/a',
   };
+
+  static String _requiredText(
+    Map<String, dynamic> row,
+    String field, {
+    required String entity,
+  }) {
+    final value = row[field];
+    if (value is String && value.trim().isNotEmpty) return value.trim();
+    throw FormatException(
+      'Supabase contiene un $entity incompleto: falta $field. '
+      'Corrige el perfil del bebé antes de sincronizar sus registros.',
+    );
+  }
+
+  static DateTime _requiredDateTime(
+    Map<String, dynamic> row,
+    String field, {
+    required String entity,
+  }) {
+    final value = row[field];
+    final parsed = value is String ? DateTime.tryParse(value) : null;
+    if (parsed != null) return parsed.toUtc();
+    throw FormatException(
+      'Supabase contiene un $entity incompleto: falta $field o no es válido. '
+      'Corrige el perfil del bebé antes de sincronizar sus registros.',
+    );
+  }
 }

@@ -188,7 +188,8 @@ class SqliteAgendaRepository implements AgendaRepository {
   ) async {
     final database = await _database.database;
     final rows = await database.rawQuery(
-      '$_selectBase WHERE a.source_register_event_id = ?',
+      '$_selectBase WHERE a.source_register_event_id = ? '
+      'ORDER BY a.starts_at ASC, a.id ASC',
       [sourceRegisterEventId],
     );
     return rows

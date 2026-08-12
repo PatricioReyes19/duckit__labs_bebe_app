@@ -60,7 +60,27 @@ class AppSettingsSyncService {
       );
     }
     final local = await _local.readSyncRecord();
-    if (local == null) return _emit(const RegisterSyncState.idle());
+    if (local == null) {
+      _emit(const RegisterSyncState(phase: RegisterSyncPhase.syncing));
+      try {
+        final remote = await _remote.pull();
+        if (remote != null) await _local.mergeRemote(remote);
+        return _emit(
+          RegisterSyncState(
+            phase: RegisterSyncPhase.synced,
+            lastSyncedAt: _clock().toUtc(),
+          ),
+        );
+      } on Object catch (error) {
+        return _emit(
+          RegisterSyncState(
+            phase: RegisterSyncPhase.failed,
+            failedCount: 1,
+            message: error.toString(),
+          ),
+        );
+      }
+    }
 
     _emit(
       RegisterSyncState(

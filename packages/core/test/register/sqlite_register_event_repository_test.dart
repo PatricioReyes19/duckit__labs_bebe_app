@@ -2,25 +2,35 @@ import 'package:core/core.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import '../helpers/baby_fixture.dart';
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   sqfliteFfiInit();
 
   late SqliteRegisterEventRepository repository;
+  late BebeDatabase database;
   var sequence = 0;
   final createdAt = DateTime.utc(2026, 8, 5, 12);
 
-  setUp(() {
+  setUp(() async {
     sequence = 0;
-    repository = SqliteRegisterEventRepository(
+    database = BebeDatabase(
       databaseFactory: databaseFactoryFfi,
       databasePath: inMemoryDatabasePath,
+    );
+    await insertBabyFixture(database, babyIds: const ['baby-1', 'baby-2']);
+    repository = SqliteRegisterEventRepository(
+      database: database,
       idGenerator: () => 'event-${++sequence}',
       clock: () => createdAt,
     );
   });
 
-  tearDown(() => repository.close());
+  tearDown(() async {
+    await repository.close();
+    await database.close();
+  });
 
   test('persists and restores a versioned event with JSON details', () async {
     final saved = await repository.save(

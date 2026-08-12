@@ -54,12 +54,7 @@ class _AppLifecycleObserverState extends State<AppLifecycleObserver>
           context.read<SessionBloc>().add(
                 const SessionResumed(),
               );
-          unawaited(getIt<RegisterEventSyncService>().synchronize());
-          unawaited(getIt<AgendaEventSyncService>().synchronize());
-          unawaited(getIt<HealthEventSyncService>().synchronize());
-          unawaited(getIt<AppSettingsSyncService>().synchronize());
-          unawaited(getIt<FamilySyncService>().synchronize());
-          unawaited(_refreshProfileAndInbox());
+          unawaited(_refreshSynchronizedData());
         }
 
       case AppLifecycleState.inactive:
@@ -76,16 +71,19 @@ class _AppLifecycleObserverState extends State<AppLifecycleObserver>
   }
 }
 
-Future<void> _refreshProfileAndInbox() async {
+Future<void> _refreshSynchronizedData() async {
   try {
-    final session = await getIt<GetCurrentSession>()();
-    if (session != null) {
-      await getIt<ProfileRemoteDataSource>().syncAuthenticatedUser(
-        session.user,
-      );
-    }
-  } on Object {
-    // Profile sync is retried on the next authentication or app resume.
+    await getIt<InitialDataSyncCoordinator>().synchronize(
+      startRealtime: getIt<SupabaseRealtimeSyncCoordinator>().start,
+    );
+  } on Object catch (error, stackTrace) {
+    debugPrint('Lifecycle data synchronization failed: $error');
+    debugPrintStack(stackTrace: stackTrace);
   }
-  await getIt<NotificationService>().refreshInbox();
+  try {
+    await getIt<NotificationService>().refreshInbox();
+  } on Object catch (error, stackTrace) {
+    debugPrint('Lifecycle notification refresh failed: $error');
+    debugPrintStack(stackTrace: stackTrace);
+  }
 }

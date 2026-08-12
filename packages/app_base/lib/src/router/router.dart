@@ -543,12 +543,19 @@ GoRouter createAppRouter({
 }
 
 void _refreshAuthenticatedData() {
-  unawaited(getIt<RegisterEventSyncService>().synchronize());
-  unawaited(getIt<AgendaEventSyncService>().synchronize());
-  unawaited(getIt<FamilySyncService>().synchronize());
-  unawaited(getIt<HealthEventSyncService>().synchronize());
-  unawaited(getIt<AppSettingsSyncService>().synchronize());
-  unawaited(getIt<NotificationService>().refreshInbox());
+  unawaited(_refreshAuthenticatedDataSafely());
+}
+
+Future<void> _refreshAuthenticatedDataSafely() async {
+  try {
+    await getIt<InitialDataSyncCoordinator>().synchronize(
+      startRealtime: getIt<SupabaseRealtimeSyncCoordinator>().start,
+    );
+    await getIt<NotificationService>().refreshInbox();
+  } on Object catch (error, stackTrace) {
+    debugPrint('Authenticated data refresh failed: $error');
+    debugPrintStack(stackTrace: stackTrace);
+  }
 }
 
 Future<void> _scheduleRegisterReminder(RegisteredEvent event) async {

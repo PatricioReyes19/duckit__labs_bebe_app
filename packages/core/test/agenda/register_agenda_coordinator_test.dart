@@ -9,6 +9,7 @@ void main() {
   late BebeDatabase database;
   late SqliteRegisterEventRepository registerRepository;
   late SqliteAgendaRepository agendaRepository;
+  late SqliteFamilyRepository familyRepository;
   late AgendaEventSyncService agendaSyncService;
   late RegisterAgendaCoordinator coordinator;
   late _MemoryAgendaRemote remote;
@@ -26,6 +27,7 @@ void main() {
       clock: () => now,
     );
     agendaRepository = SqliteAgendaRepository(database, clock: () => now);
+    familyRepository = SqliteFamilyRepository(database);
     remote = _MemoryAgendaRemote();
     agendaSyncService = AgendaEventSyncService(
       agendaRepository,
@@ -36,6 +38,7 @@ void main() {
       registerRepository,
       agendaRepository,
       agendaSyncService,
+      familyRepository: familyRepository,
       clock: () => now,
     );
   });
@@ -70,6 +73,8 @@ void main() {
     final secondPass = await agendaRepository.listDerivedBySource(
       medication.id,
     );
+    await coordinator.reconcile();
+    final thirdPass = await agendaRepository.listDerivedBySource(medication.id);
 
     expect(firstPass, isNotEmpty);
     expect(firstPass.first.startsAt, now.add(const Duration(hours: 8)));
@@ -83,6 +88,10 @@ void main() {
     expect(firstPass.first.title, 'Próxima dosis: Paracetamol');
     expect(
       secondPass.map((event) => event.id).toSet(),
+      firstPass.map((event) => event.id).toSet(),
+    );
+    expect(
+      thirdPass.map((event) => event.id).toSet(),
       firstPass.map((event) => event.id).toSet(),
     );
   });
@@ -151,6 +160,96 @@ void main() {
       isEmpty,
     );
   });
+
+  test('skips an out-of-order register until its baby is hydrated', () async {
+    final freshDatabase = BebeDatabase(
+      databaseFactory: databaseFactoryFfi,
+      databasePath: inMemoryDatabasePath,
+    );
+    final freshFamilies = SqliteFamilyRepository(freshDatabase);
+    final freshAgenda = SqliteAgendaRepository(freshDatabase, clock: () => now);
+    final freshAgendaSync = AgendaEventSyncService(
+      freshAgenda,
+      _MemoryAgendaRemote(),
+      clock: () => now,
+    );
+    final medication = RegisteredEvent(
+      id: 'remote-medication-before-baby',
+      babyId: 'baby-late',
+      type: RegisterEventType.medication,
+      occurredAt: now,
+      createdAt: now,
+      updatedAt: now,
+      details: const {
+        'name': 'Vitamina D',
+        'frequency': 'Cada 8 horas',
+        'schedule_next_doses': true,
+        'end_date': '2026-08-10T20:00:00.000Z',
+      },
+      syncStatus: RegisterSyncStatus.synced,
+    );
+    final outOfOrderRegisters = _StaticRegisterRepository(
+      freshDatabase,
+      medication,
+    );
+    final guardedCoordinator = RegisterAgendaCoordinator(
+      outOfOrderRegisters,
+      freshAgenda,
+      freshAgendaSync,
+      familyRepository: freshFamilies,
+      clock: () => now,
+    );
+    addTearDown(guardedCoordinator.close);
+    addTearDown(freshAgendaSync.close);
+    addTearDown(freshDatabase.close);
+
+    expect(await guardedCoordinator.reconcile(), isFalse);
+    expect(await freshAgenda.listDerivedBySource(medication.id), isEmpty);
+
+    await freshFamilies.joinCareCircle(
+      JoinedCareCircleDraft(
+        familyId: 'family-late',
+        familyName: 'Familia tardía',
+        babyId: 'baby-late',
+        babyName: 'Emma',
+        babyBirthDate: DateTime.utc(2026, 1, 1),
+        memberId: 'member-late',
+        memberName: 'Paula',
+        memberEmail: 'paula@example.com',
+      ),
+    );
+    final hydratedRegisters = SqliteRegisterEventRepository(
+      database: freshDatabase,
+    );
+    await hydratedRegisters.mergeRemote(medication);
+    final convergingCoordinator = RegisterAgendaCoordinator(
+      hydratedRegisters,
+      freshAgenda,
+      freshAgendaSync,
+      familyRepository: freshFamilies,
+      clock: () => now,
+    );
+    addTearDown(convergingCoordinator.close);
+    addTearDown(hydratedRegisters.close);
+
+    expect(await convergingCoordinator.reconcile(), isTrue);
+    expect(await freshAgenda.listDerivedBySource(medication.id), hasLength(1));
+  });
+}
+
+class _StaticRegisterRepository extends SqliteRegisterEventRepository {
+  _StaticRegisterRepository(BebeDatabase database, this.event)
+    : super(database: database);
+
+  final RegisteredEvent event;
+
+  @override
+  Stream<void> get changes => const Stream<void>.empty();
+
+  @override
+  Future<List<RegisteredEvent>> listByTypeIncludingDeleted(
+    RegisterEventType type,
+  ) async => type == RegisterEventType.medication ? [event] : const [];
 }
 
 class _MemoryAgendaRemote implements AgendaEventRemoteDataSource {

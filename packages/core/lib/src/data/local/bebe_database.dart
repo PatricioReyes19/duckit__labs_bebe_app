@@ -59,6 +59,9 @@ class BebeDatabase {
           if (oldVersion < 6) {
             await BebeDatabaseSchema.upgradeHealthAndSettingsForSync(database);
           }
+          if (oldVersion < 7) {
+            await BebeDatabaseSchema.upgradeCoreRelationsV7(database);
+          }
         },
       ),
     );
