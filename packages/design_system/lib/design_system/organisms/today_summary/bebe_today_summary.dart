@@ -307,3 +307,43 @@ class BebeTodayMetricData {
   final VoidCallback? onPressed;
   final String? semanticLabel;
 }
+
+/// Loading representation owned by [BebeTodaySummary].
+class BebeTodaySummarySkeleton extends StatelessWidget {
+  const BebeTodaySummarySkeleton({
+    this.itemCount = 3,
+    this.contentPadding = EdgeInsets.zero,
+    super.key,
+  });
+
+  final int itemCount;
+  final EdgeInsetsGeometry contentPadding;
+
+  @override
+  Widget build(BuildContext context) {
+    final spacing = context.theme.spacing;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: spacing.spacingL,
+      children: [
+        Padding(
+          padding: contentPadding,
+          child: const BebeSkeleton.line(width: 152, height: 18),
+        ),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: contentPadding,
+          child: Row(
+            spacing: spacing.spacingL,
+            children: List.generate(
+              itemCount,
+              (_) => const BebeSkeleton(width: 120, height: 132),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}

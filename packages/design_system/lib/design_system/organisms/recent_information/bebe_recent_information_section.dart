@@ -94,3 +94,27 @@ extension BebeRecentInformationStatusMapper on BebeRecentInformationStatus {
     };
   }
 }
+
+/// Loading representation owned by [BebeRecentInformationSection].
+class BebeRecentInformationSectionSkeleton extends StatelessWidget {
+  const BebeRecentInformationSectionSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final spacing = context.theme.spacing;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: spacing.spacingXl,
+      children: [
+        const BebeSkeleton.line(width: 178, height: 18),
+        BebeSkeleton(
+          height: 132,
+          borderRadius: BorderRadius.circular(
+            context.theme.borderRadius.radius3xl,
+          ),
+        ),
+      ],
+    );
+  }
+}

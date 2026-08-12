@@ -118,3 +118,27 @@ extension BebeUpcomingHealthTypeMapper on BebeUpcomingHealthType {
     };
   }
 }
+
+/// Loading representation owned by [BebeUpcomingHealthSection].
+class BebeUpcomingHealthSectionSkeleton extends StatelessWidget {
+  const BebeUpcomingHealthSectionSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final spacing = context.theme.spacing;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: spacing.spacingXl,
+      children: [
+        const BebeSkeleton.line(width: 210, height: 18),
+        BebeSkeleton(
+          height: 156,
+          borderRadius: BorderRadius.circular(
+            context.theme.borderRadius.radius3xl,
+          ),
+        ),
+      ],
+    );
+  }
+}

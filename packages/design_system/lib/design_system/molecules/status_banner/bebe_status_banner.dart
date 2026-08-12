@@ -18,6 +18,7 @@ class BebeStatusBanner extends StatelessWidget {
     this.description,
     this.leading,
     this.trailing,
+    this.footer,
     this.onPressed,
     this.compact = false,
     this.semanticLabel,
@@ -29,6 +30,7 @@ class BebeStatusBanner extends StatelessWidget {
   final BebeStatusBannerType type;
   final Widget? leading;
   final Widget? trailing;
+  final Widget? footer;
   final VoidCallback? onPressed;
   final bool compact;
   final String? semanticLabel;
@@ -36,6 +38,8 @@ class BebeStatusBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final spacing = context.theme.spacing;
+    final borderRadius = context.theme.borderRadius;
 
     final background = switch (type) {
       BebeStatusBannerType.success => colors.tertiaryContainer,
@@ -59,8 +63,11 @@ class BebeStatusBanner extends StatelessWidget {
 
     final body = Padding(
       padding: compact
-          ? const EdgeInsets.symmetric(horizontal: 16, vertical: 6)
-          : const EdgeInsets.all(16),
+          ? EdgeInsets.symmetric(
+              horizontal: spacing.spacingL,
+              vertical: spacing.spacingXs,
+            )
+          : EdgeInsets.all(spacing.spacingL),
       child: Row(
         children: [
           if (leading != null) ...[
@@ -68,7 +75,7 @@ class BebeStatusBanner extends StatelessWidget {
               data: IconThemeData(color: foreground),
               child: leading!,
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: spacing.spacingM),
           ],
           Expanded(
             child: Column(
@@ -85,7 +92,7 @@ class BebeStatusBanner extends StatelessWidget {
                         ),
                 ),
                 if (description != null) ...[
-                  const SizedBox(height: 4),
+                  SizedBox(height: spacing.spacingXs),
                   Text(
                     description!,
                     style: compact
@@ -99,10 +106,37 @@ class BebeStatusBanner extends StatelessWidget {
               ],
             ),
           ),
-          if (trailing != null) ...[const SizedBox(width: 12), trailing!],
+          if (trailing != null) ...[
+            SizedBox(width: spacing.spacingM),
+            trailing!,
+          ],
         ],
       ),
     );
+
+    final interactiveBody = onPressed == null
+        ? body
+        : InkWell(onTap: onPressed, child: body);
+    final content = footer == null
+        ? interactiveBody
+        : Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              interactiveBody,
+              Divider(
+                height: 1,
+                thickness: 1,
+                color: foreground.withValues(alpha: .14),
+              ),
+              Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: spacing.spacingS,
+                  vertical: spacing.spacingXs,
+                ),
+                child: footer,
+              ),
+            ],
+          );
 
     return Semantics(
       button: onPressed != null,
@@ -111,13 +145,11 @@ class BebeStatusBanner extends StatelessWidget {
       child: Material(
         color: background,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(borderRadius.radius2xl),
           side: BorderSide(color: foreground.withValues(alpha: .18)),
         ),
         clipBehavior: Clip.antiAlias,
-        child: onPressed == null
-            ? body
-            : InkWell(onTap: onPressed, child: body),
+        child: content,
       ),
     );
   }

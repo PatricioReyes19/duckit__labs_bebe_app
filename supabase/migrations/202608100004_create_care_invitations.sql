@@ -19,7 +19,6 @@ create table if not exists public.care_invitations (
   responded_at timestamptz,
   updated_at timestamptz not null default now()
 );
-
 create index if not exists care_invitations_contact_idx
   on public.care_invitations (lower(invitee_contact), status, expires_at desc);
 create index if not exists care_invitations_sender_idx
@@ -27,10 +26,8 @@ create index if not exists care_invitations_sender_idx
 create unique index if not exists care_invitations_pending_contact_idx
   on public.care_invitations (baby_id, lower(invitee_contact))
   where status = 'pending';
-
 alter table public.care_invitations enable row level security;
 revoke all on public.care_invitations from anon, authenticated;
-
 create or replace function public.create_care_invitation(
   p_baby_id text,
   p_baby_name text,
@@ -48,10 +45,9 @@ set search_path = ''
 as $$
 declare
   caller_id text := auth.jwt() ->> 'sub';
-  normalized_contact text := case
-    when position('@' in trim(p_contact)) > 0 then lower(trim(p_contact))
-    else lower(regexp_replace(trim(p_contact), '[[:space:]-]', '', 'g'))
-  end;
+  normalized_contact text := lower(
+    regexp_replace(trim(p_contact), '[[:space:]-]', '', 'g')
+  );
   normalized_code text := upper(replace(trim(p_code), ' ', ''));
   invitation public.care_invitations;
   recipient_id text;
@@ -170,7 +166,6 @@ begin
   );
 end;
 $$;
-
 create or replace function public.lookup_care_invitation(p_code text)
 returns jsonb
 language plpgsql
@@ -242,7 +237,6 @@ begin
   );
 end;
 $$;
-
 create or replace function public.accept_care_invitation(p_code text)
 returns jsonb
 language plpgsql
@@ -281,7 +275,6 @@ begin
   return lookup || jsonb_build_object('status', 'accepted');
 end;
 $$;
-
 create or replace function public.reject_care_invitation(p_code text)
 returns jsonb
 language plpgsql
@@ -319,7 +312,6 @@ begin
   return jsonb_build_object('id', invitation.id, 'status', 'rejected');
 end;
 $$;
-
 create or replace function public.resend_care_invitation(
   p_code text,
   p_new_code text
@@ -352,7 +344,6 @@ begin
   );
 end;
 $$;
-
 create or replace function public.revoke_care_invitation(p_code text)
 returns jsonb
 language plpgsql
@@ -375,7 +366,6 @@ begin
   return jsonb_build_object('id', invitation_id, 'status', 'revoked');
 end;
 $$;
-
 revoke all on function public.create_care_invitation(
   text, text, text, text, text, text, boolean, text
 ) from public;
@@ -384,7 +374,6 @@ revoke all on function public.accept_care_invitation(text) from public;
 revoke all on function public.reject_care_invitation(text) from public;
 revoke all on function public.resend_care_invitation(text, text) from public;
 revoke all on function public.revoke_care_invitation(text) from public;
-
 grant execute on function public.create_care_invitation(
   text, text, text, text, text, text, boolean, text
 ) to anon, authenticated;

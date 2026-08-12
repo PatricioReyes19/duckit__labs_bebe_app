@@ -336,7 +336,7 @@ class _MonthlyOverview extends StatelessWidget {
               timeLabel: _time(next.startsAt),
               title: next.title,
               description: next.description,
-              icon: _eventIcon(next.category),
+              icon: Icon(_eventIconData(next.category)),
               variant: _previewVariant(next.category),
               supporting: next.caregiver == null
                   ? null
@@ -478,7 +478,7 @@ class _AgendaEventCard extends StatelessWidget {
         timeLabel: _time(event.startsAt),
         size: BebeTimeBlockSize.small,
       ),
-      icon: _eventIcon(event.category),
+      icon: Icon(_eventIconData(event.category)),
       title: event.title,
       description: event.description,
       variant: _eventVariant(event.category),
@@ -718,11 +718,11 @@ List<BebeCalendarMarkerData> _markersForDay(
       .toList(growable: false);
 }
 
-Widget _eventIcon(AgendaCategory category) => switch (category) {
-  AgendaCategory.vaccines => const Icon(Icons.vaccines_outlined),
-  AgendaCategory.controls => const Icon(Icons.medical_services_outlined),
-  AgendaCategory.medication => const Icon(Icons.medication_outlined),
-  AgendaCategory.exams => const Icon(Icons.science_outlined),
+IconData _eventIconData(AgendaCategory category) => switch (category) {
+  AgendaCategory.vaccines => Icons.vaccines_outlined,
+  AgendaCategory.controls => Icons.medical_services_outlined,
+  AgendaCategory.medication => Icons.medication_outlined,
+  AgendaCategory.exams => Icons.science_outlined,
 };
 
 BebeAgendaEventCardVariant _eventVariant(AgendaCategory category) {

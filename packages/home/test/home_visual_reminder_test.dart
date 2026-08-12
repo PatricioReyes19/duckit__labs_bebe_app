@@ -185,8 +185,15 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Se aproxima un relleno'), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('home-visual-reminder')));
+    expect(find.text('Gracias por recordar'), findsOneWidget);
+    expect(find.text('Ya lo hice'), findsOneWidget);
+    await tester.tap(find.text('Ya lo hice'));
+    await tester.pump();
     expect(openedRegister, 'feeding');
+    expect(
+      find.byKey(const ValueKey('home-visual-reminder')),
+      findsNothing,
+    );
 
     now = startsAt;
     await tester.pump(const Duration(minutes: 5, milliseconds: 100));
@@ -194,6 +201,34 @@ void main() {
       find.byKey(const ValueKey('home-visual-reminder')),
       findsNothing,
     );
+  });
+
+  testWidgets('reminder footer can be dismissed without opening a flow', (
+    tester,
+  ) async {
+    var opened = false;
+    var dismissed = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: theme,
+        home: Scaffold(
+          body: BebeCareReminderBanner(
+            title: 'Se aproxima un cambio de pañal',
+            description: 'Cambio programado',
+            timeLabel: '12:10',
+            variant: BebeCareReminderBannerVariant.diaper,
+            onPressed: () => opened = true,
+            onCompleted: () => opened = true,
+            onDismissed: () => dismissed = true,
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Gracias por recordar'));
+
+    expect(dismissed, isTrue);
+    expect(opened, isFalse);
   });
 }
 

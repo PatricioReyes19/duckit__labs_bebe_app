@@ -8,6 +8,7 @@ export 'agenda_week_picker/week_picker.dart';
 export 'agenda_category_filters/category_filters.dart';
 export 'agenda_event_section.dart/event_section.dart';
 export 'reminder_banner/reminder_banner.dart';
+export 'care_reminder_banner/bebe_care_reminder_banner.dart';
 export 'monthly_overview/monthly_overview.dart';
 export 'health_notice/health_notice.dart';
 export 'week_calendar/week_calendar.dart';

@@ -79,9 +79,9 @@ GoRouter createAppRouter({
                 visibilityPolicy: appLayoutVisibilityPolicy,
                 defaultTitle: 'BebéApp',
                 defaultHeaderActions: [
-                  IconButton(
+                  NotificationInboxButton(
+                    notificationService: getIt<NotificationService>(),
                     onPressed: () => context.push('/notifications'),
-                    icon: const Icon(Icons.notifications_none_rounded),
                   ),
                 ],
                 onPrimaryActionPressed: () => RegisterPage.open(context),

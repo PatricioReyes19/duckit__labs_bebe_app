@@ -163,7 +163,7 @@ Page<void> _buildPage({
     key: ValueKey('register-${kind.routeValue}'),
     name: pageName,
     child: getFamilyOverview == null
-        ? _registerContent(
+        ? _RegisterContent(
             kind: kind,
             save: save,
             onSaved: onSaved,
@@ -183,7 +183,7 @@ Page<void> _buildPage({
             getFamilyOverview: getFamilyOverview(context),
             builder: (context, family) {
               final activeBaby = family.activeBaby;
-              return _registerContent(
+              return _RegisterContent(
                 kind: kind,
                 save: save,
                 onSaved: onSaved,
@@ -296,91 +296,115 @@ class _RegisterBabySwitchLoading extends StatelessWidget {
   }
 }
 
-Widget _registerContent({
-  required RegisterEventKind kind,
-  required SaveRegisterEvent save,
-  required RegisterRouteSaved onSaved,
-  required RegisterRouteAction onCancel,
-  required RegisterRouteAction? onNotificationsPressed,
-  required RegisterRouteAction? onHomePressed,
-  required RegisterRouteAction? onAgendaPressed,
-  required RegisterRouteAction? onHealthPressed,
-  required RegisterRouteAction? onFamilyPressed,
-  required RegisterRouteAction? onBabyPressed,
-  required String babyId,
-  required String babyName,
-  required String babyAge,
-  required String familyContextLabel,
-  BebeAvatar? babyAvatar,
-}) {
-  return MultiBlocProvider(
-    providers: [
-      BlocProvider(
-        create: (_) => FeedingRegisterCubit(
-          saveRegisterEvent: save,
-          babyId: babyId,
+class _RegisterContent extends StatelessWidget {
+  const _RegisterContent({
+    required this.kind,
+    required this.save,
+    required this.onSaved,
+    required this.onCancel,
+    required this.onNotificationsPressed,
+    required this.onHomePressed,
+    required this.onAgendaPressed,
+    required this.onHealthPressed,
+    required this.onFamilyPressed,
+    required this.onBabyPressed,
+    required this.babyId,
+    required this.babyName,
+    required this.babyAge,
+    required this.familyContextLabel,
+    this.babyAvatar,
+  });
+
+  final RegisterEventKind kind;
+  final SaveRegisterEvent save;
+  final RegisterRouteSaved onSaved;
+  final RegisterRouteAction onCancel;
+  final RegisterRouteAction? onNotificationsPressed;
+  final RegisterRouteAction? onHomePressed;
+  final RegisterRouteAction? onAgendaPressed;
+  final RegisterRouteAction? onHealthPressed;
+  final RegisterRouteAction? onFamilyPressed;
+  final RegisterRouteAction? onBabyPressed;
+  final String babyId;
+  final String babyName;
+  final String babyAge;
+  final String familyContextLabel;
+  final BebeAvatar? babyAvatar;
+
+  @override
+  Widget build(BuildContext context) => MultiBlocProvider(
+        providers: [
+          BlocProvider(
+            create: (_) => FeedingRegisterCubit(
+              saveRegisterEvent: save,
+              babyId: babyId,
+            ),
+          ),
+          BlocProvider(
+            create: (_) => SleepRegisterCubit(
+              saveRegisterEvent: save,
+              babyId: babyId,
+            ),
+          ),
+          BlocProvider(
+            create: (_) => DiaperRegisterCubit(
+              saveRegisterEvent: save,
+              babyId: babyId,
+            ),
+          ),
+          BlocProvider(
+            create: (_) => ClinicalObservationRegisterCubit(
+              saveRegisterEvent: save,
+              babyId: babyId,
+            ),
+          ),
+          BlocProvider(
+            create: (_) => MedicationRegisterCubit(
+              saveRegisterEvent: save,
+              babyId: babyId,
+            ),
+          ),
+          BlocProvider(
+            create: (_) => MeasurementRegisterCubit(
+              saveRegisterEvent: save,
+              babyId: babyId,
+            ),
+          ),
+        ],
+        child: Builder(
+          builder: (pageContext) => RegisterPageView(
+            initialKind: kind,
+            babyName: babyName,
+            babyAge: babyAge,
+            familyContextLabel: familyContextLabel,
+            babyAvatar: babyAvatar,
+            // Las categorías se comportan como tabs locales. Navegar por cada
+            // cambio recreaba la página, repetía la carga del perfil activo y
+            // dejaba un frame blanco entre formularios.
+            onKindChanged: (_) {},
+            onSaved: (event) => onSaved(pageContext, event),
+            onCancel: () => onCancel(pageContext),
+            onNotificationsPressed: onNotificationsPressed == null
+                ? null
+                : () => onNotificationsPressed!(pageContext),
+            onHomePressed: onHomePressed == null
+                ? null
+                : () => onHomePressed!(pageContext),
+            onAgendaPressed: onAgendaPressed == null
+                ? null
+                : () => onAgendaPressed!(pageContext),
+            onHealthPressed: onHealthPressed == null
+                ? null
+                : () => onHealthPressed!(pageContext),
+            onFamilyPressed: onFamilyPressed == null
+                ? null
+                : () => onFamilyPressed!(pageContext),
+            onBabyPressed: onBabyPressed == null
+                ? null
+                : () => onBabyPressed!(pageContext),
+          ),
         ),
-      ),
-      BlocProvider(
-        create: (_) => SleepRegisterCubit(
-          saveRegisterEvent: save,
-          babyId: babyId,
-        ),
-      ),
-      BlocProvider(
-        create: (_) => DiaperRegisterCubit(
-          saveRegisterEvent: save,
-          babyId: babyId,
-        ),
-      ),
-      BlocProvider(
-        create: (_) => ClinicalObservationRegisterCubit(
-          saveRegisterEvent: save,
-          babyId: babyId,
-        ),
-      ),
-      BlocProvider(
-        create: (_) => MedicationRegisterCubit(
-          saveRegisterEvent: save,
-          babyId: babyId,
-        ),
-      ),
-      BlocProvider(
-        create: (_) => MeasurementRegisterCubit(
-          saveRegisterEvent: save,
-          babyId: babyId,
-        ),
-      ),
-    ],
-    child: Builder(
-      builder: (pageContext) => RegisterPageView(
-        initialKind: kind,
-        babyName: babyName,
-        babyAge: babyAge,
-        familyContextLabel: familyContextLabel,
-        babyAvatar: babyAvatar,
-        // Las categorías se comportan como tabs locales. Navegar por cada
-        // cambio recreaba la página, repetía la carga del perfil activo y
-        // dejaba un frame blanco entre formularios.
-        onKindChanged: (_) {},
-        onSaved: (event) => onSaved(pageContext, event),
-        onCancel: () => onCancel(pageContext),
-        onNotificationsPressed: onNotificationsPressed == null
-            ? null
-            : () => onNotificationsPressed(pageContext),
-        onHomePressed:
-            onHomePressed == null ? null : () => onHomePressed(pageContext),
-        onAgendaPressed:
-            onAgendaPressed == null ? null : () => onAgendaPressed(pageContext),
-        onHealthPressed:
-            onHealthPressed == null ? null : () => onHealthPressed(pageContext),
-        onFamilyPressed:
-            onFamilyPressed == null ? null : () => onFamilyPressed(pageContext),
-        onBabyPressed:
-            onBabyPressed == null ? null : () => onBabyPressed(pageContext),
-      ),
-    ),
-  );
+      );
 }
 
 class _RegisterContextError extends StatelessWidget {

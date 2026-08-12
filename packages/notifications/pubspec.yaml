@@ -1,5 +1,5 @@
 name: notifications
-description: Integración de Firebase Cloud Messaging para BebéApp.
+description: Adaptadores de notificaciones push, locales e INAPP para BebéApp.
 version: 0.1.0
 publish_to: none
 

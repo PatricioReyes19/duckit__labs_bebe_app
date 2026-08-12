@@ -324,3 +324,31 @@ class _BebeCompactSiblingSelector extends StatelessWidget {
     );
   }
 }
+
+/// Loading representation owned by [BebeActiveBabyHeader].
+class BebeActiveBabyHeaderSkeleton extends StatelessWidget {
+  const BebeActiveBabyHeaderSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final spacing = context.theme.spacing;
+
+    return Row(
+      spacing: spacing.spacingM,
+      children: [
+        const BebeSkeleton.circle(size: 56),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            spacing: spacing.spacingS,
+            children: const [
+              BebeSkeleton.line(width: 136, height: 16),
+              BebeSkeleton.line(width: 92),
+              BebeSkeleton.line(width: 168),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}

@@ -41,8 +41,7 @@ class HomeDailyHistoryPage extends GoRoute {
               key: const ValueKey('home-daily-history'),
               name: name ?? nameRoute,
               child: getFamilyOverview == null
-                  ? _historyContent(
-                      context: context,
+                  ? _HomeDailyHistoryContent(
                       getRegisterEvents: getRegisterEvents,
                       deleteRegisterEvent: deleteRegisterEvent,
                       updateRegisterEvent: updateRegisterEvent,
@@ -60,8 +59,7 @@ class HomeDailyHistoryPage extends GoRoute {
                           );
                         }
                         final baby = snapshot.data!.activeBaby;
-                        return _historyContent(
-                          context: context,
+                        return _HomeDailyHistoryContent(
                           getRegisterEvents: getRegisterEvents,
                           deleteRegisterEvent: deleteRegisterEvent,
                           updateRegisterEvent: updateRegisterEvent,
@@ -88,26 +86,37 @@ class HomeDailyHistoryPage extends GoRoute {
   static const fullPath = '/home/history';
 }
 
-Widget _historyContent({
-  required BuildContext context,
-  required GetRegisterEventsFactory getRegisterEvents,
-  required DeleteRegisterEventFactory? deleteRegisterEvent,
-  required UpdateRegisterEventFactory? updateRegisterEvent,
-  required RegisterEventSyncServiceFactory? syncService,
-  required String babyId,
-  required String babyName,
-  required HomeDailyHistoryAction onRegisterPressed,
-}) =>
-    BlocProvider(
-      create: (_) => HomeDailyHistoryCubit(
-        getRegisterEvents: getRegisterEvents(context),
-        deleteRegisterEvent: deleteRegisterEvent?.call(context),
-        updateRegisterEvent: updateRegisterEvent?.call(context),
-        syncService: syncService?.call(context),
-        babyId: babyId,
-      )..load(),
-      child: HomeDailyHistoryView(
-        babyName: babyName,
-        onRegisterPressed: () => onRegisterPressed(context),
-      ),
-    );
+class _HomeDailyHistoryContent extends StatelessWidget {
+  const _HomeDailyHistoryContent({
+    required this.getRegisterEvents,
+    required this.deleteRegisterEvent,
+    required this.updateRegisterEvent,
+    required this.syncService,
+    required this.babyId,
+    required this.babyName,
+    required this.onRegisterPressed,
+  });
+
+  final GetRegisterEventsFactory getRegisterEvents;
+  final DeleteRegisterEventFactory? deleteRegisterEvent;
+  final UpdateRegisterEventFactory? updateRegisterEvent;
+  final RegisterEventSyncServiceFactory? syncService;
+  final String babyId;
+  final String babyName;
+  final HomeDailyHistoryAction onRegisterPressed;
+
+  @override
+  Widget build(BuildContext context) => BlocProvider(
+        create: (_) => HomeDailyHistoryCubit(
+          getRegisterEvents: getRegisterEvents(context),
+          deleteRegisterEvent: deleteRegisterEvent?.call(context),
+          updateRegisterEvent: updateRegisterEvent?.call(context),
+          syncService: syncService?.call(context),
+          babyId: babyId,
+        )..load(),
+        child: HomeDailyHistoryView(
+          babyName: babyName,
+          onRegisterPressed: () => onRegisterPressed(context),
+        ),
+      );
+}

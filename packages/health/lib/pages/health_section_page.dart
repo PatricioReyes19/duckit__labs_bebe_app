@@ -118,6 +118,23 @@ class HealthSectionPage extends GoRoute {
   static String flowLocation(HealthSectionKind kind, String action) =>
       '${locationFor(kind)}/$action';
 
+  static bool returnsToCurrentSection(
+    HealthSectionKind currentKind,
+    String action,
+  ) {
+    final targetKind = switch (action) {
+      HealthFlowAction.sync => HealthSectionKind.sync,
+      HealthFlowAction.history => HealthSectionKind.clinicalHistory,
+      HealthFlowAction.reports => HealthSectionKind.reports,
+      _ => currentKind,
+    };
+    final isSectionDestination =
+        action == HealthFlowAction.sync ||
+        action == HealthFlowAction.history ||
+        action == HealthFlowAction.reports;
+    return isSectionDestination && targetKind == currentKind;
+  }
+
   static void _openFlow(
     BuildContext context,
     HealthSectionKind currentKind,
@@ -144,6 +161,13 @@ class HealthSectionPage extends GoRoute {
     final location = isSectionDestination
         ? locationFor(targetKind)
         : flowLocation(targetKind, action);
+    if (returnsToCurrentSection(currentKind, action)) {
+      // Success/detail flows inside a section must collapse back to the
+      // canonical section route. Pushing it would leave the success page
+      // underneath and the system Back button would reopen it.
+      context.go(location);
+      return;
+    }
     if (action == HealthFlowAction.success ||
         action == HealthFlowAction.exported) {
       context.pushReplacement(location);

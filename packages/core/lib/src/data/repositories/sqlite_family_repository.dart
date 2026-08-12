@@ -496,11 +496,11 @@ class SqliteFamilyRepository implements FamilyRepository {
 
   /// Returns a complete local family aggregate only when it has never been
   /// uploaded or a family/baby mutation marked it as pending.
-  Future<FamilySyncSnapshot?> readPendingSnapshot() async {
+  Future<FamilySyncSnapshot?> readPendingSnapshot({bool force = false}) async {
     final database = await _database.database;
     final pendingAt = await _readSyncMetadata(database, _familyPendingAtKey);
     final syncedAt = await _readSyncMetadata(database, _familySyncedAtKey);
-    if (pendingAt == null && syncedAt != null) return null;
+    if (!force && pendingAt == null && syncedAt != null) return null;
     final localFamilies = await database.query(
       BebeDatabaseSchema.families,
       columns: const ['id'],
@@ -508,10 +508,10 @@ class SqliteFamilyRepository implements FamilyRepository {
     );
     if (localFamilies.isEmpty) return null;
     final overview = await getCurrent();
-    final updatedAt = pendingAt == null
+    final updatedAt = pendingAt == null || force
         ? _clock().toUtc()
         : DateTime.parse(pendingAt).toUtc();
-    if (pendingAt == null) {
+    if (pendingAt == null || force) {
       await _writeSyncMetadata(
         database,
         _familyPendingAtKey,

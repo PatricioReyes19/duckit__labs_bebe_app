@@ -1,5 +1,10 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:design_system/design_system.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:mocktail/mocktail.dart';
@@ -10,6 +15,19 @@ import 'package:shared_preferences_platform_interface/in_memory_shared_preferenc
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
 void main() {
+  late BebeTheme bebeTheme;
+
+  setUpAll(() {
+    final candidates = [
+      File('assets/json/bebe_theme.json'),
+      File('packages/design_system/assets/json/bebe_theme.json'),
+      File('../design_system/assets/json/bebe_theme.json'),
+    ];
+    final file = candidates.firstWhere((candidate) => candidate.existsSync());
+    final json = jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
+    bebeTheme = BebeTheme.fromJson(json);
+  });
+
   setUp(() {
     SharedPreferencesAsyncPlatform.instance =
         InMemorySharedPreferencesAsync.empty();
@@ -116,6 +134,42 @@ void main() {
       expect(service.currentNotifications.single.wasOpened, isTrue);
     },
   );
+
+  testWidgets('notification button exposes an unread dot', (tester) async {
+    final service = _MockNotificationService();
+    when(
+      () => service.notifications,
+    ).thenAnswer((_) => const Stream<List<AppNotification>>.empty());
+    when(() => service.currentNotifications).thenReturn([
+      AppNotification(
+        id: 'unread-1',
+        title: 'Registro sincronizado',
+        body: 'Se recibió una toma.',
+        receivedAt: DateTime.utc(2026, 8, 12, 12),
+      ),
+    ]);
+    var pressed = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: bebeTheme.lightTheme(),
+        home: Scaffold(
+          appBar: AppBar(
+            actions: [
+              NotificationInboxButton(
+                notificationService: service,
+                onPressed: () => pressed = true,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byType(BebeIndicatorDot), findsOneWidget);
+    await tester.tap(find.byType(IconButton));
+    expect(pressed, isTrue);
+  });
 }
 
 class _MockFirebaseMessaging extends Mock implements FirebaseMessaging {}
@@ -124,3 +178,5 @@ class _MockFirebaseAuth extends Mock implements FirebaseAuth {}
 
 class _MockLocalNotifications extends Mock
     implements FlutterLocalNotificationsPlugin {}
+
+class _MockNotificationService extends Mock implements NotificationService {}

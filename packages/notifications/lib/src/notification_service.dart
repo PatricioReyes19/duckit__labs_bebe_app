@@ -1,10 +1,10 @@
 import 'notification_message.dart';
 
-typedef RegisterRemoteNotificationDevice =
-    Future<void> Function({required String token, required String platform});
+typedef RegisterRemoteNotificationDevice = Future<void> Function(
+    {required String token, required String platform});
 
-typedef UnregisterRemoteNotificationDevice =
-    Future<void> Function(String token);
+typedef UnregisterRemoteNotificationDevice = Future<void> Function(
+    String token);
 
 typedef LoadRemoteNotifications = Future<List<AppNotification>> Function();
 typedef MarkRemoteNotificationRead = Future<void> Function(String id);

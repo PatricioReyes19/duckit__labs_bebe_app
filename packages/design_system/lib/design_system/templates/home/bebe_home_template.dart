@@ -80,23 +80,16 @@ class BebeHomeTemplate extends StatelessWidget {
               maxWidth: maximumContentWidth,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
+                spacing: spacing.spacing4xl,
                 children: [
                   padded(activeBabyHeader),
-                  if (visualReminder != null) ...[
-                    SizedBox(height: spacing.spacingL),
-                    padded(visualReminder!),
-                  ],
-                  if (isEmpty) ...[
-                    SizedBox(height: spacing.spacing4xl),
-                    padded(emptyState ?? const SizedBox.shrink()),
-                  ] else ...[
-                    SizedBox(height: spacing.spacing4xl),
+                  if (visualReminder != null) padded(visualReminder!),
+                  if (isEmpty)
+                    padded(emptyState ?? const SizedBox.shrink())
+                  else ...[
                     todaySummary,
-                    SizedBox(height: spacing.spacing4xl),
                     quickActions,
-                    SizedBox(height: spacing.spacing4xl),
                     padded(upcomingHealth),
-                    SizedBox(height: spacing.spacing4xl),
                     padded(recentInformation),
                   ],
                 ],
@@ -181,12 +174,47 @@ class _HomeLoadingState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.theme.colors;
+    final spacing = context.theme.spacing;
+    final horizontalPadding = spacing.spacing2xl;
 
     return SafeArea(
       top: false,
-      child: Center(
-        child: CircularProgressIndicator(color: colors.icons.brandDefault),
+      child: ColoredBox(
+        color: context.theme.colors.background.neutralsSurface,
+        child: SingleChildScrollView(
+          padding: EdgeInsets.symmetric(vertical: spacing.spacingXl),
+          child: BebeResponsiveContent(
+            maxWidth: BebeLayout.pageContentMaxWidth,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              spacing: spacing.spacing4xl,
+              children: [
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                  child: const BebeActiveBabyHeaderSkeleton(),
+                ),
+                BebeTodaySummarySkeleton(
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: horizontalPadding,
+                  ),
+                ),
+                BebeQuickRegistrationActionsSkeleton(
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: horizontalPadding,
+                  ),
+                ),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                  child: const BebeUpcomingHealthSectionSkeleton(),
+                ),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                  child: const BebeRecentInformationSectionSkeleton(),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

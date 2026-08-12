@@ -24,15 +24,12 @@ create table if not exists public.register_events (
   details jsonb not null default '{}'::jsonb,
   schema_version integer not null default 1 check (schema_version > 0)
 );
-
 create index if not exists register_events_owner_updated_idx
   on public.register_events (owner_id, updated_at);
 create index if not exists register_events_owner_baby_occurred_idx
   on public.register_events (owner_id, baby_id, occurred_at desc)
   where deleted_at is null;
-
 alter table public.register_events enable row level security;
-
 -- Firebase JWTs without a custom role are evaluated as `anon` by Supabase.
 -- This predicate keeps that fallback scoped to the exact Firebase project.
 create or replace function public.is_bebeapp_firebase_user()
@@ -48,11 +45,9 @@ as $$
       'https://securetoken.google.com/bebeapp-313a4'
     and auth.jwt() ->> 'aud' = 'bebeapp-313a4';
 $$;
-
 revoke all on function public.is_bebeapp_firebase_user() from public;
 grant execute on function public.is_bebeapp_firebase_user()
   to anon, authenticated;
-
 drop policy if exists "register events select own" on public.register_events;
 create policy "register events select own"
   on public.register_events
@@ -62,7 +57,6 @@ create policy "register events select own"
     (select public.is_bebeapp_firebase_user())
     and owner_id = auth.jwt() ->> 'sub'
   );
-
 drop policy if exists "register events insert own" on public.register_events;
 create policy "register events insert own"
   on public.register_events
@@ -72,7 +66,6 @@ create policy "register events insert own"
     (select public.is_bebeapp_firebase_user())
     and owner_id = auth.jwt() ->> 'sub'
   );
-
 drop policy if exists "register events update own" on public.register_events;
 create policy "register events update own"
   on public.register_events
@@ -86,10 +79,8 @@ create policy "register events update own"
     (select public.is_bebeapp_firebase_user())
     and owner_id = auth.jwt() ->> 'sub'
   );
-
 grant select, insert, update on public.register_events
   to anon, authenticated;
-
 -- Idempotent last-write-wins mutation. A retry with the same id/timestamp is
 -- harmless and an older offline device cannot overwrite a newer mutation.
 create or replace function public.apply_register_event(payload jsonb)
@@ -157,15 +148,12 @@ begin
   return result;
 end;
 $$;
-
 revoke all on function public.apply_register_event(jsonb) from public;
 grant execute on function public.apply_register_event(jsonb)
   to anon, authenticated;
-
 insert into storage.buckets (id, name, public)
 values ('register-event-media', 'register-event-media', false)
 on conflict (id) do update set public = excluded.public;
-
 drop policy if exists "register media select own" on storage.objects;
 create policy "register media select own"
   on storage.objects
@@ -176,7 +164,6 @@ create policy "register media select own"
     and (select public.is_bebeapp_firebase_user())
     and owner_id = auth.jwt() ->> 'sub'
   );
-
 drop policy if exists "register media insert own" on storage.objects;
 create policy "register media insert own"
   on storage.objects
@@ -187,7 +174,6 @@ create policy "register media insert own"
     and (select public.is_bebeapp_firebase_user())
     and (storage.foldername(name))[1] = auth.jwt() ->> 'sub'
   );
-
 drop policy if exists "register media update own" on storage.objects;
 create policy "register media update own"
   on storage.objects
@@ -202,7 +188,6 @@ create policy "register media update own"
     bucket_id = 'register-event-media'
     and (storage.foldername(name))[1] = auth.jwt() ->> 'sub'
   );
-
 drop policy if exists "register media delete own" on storage.objects;
 create policy "register media delete own"
   on storage.objects
@@ -213,7 +198,6 @@ create policy "register media delete own"
     and (select public.is_bebeapp_firebase_user())
     and owner_id = auth.jwt() ->> 'sub'
   );
-
 do $$
 begin
   if not exists (

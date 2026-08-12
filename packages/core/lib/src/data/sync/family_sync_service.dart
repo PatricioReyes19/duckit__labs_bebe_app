@@ -69,7 +69,19 @@ class FamilySyncService {
         final accepted = await _remote.push(pending);
         await _local.markSnapshotSynced(attempted: pending, accepted: accepted);
       }
-      await _local.mergeRemote(await _remote.pull());
+      try {
+        await _local.mergeRemote(await _remote.pull());
+      } on FormatException {
+        if (pending != null) rethrow;
+        // A released compatibility client could create an incomplete remote
+        // Baby and still leave the local snapshot marked as synchronized.
+        // Repair that same canonical id once from the complete local graph.
+        final repair = await _local.readPendingSnapshot(force: true);
+        if (repair == null) rethrow;
+        final accepted = await _remote.push(repair);
+        await _local.markSnapshotSynced(attempted: repair, accepted: accepted);
+        await _local.mergeRemote(await _remote.pull());
+      }
       return _emit(
         RegisterSyncState(
           phase: RegisterSyncPhase.synced,

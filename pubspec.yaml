@@ -6,7 +6,7 @@ environment:
 
 workspace:
   - apps/bebe_app
-  - apps/bebe_app/packages/notifications
+  - packages/notifications
   - apps/widgetbook
   - packages/app_base
   - packages/app_layout

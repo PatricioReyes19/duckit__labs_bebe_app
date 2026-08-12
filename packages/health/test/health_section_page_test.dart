@@ -37,4 +37,24 @@ void main() {
       '/health/reports/export',
     );
   });
+
+  test(
+    'volver desde el PDF colapsa a Reportes sin apilar la vista de éxito',
+    () {
+      expect(
+        HealthSectionPage.returnsToCurrentSection(
+          HealthSectionKind.reports,
+          HealthFlowAction.reports,
+        ),
+        isTrue,
+      );
+      expect(
+        HealthSectionPage.returnsToCurrentSection(
+          HealthSectionKind.vaccines,
+          HealthFlowAction.reports,
+        ),
+        isFalse,
+      );
+    },
+  );
 }

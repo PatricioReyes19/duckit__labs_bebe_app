@@ -6,7 +6,7 @@ import 'notification_message.dart';
 
 class NotificationInboxStore {
   NotificationInboxStore({SharedPreferencesAsync? preferences})
-    : _preferences = preferences ?? SharedPreferencesAsync();
+      : _preferences = preferences ?? SharedPreferencesAsync();
 
   static const _storageKey = 'bebeapp.notifications.inbox.v1';
   static const _maximumItems = 100;

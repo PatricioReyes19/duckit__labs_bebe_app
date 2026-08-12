@@ -1,7 +1,6 @@
 import '../../entities/register/register.dart';
 
 abstract interface class RegisterEventRepository {
-  /// Emits whenever visible event content changes locally or after a pull.
   Stream<void> get changes;
 
   Future<RegisteredEvent> save(RegisterEventDraft draft);
@@ -14,7 +13,6 @@ abstract interface class RegisterEventRepository {
     int? limit,
   });
 
-  /// Emits the current local snapshot immediately and on later mutations.
   Stream<List<RegisteredEvent>> observeByBaby(
     String babyId, {
     RegisterEventType? type,

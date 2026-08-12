@@ -186,7 +186,7 @@ Editar la fuente de configuración del flavor:
 ```json
 {
   "APP_ENVIRONMENT": "development",
-  "APP_DISPLAY_NAME": "BebéApp Dev",
+  "APP_DISPLAY_NAME": "BebéApp",
   "SUPABASE_URL": "https://PROJECT_REF.supabase.co",
   "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_...",
   "INVITATION_BASE_URL": "https://bebe.app",

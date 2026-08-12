@@ -93,6 +93,7 @@ class _LoadedHome extends StatefulWidget {
 class _LoadedHomeState extends State<_LoadedHome> {
   Timer? _reminderTimer;
   HomeVisualReminderVm? _activeReminder;
+  final Set<String> _dismissedReminderIds = <String>{};
   String? _switchingBabyId;
 
   HomeOverviewVm get overview => widget.overview;
@@ -104,10 +105,7 @@ class _LoadedHomeState extends State<_LoadedHome> {
   @override
   void initState() {
     super.initState();
-    _activeReminder = HomeVisualReminderVm.activeAt(
-      overview.visualReminders,
-      widget.clock(),
-    );
+    _activeReminder = _resolveActiveReminder();
     _armReminderTimer();
   }
 
@@ -117,10 +115,7 @@ class _LoadedHomeState extends State<_LoadedHome> {
     if (_switchingBabyId == overview.activeBaby.id) {
       _switchingBabyId = null;
     }
-    _activeReminder = HomeVisualReminderVm.activeAt(
-      overview.visualReminders,
-      widget.clock(),
-    );
+    _activeReminder = _resolveActiveReminder();
     _armReminderTimer();
   }
 
@@ -136,10 +131,7 @@ class _LoadedHomeState extends State<_LoadedHome> {
     _reminderTimer = Timer(delay, () {
       if (!mounted) return;
       setState(() {
-        _activeReminder = HomeVisualReminderVm.activeAt(
-          overview.visualReminders,
-          widget.clock(),
-        );
+        _activeReminder = _resolveActiveReminder();
       });
       _armReminderTimer();
     });
@@ -167,6 +159,8 @@ class _LoadedHomeState extends State<_LoadedHome> {
           : _HomeVisualReminderBanner(
               reminder: _activeReminder!,
               onPressed: () => _openReminder(context, _activeReminder!),
+              onCompleted: () => _completeReminder(_activeReminder!),
+              onDismissed: () => _dismissReminder(_activeReminder!),
             ),
       isEmpty: !overview.hasCareData,
       emptyState: _HomeFirstSteps(
@@ -284,7 +278,12 @@ class _LoadedHomeState extends State<_LoadedHome> {
         onSelected: (babyId) => Navigator.of(sheetContext).pop(babyId),
       ),
     );
-    if (!mounted || selectedId == null || selectedId == active.id) return;
+    if (!mounted ||
+        !context.mounted ||
+        selectedId == null ||
+        selectedId == active.id) {
+      return;
+    }
     await _switchBaby(context, selectedId);
   }
 
@@ -293,7 +292,7 @@ class _LoadedHomeState extends State<_LoadedHome> {
     setState(() => _switchingBabyId = babyId);
     try {
       await widget.switchBaby(babyId);
-      if (!mounted) return;
+      if (!mounted || !context.mounted) return;
       final bloc = context.read<HomeBloc>();
       final current = bloc.state;
       if (current is! HomeLoaded || current.overview.activeBaby.id != babyId) {
@@ -305,10 +304,14 @@ class _LoadedHomeState extends State<_LoadedHome> {
             )
             .timeout(const Duration(seconds: 5));
       }
-      if (!mounted || context.read<HomeBloc>().state is! HomeFailure) return;
+      if (!mounted ||
+          !context.mounted ||
+          context.read<HomeBloc>().state is! HomeFailure) {
+        return;
+      }
       throw StateError('No se pudieron cargar los datos del bebé.');
     } on Object {
-      if (mounted) {
+      if (mounted && context.mounted) {
         BebeInAppSnackbar.show(
           context,
           title: 'No pudimos cambiar de bebé',
@@ -332,8 +335,38 @@ class _LoadedHomeState extends State<_LoadedHome> {
       case HomeVisualReminderKind.diaper:
         openRegister(context, 'diaper');
       case HomeVisualReminderKind.medication:
-        openAgenda(context);
+        openRegister(context, 'medication');
     }
+  }
+
+  HomeVisualReminderVm? _resolveActiveReminder() {
+    return HomeVisualReminderVm.activeAt(
+      overview.visualReminders.where(
+        (reminder) => !_dismissedReminderIds.contains(reminder.id),
+      ),
+      widget.clock(),
+    );
+  }
+
+  void _completeReminder(HomeVisualReminderVm reminder) {
+    setState(() {
+      _dismissedReminderIds.add(reminder.id);
+      _activeReminder = _resolveActiveReminder();
+    });
+    _openReminder(context, reminder);
+  }
+
+  void _dismissReminder(HomeVisualReminderVm reminder) {
+    setState(() {
+      _dismissedReminderIds.add(reminder.id);
+      _activeReminder = _resolveActiveReminder();
+    });
+    BebeInAppSnackbar.show(
+      context,
+      title: 'Recordatorio ocultado',
+      message: 'No volveremos a mostrar este aviso en Home.',
+      variant: BebeInAppSnackbarVariant.information,
+    );
   }
 
   BebeTodayMetricData _metric(HomeTodayMetricVm metric) {
@@ -436,35 +469,37 @@ class _HomeVisualReminderBanner extends StatelessWidget {
   const _HomeVisualReminderBanner({
     required this.reminder,
     required this.onPressed,
+    required this.onCompleted,
+    required this.onDismissed,
   });
 
   final HomeVisualReminderVm reminder;
   final VoidCallback onPressed;
+  final VoidCallback onCompleted;
+  final VoidCallback onDismissed;
 
   @override
   Widget build(BuildContext context) {
     final time = reminder.startsAt;
     final timeLabel = '${time.hour.toString().padLeft(2, '0')}:'
         '${time.minute.toString().padLeft(2, '0')}';
-    return BebeStatusBanner(
+    return BebeCareReminderBanner(
       key: const ValueKey('home-visual-reminder'),
       title: reminder.title,
-      description: '${reminder.detail} · Programado a las $timeLabel',
-      type: BebeStatusBannerType.warning,
-      leading: Icon(
-        switch (reminder.kind) {
-          HomeVisualReminderKind.feeding ||
-          HomeVisualReminderKind.bottle ||
-          HomeVisualReminderKind.formula =>
-            LucideIcons.milk,
-          HomeVisualReminderKind.diaper => LucideIcons.baby,
-          HomeVisualReminderKind.medication => Icons.medication_outlined,
-        },
-      ),
-      trailing: const Icon(Icons.chevron_right_rounded),
+      description: reminder.detail,
+      timeLabel: timeLabel,
+      variant: switch (reminder.kind) {
+        HomeVisualReminderKind.feeding ||
+        HomeVisualReminderKind.bottle ||
+        HomeVisualReminderKind.formula =>
+          BebeCareReminderBannerVariant.feeding,
+        HomeVisualReminderKind.diaper => BebeCareReminderBannerVariant.diaper,
+        HomeVisualReminderKind.medication =>
+          BebeCareReminderBannerVariant.medication,
+      },
       onPressed: onPressed,
-      semanticLabel: '${reminder.title}. ${reminder.detail}. '
-          'Programado a las $timeLabel.',
+      onCompleted: onCompleted,
+      onDismissed: onDismissed,
     );
   }
 }

@@ -44,16 +44,16 @@ class FirebaseNotificationService implements NotificationService {
     LoadRemoteNotifications? loadRemoteNotifications,
     MarkRemoteNotificationRead? markRemoteNotificationRead,
     MarkAllRemoteNotificationsRead? markAllRemoteNotificationsRead,
-  }) : _messaging = messaging ?? FirebaseMessaging.instance,
-       _auth = auth ?? FirebaseAuth.instance,
-       _localNotifications =
-           localNotifications ?? FlutterLocalNotificationsPlugin(),
-       _inboxStore = inboxStore ?? NotificationInboxStore(),
-       _registerRemoteDevice = registerRemoteDevice,
-       _unregisterRemoteDevice = unregisterRemoteDevice,
-       _loadRemoteNotifications = loadRemoteNotifications,
-       _markRemoteNotificationRead = markRemoteNotificationRead,
-       _markAllRemoteNotificationsRead = markAllRemoteNotificationsRead;
+  })  : _messaging = messaging ?? FirebaseMessaging.instance,
+        _auth = auth ?? FirebaseAuth.instance,
+        _localNotifications =
+            localNotifications ?? FlutterLocalNotificationsPlugin(),
+        _inboxStore = inboxStore ?? NotificationInboxStore(),
+        _registerRemoteDevice = registerRemoteDevice,
+        _unregisterRemoteDevice = unregisterRemoteDevice,
+        _loadRemoteNotifications = loadRemoteNotifications,
+        _markRemoteNotificationRead = markRemoteNotificationRead,
+        _markAllRemoteNotificationsRead = markAllRemoteNotificationsRead;
 
   static const _channel = AndroidNotificationChannel(
     'bebeapp_high_importance',
@@ -137,12 +137,12 @@ class FirebaseNotificationService implements NotificationService {
       )
       ..add(
         _auth.userChanges().listen(
-          (user) => unawaited(_handleAuthenticatedUser(user)),
-        ),
+              (user) => unawaited(_handleAuthenticatedUser(user)),
+            ),
       );
 
-    final localLaunch = await _localNotifications
-        .getNotificationAppLaunchDetails();
+    final localLaunch =
+        await _localNotifications.getNotificationAppLaunchDetails();
     final localResponse = localLaunch?.notificationResponse;
     if (localLaunch?.didNotificationLaunchApp ?? false) {
       await _handleLocalNotificationTap(localResponse?.payload);
@@ -174,13 +174,11 @@ class FirebaseNotificationService implements NotificationService {
 
     await _localNotifications
         .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin
-        >()
+            AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(_channel);
     await _localNotifications
         .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin
-        >()
+            AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(_reminderChannel);
   }
 
@@ -225,7 +223,7 @@ class FirebaseNotificationService implements NotificationService {
           interruptionLevel: InterruptionLevel.timeSensitive,
         ),
       ),
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       payload: jsonEncode(notification.toJson()),
     );
   }
@@ -314,13 +312,13 @@ class FirebaseNotificationService implements NotificationService {
     } on Object catch (error) {
       debugPrint('No se pudo actualizar la bandeja desde Supabase: $error');
     }
-    final merged =
-        <String, AppNotification>{
-          for (final item in local) item.id: item,
-          for (final item in remote) item.id: item,
-        }.values.toList()..sort(
-          (first, second) => second.receivedAt.compareTo(first.receivedAt),
-        );
+    final merged = <String, AppNotification>{
+      for (final item in local) item.id: item,
+      for (final item in remote) item.id: item,
+    }.values.toList()
+      ..sort(
+        (first, second) => second.receivedAt.compareTo(first.receivedAt),
+      );
     _currentNotifications = merged.take(100).toList(growable: false);
     await _inboxStore.save(_currentNotifications);
     _emitNotifications();
@@ -383,6 +381,12 @@ class FirebaseNotificationService implements NotificationService {
       sound: true,
     );
     final state = _mapAuthorizationStatus(settings.authorizationStatus);
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      await _localNotifications
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>()
+          ?.requestExactAlarmsPermission();
+    }
     if (state == NotificationPermissionState.authorized ||
         state == NotificationPermissionState.provisional) {
       final token = await _getTokenWhenAvailable();

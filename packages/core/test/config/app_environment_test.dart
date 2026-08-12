@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   const environment = AppEnvironment(
     name: 'development',
-    appDisplayName: 'BebéApp Dev',
+    appDisplayName: 'BebéApp',
     supabaseUrl: 'https://project.supabase.co',
     supabasePublishableKey: 'sb_publishable_test',
     invitationBaseUrl: 'https://bebe.app',
@@ -38,7 +38,7 @@ void main() {
   test('rechaza una configuración Supabase parcial', () {
     const invalid = AppEnvironment(
       name: 'development',
-      appDisplayName: 'BebéApp Dev',
+      appDisplayName: 'BebéApp',
       supabaseUrl: 'https://project.supabase.co',
       supabasePublishableKey: '',
       invitationBaseUrl: 'https://bebe.app',

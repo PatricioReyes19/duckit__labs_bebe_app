@@ -3,7 +3,6 @@
 -- created by migrations 202608100001..004.
 
 create extension if not exists pgcrypto;
-
 -- FAMILY --------------------------------------------------------------------
 
 create table if not exists public.families (
@@ -13,11 +12,9 @@ create table if not exists public.families (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
-
 alter table public.babies add column if not exists family_id text;
 alter table public.babies add column if not exists birth_date timestamptz;
 alter table public.babies add column if not exists updated_by text;
-
 -- Old installations had one remote baby without a family aggregate. Preserve
 -- those rows by assigning a deterministic family before adding the FK.
 insert into public.families (id, name, created_by, created_at, updated_at)
@@ -30,16 +27,13 @@ select
 from public.babies baby
 where baby.family_id is null
 on conflict (id) do nothing;
-
 update public.babies baby
 set family_id = 'family-' || md5(baby.id)
 where baby.family_id is null;
-
 update public.babies
 set birth_date = coalesce(birth_date, created_at),
     updated_by = coalesce(updated_by, created_by)
 where birth_date is null or updated_by is null;
-
 -- Keep these columns nullable for backward compatibility with the bootstrap
 -- and invitation RPCs from already released clients. The new family snapshot
 -- always supplies all three values and the backfill above fixes existing rows.
@@ -57,14 +51,11 @@ begin
   end if;
 end;
 $$;
-
 create index if not exists families_updated_idx
   on public.families (updated_at, id);
 create index if not exists babies_family_updated_idx
   on public.babies (family_id, updated_at, id);
-
 alter table public.families enable row level security;
-
 create or replace function public.can_access_family(target_family_id text)
 returns boolean
 language sql
@@ -80,15 +71,12 @@ as $$
       and membership.user_id = auth.jwt() ->> 'sub'
   );
 $$;
-
 revoke all on function public.can_access_family(text) from public;
 grant execute on function public.can_access_family(text) to anon, authenticated;
-
 drop policy if exists "families select members" on public.families;
 create policy "families select members"
   on public.families for select to anon, authenticated
   using ((select public.can_access_family(id)));
-
 drop policy if exists "families insert creator" on public.families;
 create policy "families insert creator"
   on public.families for insert to anon, authenticated
@@ -96,19 +84,16 @@ create policy "families insert creator"
     (select public.is_bebeapp_firebase_user())
     and created_by = auth.jwt() ->> 'sub'
   );
-
 drop policy if exists "families update members" on public.families;
 create policy "families update members"
   on public.families for update to anon, authenticated
   using ((select public.can_access_family(id)))
   with check ((select public.can_access_family(id)));
-
 drop policy if exists "babies update members" on public.babies;
 create policy "babies update members"
   on public.babies for update to anon, authenticated
   using ((select public.can_access_baby(id, true)))
   with check ((select public.can_access_baby(id, true)));
-
 -- A family member must be able to resolve the display names of the other
 -- members returned by baby_caregivers.
 drop policy if exists "profiles select shared caregivers" on public.profiles;
@@ -124,9 +109,7 @@ create policy "profiles select shared caregivers"
         and theirs.user_id = profiles.id
     )
   );
-
 grant select, insert, update on public.families to anon, authenticated;
-
 create or replace function public.apply_family_snapshot(payload jsonb)
 returns public.families
 language plpgsql
@@ -215,11 +198,9 @@ begin
   return result;
 end;
 $$;
-
 revoke all on function public.apply_family_snapshot(jsonb) from public;
 grant execute on function public.apply_family_snapshot(jsonb)
   to anon, authenticated;
-
 -- HEALTH --------------------------------------------------------------------
 
 create table if not exists public.health_events (
@@ -238,19 +219,15 @@ create table if not exists public.health_events (
   updated_at timestamptz not null,
   updated_by text not null
 );
-
 create index if not exists health_events_baby_starts_idx
   on public.health_events (baby_id, starts_at);
 create index if not exists health_events_updated_idx
   on public.health_events (updated_at, id);
-
 alter table public.health_events enable row level security;
-
 drop policy if exists "health events select members" on public.health_events;
 create policy "health events select members"
   on public.health_events for select to anon, authenticated
   using ((select public.can_access_baby(baby_id)));
-
 drop policy if exists "health events insert members" on public.health_events;
 create policy "health events insert members"
   on public.health_events for insert to anon, authenticated
@@ -259,7 +236,6 @@ create policy "health events insert members"
     and updated_by = auth.jwt() ->> 'sub'
     and (select public.can_access_baby(baby_id, true))
   );
-
 drop policy if exists "health events update members" on public.health_events;
 create policy "health events update members"
   on public.health_events for update to anon, authenticated
@@ -268,9 +244,7 @@ create policy "health events update members"
     updated_by = auth.jwt() ->> 'sub'
     and (select public.can_access_baby(baby_id, true))
   );
-
 grant select, insert, update on public.health_events to anon, authenticated;
-
 create or replace function public.apply_health_event(payload jsonb)
 returns public.health_events
 language plpgsql
@@ -329,10 +303,8 @@ begin
   return result;
 end;
 $$;
-
 revoke all on function public.apply_health_event(jsonb) from public;
 grant execute on function public.apply_health_event(jsonb) to anon, authenticated;
-
 -- USER SETTINGS -------------------------------------------------------------
 
 create table if not exists public.user_preferences (
@@ -352,9 +324,7 @@ create table if not exists public.user_preferences (
   text_size text not null default 'Predeterminado',
   updated_at timestamptz not null default now()
 );
-
 alter table public.user_preferences enable row level security;
-
 drop policy if exists "user preferences own" on public.user_preferences;
 create policy "user preferences own"
   on public.user_preferences for all to anon, authenticated
@@ -363,9 +333,7 @@ create policy "user preferences own"
     (select public.is_bebeapp_firebase_user())
     and user_id = auth.jwt() ->> 'sub'
   );
-
 grant select, insert, update on public.user_preferences to anon, authenticated;
-
 create or replace function public.apply_user_preferences(payload jsonb)
 returns public.user_preferences
 language plpgsql
@@ -437,11 +405,9 @@ begin
   return result;
 end;
 $$;
-
 revoke all on function public.apply_user_preferences(jsonb) from public;
 grant execute on function public.apply_user_preferences(jsonb)
   to anon, authenticated;
-
 -- Migration 004 predates family_id and birth_date. Return those canonical
 -- identifiers so accepting an invitation creates the same local aggregate
 -- instead of inventing a second family id or estimating a birth date.
@@ -518,7 +484,6 @@ begin
   );
 end;
 $$;
-
 -- HEALTH NOTIFICATIONS ------------------------------------------------------
 
 create or replace function public.notify_health_activity()
@@ -563,13 +528,11 @@ begin
   return new;
 end;
 $$;
-
 drop trigger if exists health_events_notify_care_circle
   on public.health_events;
 create trigger health_events_notify_care_circle
 after insert or update of updated_at on public.health_events
 for each row execute function public.notify_health_activity();
-
 -- Realtime only wakes pull-based services; RLS still filters every payload.
 do $$
 declare

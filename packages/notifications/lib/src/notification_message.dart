@@ -21,8 +21,7 @@ class AppNotification {
     final receivedAt = message.sentTime ?? DateTime.now();
 
     return AppNotification(
-      id:
-          data['notification_id'] ??
+      id: data['notification_id'] ??
           message.messageId ??
           '${receivedAt.microsecondsSinceEpoch}-${data.hashCode}',
       title: notification?.title ?? data['title'] ?? 'BebéApp',
@@ -78,8 +77,8 @@ class AppNotification {
     };
 
     return allowedPrefixes.any(
-          (prefix) => uri.path == prefix || uri.path.startsWith('$prefix/'),
-        )
+      (prefix) => uri.path == prefix || uri.path.startsWith('$prefix/'),
+    )
         ? candidate
         : null;
   }
@@ -96,11 +95,11 @@ class AppNotification {
   }
 
   Map<String, Object?> toJson() => <String, Object?>{
-    'id': id,
-    'title': title,
-    'body': body,
-    'receivedAt': receivedAt.toIso8601String(),
-    'data': data,
-    'wasOpened': wasOpened,
-  };
+        'id': id,
+        'title': title,
+        'body': body,
+        'receivedAt': receivedAt.toIso8601String(),
+        'data': data,
+        'wasOpened': wasOpened,
+      };
 }

@@ -107,7 +107,10 @@ class BebeQuickRegistrationActions extends StatelessWidget {
                     for (var index = 0; index < items.length; index++) ...[
                       SizedBox(
                         width: tileWidth,
-                        child: _buildTile(items[index]),
+                        child: _QuickRegistrationActionTile(
+                          item: items[index],
+                          onPressed: onItemPressed,
+                        ),
                       ),
                       if (index < items.length - 1) SizedBox(width: gap),
                     ],
@@ -120,16 +123,65 @@ class BebeQuickRegistrationActions extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _buildTile(BebeQuickActionData item) {
+class _QuickRegistrationActionTile extends StatelessWidget {
+  const _QuickRegistrationActionTile({
+    required this.item,
+    required this.onPressed,
+  });
+
+  final BebeQuickActionData item;
+  final ValueChanged<String> onPressed;
+
+  @override
+  Widget build(BuildContext context) {
     return BebeCategoryActionTile(
       variant: item.type.toTitleVariant(),
       label: item.label,
       icon: item.icon,
       semanticLabel: item.semanticLabel,
-      onPressed: () {
-        onItemPressed(item.id);
-      },
+      onPressed: () => onPressed(item.id),
+    );
+  }
+}
+
+/// Loading representation owned by [BebeQuickRegistrationActions].
+class BebeQuickRegistrationActionsSkeleton extends StatelessWidget {
+  const BebeQuickRegistrationActionsSkeleton({
+    this.itemCount = 5,
+    this.contentPadding = EdgeInsets.zero,
+    super.key,
+  });
+
+  final int itemCount;
+  final EdgeInsetsGeometry contentPadding;
+
+  @override
+  Widget build(BuildContext context) {
+    final spacing = context.theme.spacing;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: spacing.spacingM,
+      children: [
+        Padding(
+          padding: contentPadding,
+          child: const BebeSkeleton.line(width: 132, height: 18),
+        ),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: contentPadding,
+          child: Row(
+            spacing: spacing.spacingS,
+            children: List.generate(
+              itemCount,
+              (_) => const BebeSkeleton(width: 80, height: 88),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

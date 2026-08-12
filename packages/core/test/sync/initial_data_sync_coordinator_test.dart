@@ -84,6 +84,46 @@ void main() {
       hasLength(1),
     );
   });
+
+  test(
+    'repairs an incomplete remote Baby from the complete local graph',
+    () async {
+      final database = BebeDatabase(
+        databaseFactory: databaseFactoryFfi,
+        databasePath: inMemoryDatabasePath,
+      );
+      final families = SqliteFamilyRepository(
+        database,
+        idGenerator: (prefix) => '$prefix-repair',
+        clock: () => now,
+      );
+      final created = await families.createInitialFamily(
+        InitialFamilyDraft(
+          familyName: 'Familia de Emilia',
+          babyName: 'Emilia',
+          birthDate: DateTime.utc(2026, 2, 3),
+          ownerName: 'Paula',
+          ownerEmail: 'paula@example.com',
+        ),
+      );
+      final initial = (await families.readPendingSnapshot())!;
+      await families.markSnapshotSynced(attempted: initial, accepted: initial);
+      final remote = _RepairableFamilyRemote();
+      final sync = FamilySyncService(families, remote, clock: () => now);
+      addTearDown(() async {
+        await sync.close();
+        await database.close();
+      });
+
+      final result = await sync.synchronize();
+
+      expect(result.phase, RegisterSyncPhase.synced);
+      expect(remote.pushCount, 1);
+      expect(remote.snapshot?.overview.id, created.id);
+      expect(remote.snapshot?.overview.activeBaby.name, 'Emilia');
+      expect(await families.readPendingSnapshot(), isNull);
+    },
+  );
 }
 
 class _SyncHarness {
@@ -301,6 +341,46 @@ class _FamilyRemote implements FamilyRemoteDataSource {
   @override
   Future<FamilySyncSnapshot> push(FamilySyncSnapshot snapshot) async =>
       snapshot;
+
+  @override
+  Future<void> createInvitation(Map<String, Object?> parameters) async {}
+
+  @override
+  Future<void> resendInvitation({
+    required String code,
+    required String newCode,
+  }) async {}
+
+  @override
+  Future<void> revokeInvitation(String code) async {}
+}
+
+class _RepairableFamilyRemote implements FamilyRemoteDataSource {
+  FamilySyncSnapshot? snapshot;
+  var pushCount = 0;
+  var incomplete = true;
+
+  @override
+  bool get isConfigured => true;
+
+  @override
+  Future<bool> isAuthenticated() async => true;
+
+  @override
+  Future<List<FamilySyncSnapshot>> pull() async {
+    if (incomplete) {
+      throw const FormatException('Supabase Baby missing birth_date');
+    }
+    return [snapshot!];
+  }
+
+  @override
+  Future<FamilySyncSnapshot> push(FamilySyncSnapshot value) async {
+    pushCount += 1;
+    incomplete = false;
+    snapshot = value;
+    return value;
+  }
 
   @override
   Future<void> createInvitation(Map<String, Object?> parameters) async {}

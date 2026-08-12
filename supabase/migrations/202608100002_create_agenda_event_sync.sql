@@ -17,7 +17,6 @@ create table if not exists public.agenda_events (
   caregiver_id text,
   source_register_event_id text
 );
-
 create index if not exists agenda_events_owner_updated_idx
   on public.agenda_events (owner_id, updated_at);
 create index if not exists agenda_events_owner_baby_starts_idx
@@ -26,9 +25,7 @@ create index if not exists agenda_events_owner_baby_starts_idx
 create index if not exists agenda_events_source_register_idx
   on public.agenda_events (owner_id, source_register_event_id)
   where source_register_event_id is not null;
-
 alter table public.agenda_events enable row level security;
-
 drop policy if exists "agenda events select own" on public.agenda_events;
 create policy "agenda events select own"
   on public.agenda_events
@@ -38,7 +35,6 @@ create policy "agenda events select own"
     (select public.is_bebeapp_firebase_user())
     and owner_id = auth.jwt() ->> 'sub'
   );
-
 drop policy if exists "agenda events insert own" on public.agenda_events;
 create policy "agenda events insert own"
   on public.agenda_events
@@ -48,7 +44,6 @@ create policy "agenda events insert own"
     (select public.is_bebeapp_firebase_user())
     and owner_id = auth.jwt() ->> 'sub'
   );
-
 drop policy if exists "agenda events update own" on public.agenda_events;
 create policy "agenda events update own"
   on public.agenda_events
@@ -62,9 +57,7 @@ create policy "agenda events update own"
     (select public.is_bebeapp_firebase_user())
     and owner_id = auth.jwt() ->> 'sub'
   );
-
 grant select, insert, update on public.agenda_events to anon, authenticated;
-
 create or replace function public.apply_agenda_event(payload jsonb)
 returns public.agenda_events
 language plpgsql
@@ -130,11 +123,9 @@ begin
   return result;
 end;
 $$;
-
 revoke all on function public.apply_agenda_event(jsonb) from public;
 grant execute on function public.apply_agenda_event(jsonb)
   to anon, authenticated;
-
 do $$
 begin
   if not exists (

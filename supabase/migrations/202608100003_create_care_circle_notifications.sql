@@ -2,7 +2,6 @@
 -- Run after the register and agenda sync migrations.
 
 create extension if not exists pgcrypto;
-
 create table if not exists public.profiles (
   id text primary key,
   email text,
@@ -10,7 +9,6 @@ create table if not exists public.profiles (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
-
 create table if not exists public.babies (
   id text primary key,
   display_name text not null default 'Bebé',
@@ -18,7 +16,6 @@ create table if not exists public.babies (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
-
 create table if not exists public.baby_caregivers (
   baby_id text not null references public.babies(id) on delete cascade,
   user_id text not null,
@@ -29,14 +26,11 @@ create table if not exists public.baby_caregivers (
   joined_at timestamptz not null default now(),
   primary key (baby_id, user_id)
 );
-
 create index if not exists baby_caregivers_user_idx
   on public.baby_caregivers (user_id, baby_id);
-
 alter table public.profiles enable row level security;
 alter table public.babies enable row level security;
 alter table public.baby_caregivers enable row level security;
-
 create or replace function public.can_access_baby(
   target_baby_id text,
   require_write boolean default false
@@ -55,11 +49,9 @@ as $$
       and (not require_write or membership.can_write)
   );
 $$;
-
 revoke all on function public.can_access_baby(text, boolean) from public;
 grant execute on function public.can_access_baby(text, boolean)
   to anon, authenticated;
-
 drop policy if exists "profiles select own" on public.profiles;
 create policy "profiles select own"
   on public.profiles for select to anon, authenticated
@@ -67,7 +59,6 @@ create policy "profiles select own"
     (select public.is_bebeapp_firebase_user())
     and id = auth.jwt() ->> 'sub'
   );
-
 drop policy if exists "profiles insert own" on public.profiles;
 create policy "profiles insert own"
   on public.profiles for insert to anon, authenticated
@@ -75,18 +66,15 @@ create policy "profiles insert own"
     (select public.is_bebeapp_firebase_user())
     and id = auth.jwt() ->> 'sub'
   );
-
 drop policy if exists "profiles update own" on public.profiles;
 create policy "profiles update own"
   on public.profiles for update to anon, authenticated
   using (id = auth.jwt() ->> 'sub')
   with check (id = auth.jwt() ->> 'sub');
-
 drop policy if exists "babies select members" on public.babies;
 create policy "babies select members"
   on public.babies for select to anon, authenticated
   using ((select public.can_access_baby(id)));
-
 drop policy if exists "babies insert creator" on public.babies;
 create policy "babies insert creator"
   on public.babies for insert to anon, authenticated
@@ -94,13 +82,11 @@ create policy "babies insert creator"
     (select public.is_bebeapp_firebase_user())
     and created_by = auth.jwt() ->> 'sub'
   );
-
 drop policy if exists "baby caregivers select members"
   on public.baby_caregivers;
 create policy "baby caregivers select members"
   on public.baby_caregivers for select to anon, authenticated
   using ((select public.can_access_baby(baby_id)));
-
 drop policy if exists "baby caregivers insert owner"
   on public.baby_caregivers;
 create policy "baby caregivers insert owner"
@@ -112,7 +98,6 @@ create policy "baby caregivers insert owner"
         and baby.created_by = auth.jwt() ->> 'sub'
     )
   );
-
 drop policy if exists "baby caregivers update owner"
   on public.baby_caregivers;
 create policy "baby caregivers update owner"
@@ -131,12 +116,10 @@ create policy "baby caregivers update owner"
         and baby.created_by = auth.jwt() ->> 'sub'
     )
   );
-
 grant select, insert, update on public.profiles to anon, authenticated;
 grant select, insert, update on public.babies to anon, authenticated;
 grant select, insert, update on public.baby_caregivers
   to anon, authenticated;
-
 -- Existing owner-only rows become one-member care circles.
 insert into public.babies (id, display_name, created_by)
 select source.baby_id, 'Bebé', min(source.owner_id)
@@ -147,7 +130,6 @@ from (
 ) source
 group by source.baby_id
 on conflict (id) do nothing;
-
 insert into public.baby_caregivers (baby_id, user_id, role, can_write)
 select distinct source.baby_id, source.owner_id, 'owner', true
 from (
@@ -156,7 +138,6 @@ from (
   select baby_id, owner_id from public.agenda_events
 ) source
 on conflict (baby_id, user_id) do nothing;
-
 create or replace function public.bootstrap_baby(
   p_baby_id text,
   p_display_name text default 'Bebé'
@@ -195,11 +176,9 @@ begin
   return result;
 end;
 $$;
-
 revoke all on function public.bootstrap_baby(text, text) from public;
 grant execute on function public.bootstrap_baby(text, text)
   to anon, authenticated;
-
 create or replace function public.add_baby_caregiver(
   p_baby_id text,
   p_user_id text,
@@ -235,22 +214,18 @@ begin
   return result;
 end;
 $$;
-
 revoke all on function public.add_baby_caregiver(text, text, text, boolean)
   from public;
 grant execute on function public.add_baby_caregiver(text, text, text, boolean)
   to anon, authenticated;
-
 alter table public.register_events
   add column if not exists updated_by text;
 update public.register_events set updated_by = owner_id where updated_by is null;
 alter table public.register_events alter column updated_by set not null;
-
 alter table public.agenda_events
   add column if not exists updated_by text;
 update public.agenda_events set updated_by = owner_id where updated_by is null;
 alter table public.agenda_events alter column updated_by set not null;
-
 drop policy if exists "register events select own" on public.register_events;
 drop policy if exists "register events insert own" on public.register_events;
 drop policy if exists "register events update own" on public.register_events;
@@ -260,7 +235,6 @@ drop policy if exists "register events insert care circle"
   on public.register_events;
 drop policy if exists "register events update care circle"
   on public.register_events;
-
 create policy "register events select care circle"
   on public.register_events for select to anon, authenticated
   using ((select public.can_access_baby(baby_id)));
@@ -278,7 +252,6 @@ create policy "register events update care circle"
     (select public.can_access_baby(baby_id, true))
     and updated_by = auth.jwt() ->> 'sub'
   );
-
 drop policy if exists "agenda events select own" on public.agenda_events;
 drop policy if exists "agenda events insert own" on public.agenda_events;
 drop policy if exists "agenda events update own" on public.agenda_events;
@@ -288,7 +261,6 @@ drop policy if exists "agenda events insert care circle"
   on public.agenda_events;
 drop policy if exists "agenda events update care circle"
   on public.agenda_events;
-
 create policy "agenda events select care circle"
   on public.agenda_events for select to anon, authenticated
   using ((select public.can_access_baby(baby_id)));
@@ -306,7 +278,6 @@ create policy "agenda events update care circle"
     (select public.can_access_baby(baby_id, true))
     and updated_by = auth.jwt() ->> 'sub'
   );
-
 create or replace function public.apply_register_event(payload jsonb)
 returns public.register_events
 language plpgsql
@@ -368,7 +339,6 @@ begin
   return result;
 end;
 $$;
-
 create or replace function public.apply_agenda_event(payload jsonb)
 returns public.agenda_events
 language plpgsql
@@ -430,7 +400,6 @@ begin
   return result;
 end;
 $$;
-
 -- Media is grouped by baby id so every authorized caregiver can read it.
 drop policy if exists "register media select own" on storage.objects;
 drop policy if exists "register media insert own" on storage.objects;
@@ -440,7 +409,6 @@ drop policy if exists "register media select care circle" on storage.objects;
 drop policy if exists "register media insert care circle" on storage.objects;
 drop policy if exists "register media update care circle" on storage.objects;
 drop policy if exists "register media delete care circle" on storage.objects;
-
 create policy "register media select care circle"
   on storage.objects for select to anon, authenticated
   using (
@@ -469,7 +437,6 @@ create policy "register media delete care circle"
     bucket_id = 'register-event-media'
     and (select public.can_access_baby((storage.foldername(name))[1], true))
   );
-
 create table if not exists public.push_devices (
   id uuid primary key default gen_random_uuid(),
   user_id text not null,
@@ -481,7 +448,6 @@ create table if not exists public.push_devices (
 create index if not exists push_devices_user_enabled_idx
   on public.push_devices (user_id, enabled);
 alter table public.push_devices enable row level security;
-
 drop policy if exists "push devices own" on public.push_devices;
 create policy "push devices own"
   on public.push_devices for select to anon, authenticated
@@ -491,7 +457,6 @@ create policy "push devices delete own"
   on public.push_devices for delete to anon, authenticated
   using (user_id = auth.jwt() ->> 'sub');
 grant select, delete on public.push_devices to anon, authenticated;
-
 create or replace function public.register_push_device(
   p_token text,
   p_platform text
@@ -519,7 +484,6 @@ begin
     updated_at = now();
 end;
 $$;
-
 create or replace function public.unregister_push_device(p_token text)
 returns void
 language sql
@@ -529,14 +493,12 @@ as $$
   delete from public.push_devices
   where token = p_token and user_id = auth.jwt() ->> 'sub';
 $$;
-
 revoke all on function public.register_push_device(text, text) from public;
 revoke all on function public.unregister_push_device(text) from public;
 grant execute on function public.register_push_device(text, text)
   to anon, authenticated;
 grant execute on function public.unregister_push_device(text)
   to anon, authenticated;
-
 create table if not exists public.activity_notifications (
   id uuid primary key default gen_random_uuid(),
   recipient_id text not null,
@@ -557,7 +519,6 @@ create table if not exists public.activity_notifications (
 create index if not exists activity_notifications_recipient_idx
   on public.activity_notifications (recipient_id, created_at desc);
 alter table public.activity_notifications enable row level security;
-
 drop policy if exists "activity notifications select recipient"
   on public.activity_notifications;
 create policy "activity notifications select recipient"
@@ -570,7 +531,6 @@ create policy "activity notifications update recipient"
   using (recipient_id = auth.jwt() ->> 'sub')
   with check (recipient_id = auth.jwt() ->> 'sub');
 grant select, update on public.activity_notifications to anon, authenticated;
-
 create or replace function public.notify_care_circle_activity()
 returns trigger
 language plpgsql
@@ -631,19 +591,16 @@ begin
   return new;
 end;
 $$;
-
 drop trigger if exists register_events_notify_care_circle
   on public.register_events;
 create trigger register_events_notify_care_circle
 after insert or update of updated_at on public.register_events
 for each row execute function public.notify_care_circle_activity();
-
 drop trigger if exists agenda_events_notify_care_circle
   on public.agenda_events;
 create trigger agenda_events_notify_care_circle
 after insert or update of updated_at on public.agenda_events
 for each row execute function public.notify_care_circle_activity();
-
 do $$
 begin
   if not exists (

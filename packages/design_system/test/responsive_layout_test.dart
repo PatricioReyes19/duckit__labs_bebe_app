@@ -254,6 +254,32 @@ void main() {
     expect(tester.getTopLeft(firstAction).dx, lessThan(actionsViewportLeft));
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('home loading composes component-owned skeletons', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _TestApp(
+        theme: bebeTheme.lightTheme(),
+        child: const BebeHomeTemplate(
+          isLoading: true,
+          activeBabyHeader: SizedBox.shrink(),
+          todaySummary: SizedBox.shrink(),
+          quickActions: SizedBox.shrink(),
+          upcomingHealth: SizedBox.shrink(),
+          recentInformation: SizedBox.shrink(),
+        ),
+      ),
+    );
+
+    expect(find.byType(BebeActiveBabyHeaderSkeleton), findsOneWidget);
+    expect(find.byType(BebeTodaySummarySkeleton), findsOneWidget);
+    expect(find.byType(BebeQuickRegistrationActionsSkeleton), findsOneWidget);
+    expect(find.byType(BebeUpcomingHealthSectionSkeleton), findsOneWidget);
+    expect(find.byType(BebeRecentInformationSectionSkeleton), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 const _metrics = <BebeTodayMetricData>[
