@@ -8,6 +8,7 @@ export 'register_event_sync_service.dart';
 export 'supabase_configuration.dart';
 export 'supabase_push_device_repository.dart';
 export 'supabase_realtime_sync_coordinator.dart';
+export 'sync_ux_state.dart';
 export 'health_event_sync_service.dart';
 export 'initial_data_sync_coordinator.dart';
 export 'offline_first_health_repository.dart';

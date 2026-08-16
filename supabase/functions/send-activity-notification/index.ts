@@ -190,16 +190,24 @@ Deno.serve(async (request) => {
           message: {
             token: device.token,
             notification: {
-              title: notification.title,
-              body: notification.body,
+              title: "BebéApp",
+              body: "Tienes una novedad en tu círculo de cuidado.",
             },
             data: {
               notification_id: notification.id,
               route: notification.route,
+              account_id: notification.recipient_id,
+              baby_id: String(notification.payload?.baby_id ?? ""),
               payload: JSON.stringify(notification.payload ?? {}),
             },
-            android: { priority: "high" },
-            apns: { payload: { aps: { sound: "default" } } },
+            android: {
+              priority: "high",
+              notification: { tag: notification.id },
+            },
+            apns: {
+              headers: { "apns-collapse-id": notification.id },
+              payload: { aps: { sound: "default" } },
+            },
           },
         }),
       });

@@ -71,7 +71,7 @@ class SleepRegisterForm extends StatelessWidget {
             key: ValueKey('sleep-ongoing-guidance'),
             title: 'Sin hora de despertar',
             description:
-                'Guardaremos la hora de inicio. Cuando despierte podrás finalizar el sueño desde el historial de hoy.',
+                'Guardaremos la hora de inicio. Cuando despierte podrás finalizar el sueño desde Home o desde el historial.',
             icon: Icon(Icons.timer_outlined),
             variant: BebeInfoBannerVariant.information,
           ),

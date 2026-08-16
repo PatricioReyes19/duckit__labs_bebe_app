@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import '../datasources/remote/family_remote_data_source.dart';
+import '../models/family_models.dart';
 import '../repositories/sqlite_family_repository.dart';
 import 'register_event_sync_service.dart';
 
@@ -15,11 +16,13 @@ class FamilySyncService {
   final DateTime Function() _clock;
   final _states = StreamController<RegisterSyncState>.broadcast();
   RegisterSyncState _state = const RegisterSyncState.idle();
+  List<FamilySyncSnapshot>? _lastPulledSnapshots;
   Future<RegisterSyncState>? _running;
   bool _rerunRequested = false;
 
   RegisterSyncState get state => _state;
   Stream<RegisterSyncState> get states => _states.stream;
+  List<FamilySyncSnapshot>? get lastPulledSnapshots => _lastPulledSnapshots;
 
   Future<RegisterSyncState> synchronize() {
     _rerunRequested = true;
@@ -40,6 +43,7 @@ class FamilySyncService {
   }
 
   Future<RegisterSyncState> _synchronizeOnce() async {
+    _lastPulledSnapshots = null;
     if (!_remote.isConfigured) {
       return _emit(
         const RegisterSyncState(
@@ -57,8 +61,9 @@ class FamilySyncService {
       );
     }
 
+    FamilySyncSnapshot? pending;
     try {
-      final pending = await _local.readPendingSnapshot();
+      pending = await _local.readPendingSnapshot();
       _emit(
         RegisterSyncState(
           phase: RegisterSyncPhase.syncing,
@@ -70,7 +75,9 @@ class FamilySyncService {
         await _local.markSnapshotSynced(attempted: pending, accepted: accepted);
       }
       try {
-        await _local.mergeRemote(await _remote.pull());
+        final snapshots = await _remote.pull();
+        await _local.mergeRemote(snapshots);
+        _lastPulledSnapshots = List.unmodifiable(snapshots);
       } on FormatException {
         if (pending != null) rethrow;
         // A released compatibility client could create an incomplete remote
@@ -80,7 +87,9 @@ class FamilySyncService {
         if (repair == null) rethrow;
         final accepted = await _remote.push(repair);
         await _local.markSnapshotSynced(attempted: repair, accepted: accepted);
-        await _local.mergeRemote(await _remote.pull());
+        final snapshots = await _remote.pull();
+        await _local.mergeRemote(snapshots);
+        _lastPulledSnapshots = List.unmodifiable(snapshots);
       }
       return _emit(
         RegisterSyncState(
@@ -92,6 +101,7 @@ class FamilySyncService {
       return _emit(
         RegisterSyncState(
           phase: RegisterSyncPhase.failed,
+          pendingCount: pending == null ? 0 : 1,
           failedCount: 1,
           message: error.toString(),
         ),

@@ -28,6 +28,7 @@ class SqliteFamilyRepository implements FamilyRepository {
   final DateTime Function() _clock;
   final StreamController<String> _activeBabyChanges =
       StreamController<String>.broadcast();
+  String? _activeFamilyId;
 
   @override
   Stream<String> get activeBabyChanges => _activeBabyChanges.stream;
@@ -44,9 +45,35 @@ class SqliteFamilyRepository implements FamilyRepository {
     return rows.isNotEmpty;
   }
 
+  Future<List<FamilyOverviewEntity>> listAvailable() async {
+    final database = await _database.database;
+    final rows = await database.query(
+      BebeDatabaseSchema.families,
+      orderBy: 'rowid ASC',
+    );
+    final families = <FamilyOverviewEntity>[];
+    for (final row in rows) {
+      families.add(await _overview(database, FamilyModel.fromRow(row)));
+    }
+    return List.unmodifiable(families);
+  }
+
   @override
   Future<FamilyOverviewEntity> getCurrent() async {
     final database = await _database.database;
+    final activeFamilyId = _activeFamilyId;
+    if (activeFamilyId != null) {
+      final selected = await database.query(
+        BebeDatabaseSchema.families,
+        where: 'id = ?',
+        whereArgs: [activeFamilyId],
+        limit: 1,
+      );
+      if (selected.isNotEmpty) {
+        return _overview(database, FamilyModel.fromRow(selected.single));
+      }
+      _activeFamilyId = null;
+    }
     final families = await database.query(
       BebeDatabaseSchema.families,
       orderBy: 'rowid DESC',
@@ -71,6 +98,7 @@ class SqliteFamilyRepository implements FamilyRepository {
       throw StateError('Baby $babyId does not exist.');
     }
     final baby = BabyModel.fromRow(babyRows.single);
+    _activeFamilyId = baby.familyId;
     await database.update(
       BebeDatabaseSchema.families,
       {'active_baby_id': babyId},

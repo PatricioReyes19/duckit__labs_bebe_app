@@ -43,6 +43,7 @@ class HomeOverviewEntity {
     required this.family,
     required this.activeBaby,
     required this.metrics,
+    required this.activeRegisterEvents,
     required this.upcomingHealthEvent,
     required this.mostRecentEvent,
     this.careReminders = const [],
@@ -51,6 +52,7 @@ class HomeOverviewEntity {
   final FamilyOverviewEntity family;
   final BabyEntity activeBaby;
   final List<HomeMetricEntity> metrics;
+  final List<RegisteredEvent> activeRegisterEvents;
   final HealthEventEntity? upcomingHealthEvent;
   final RegisteredEvent? mostRecentEvent;
   final List<HomeCareReminderEntity> careReminders;

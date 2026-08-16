@@ -8,7 +8,9 @@ import 'package:go_router/go_router.dart';
 import 'package:notifications/notifications.dart';
 
 import '../dependencies/dependencies.dart';
+import '../notifications/notification_navigation_guard.dart';
 import '../router/startup_route_mapper.dart';
+import '../startup/startup.dart';
 
 final appScaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
@@ -63,7 +65,7 @@ class _AppListenersState extends State<AppListeners> {
   }
 
   void _openNotification(AppNotification notification) {
-    getIt<GoRouter>().go(notification.route ?? '/notifications');
+    unawaited(openNotificationSafely(notification));
   }
 
   @override
@@ -78,10 +80,34 @@ class _AppListenersState extends State<AppListeners> {
     return BlocListener<SessionBloc, SessionState>(
       listenWhen: (previous, current) =>
           previous is SessionAuthenticated && current is SessionUnauthenticated,
-      listener: (_, __) => getIt<GoRouter>().go(StartupPaths.login),
+      listener: (_, __) => unawaited(_closeAccountStorageAndOpenLogin()),
       child: widget.child,
     );
   }
+}
+
+Future<void> openNotificationSafely(AppNotification notification) async {
+  final guard = NotificationNavigationGuard(
+    getCurrentSession: getIt<GetCurrentSession>().call,
+    restoreAuthenticatedContext: (user) =>
+        getIt<AuthenticatedStartupCoordinator>().resolve(user: user),
+    readAvailableFamilies: getIt<SqliteFamilyRepository>().listAvailable,
+    activateBaby: (babyId) async {
+      await getIt<SqliteFamilyRepository>().setActiveBaby(babyId);
+    },
+    activeContextRepository: getIt<ActiveContextRepository>(),
+  );
+  final route = await guard.resolve(notification);
+  getIt<GoRouter>().go(route);
+}
+
+Future<void> _closeAccountStorageAndOpenLogin() async {
+  try {
+    await getIt<BebeDatabase>().close();
+  } on Object {
+    // La sesión ya no es válida; la navegación pública no debe bloquearse.
+  }
+  getIt<GoRouter>().go(StartupPaths.login);
 }
 
 BebeInAppSnackbarVariant _snackbarVariant(AppNotification notification) =>

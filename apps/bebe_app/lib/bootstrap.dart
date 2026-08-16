@@ -64,9 +64,6 @@ Future<void> bootstrap() async {
 
       try {
         await setupDependencies();
-        await getIt<InitialDataSyncCoordinator>().synchronize(
-          startRealtime: getIt<SupabaseRealtimeSyncCoordinator>().start,
-        );
 
         PaintingBinding.instance.imageCache.maximumSizeBytes = 300 << 20;
 

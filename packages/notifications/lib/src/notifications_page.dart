@@ -82,6 +82,17 @@ class _NotificationsPageState extends State<NotificationsPage> {
     }
   }
 
+  Future<void> _openSettings() async {
+    final opened = await widget.notificationService.openNotificationSettings();
+    if (!opened && mounted) {
+      BebeInAppSnackbar.show(
+        context,
+        message: 'No pudimos abrir la configuración del dispositivo.',
+        variant: BebeInAppSnackbarVariant.error,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -108,12 +119,15 @@ class _NotificationsPageState extends State<NotificationsPage> {
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
-            if (_permission == NotificationPermissionState.denied ||
-                _permission == NotificationPermissionState.notDetermined)
+            if (_permission != null &&
+                _permission != NotificationPermissionState.granted)
               SliverToBoxAdapter(
                 child: _PermissionBanner(
+                  permission: _permission!,
                   isLoading: _requestingPermission,
-                  onPressed: _requestPermission,
+                  onPressed: _permission!.requiresSettings
+                      ? _openSettings
+                      : _requestPermission,
                 ),
               ),
             if (_notifications.isEmpty)
@@ -147,8 +161,13 @@ class _NotificationsPageState extends State<NotificationsPage> {
 }
 
 class _PermissionBanner extends StatelessWidget {
-  const _PermissionBanner({required this.isLoading, required this.onPressed});
+  const _PermissionBanner({
+    required this.permission,
+    required this.isLoading,
+    required this.onPressed,
+  });
 
+  final NotificationPermissionState permission;
   final bool isLoading;
   final VoidCallback onPressed;
 
@@ -162,11 +181,18 @@ class _PermissionBanner extends StatelessWidget {
           children: [
             const Icon(Icons.notifications_off_outlined),
             const SizedBox(width: 12),
-            const Expanded(
-              child: Text(
-                'Activa los avisos para recibir recordatorios y novedades del círculo de cuidado.',
+            if (permission.requiresSettings)
+              const Expanded(
+                child: Text(
+                  'Las notificaciones están bloqueadas. Actívalas desde la configuración del dispositivo.',
+                ),
+              )
+            else
+              const Expanded(
+                child: Text(
+                  'Activa los avisos para recibir recordatorios y novedades del círculo de cuidado.',
+                ),
               ),
-            ),
             const SizedBox(width: 12),
             FilledButton.tonal(
               onPressed: isLoading ? null : onPressed,
@@ -175,7 +201,11 @@ class _PermissionBanner extends StatelessWidget {
                       dimension: 18,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('Activar'),
+                  : Text(
+                      permission.requiresSettings
+                          ? 'Abrir configuración'
+                          : 'Activar',
+                    ),
             ),
           ],
         ),

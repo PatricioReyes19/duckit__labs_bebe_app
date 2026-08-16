@@ -180,6 +180,7 @@ class RegisterEventSyncService {
       return _emit(
         RegisterSyncState(
           phase: RegisterSyncPhase.failed,
+          pendingCount: pending.length,
           failedCount: failedCount,
           lastSyncedAt: newestRemoteTimestamp == null ? null : now,
           message: lastError?.toString(),

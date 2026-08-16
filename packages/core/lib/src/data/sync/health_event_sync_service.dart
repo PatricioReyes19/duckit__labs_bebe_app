@@ -113,6 +113,7 @@ class HealthEventSyncService {
         : _emit(
             RegisterSyncState(
               phase: RegisterSyncPhase.failed,
+              pendingCount: pending.length,
               failedCount: failedCount,
               lastSyncedAt: newest == null ? null : now,
               message: lastError?.toString(),

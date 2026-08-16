@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:io';
 
+import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:family/family.dart';
 import 'package:family/models/models.dart';
@@ -16,6 +18,9 @@ class FamilyView extends StatelessWidget {
     this.onPersonalSettingsPressed,
     this.onBabyPressed,
     this.onMemberPressed,
+    this.initialSyncState = const SyncUxState.pending(),
+    this.syncStates,
+    this.onRetrySync,
     super.key,
   });
 
@@ -27,6 +32,9 @@ class FamilyView extends StatelessWidget {
   final VoidCallback? onPersonalSettingsPressed;
   final ValueChanged<String>? onBabyPressed;
   final ValueChanged<String>? onMemberPressed;
+  final SyncUxState initialSyncState;
+  final Stream<SyncUxState>? syncStates;
+  final Future<void> Function()? onRetrySync;
 
   @override
   Widget build(BuildContext context) {
@@ -49,6 +57,9 @@ class FamilyView extends StatelessWidget {
             onPersonalSettingsPressed: onPersonalSettingsPressed,
             onBabyPressed: onBabyPressed,
             onMemberPressed: onMemberPressed,
+            initialSyncState: initialSyncState,
+            syncStates: syncStates,
+            onRetrySync: onRetrySync,
           ),
         };
       },
@@ -67,6 +78,9 @@ class _FamilyContent extends StatelessWidget {
     this.onPersonalSettingsPressed,
     this.onBabyPressed,
     this.onMemberPressed,
+    required this.initialSyncState,
+    this.syncStates,
+    this.onRetrySync,
   });
 
   final FamilyOverviewVm overview;
@@ -78,6 +92,9 @@ class _FamilyContent extends StatelessWidget {
   final VoidCallback? onPersonalSettingsPressed;
   final ValueChanged<String>? onBabyPressed;
   final ValueChanged<String>? onMemberPressed;
+  final SyncUxState initialSyncState;
+  final Stream<SyncUxState>? syncStates;
+  final Future<void> Function()? onRetrySync;
 
   @override
   Widget build(BuildContext context) {
@@ -180,10 +197,26 @@ class _FamilyContent extends StatelessWidget {
             ),
         ],
       ),
-      familyActions: _FamilyActions(
-        onInviteCaregiverPressed: onInviteCaregiverPressed,
-        onFamilySettingsPressed: onFamilySettingsPressed,
-        onPersonalSettingsPressed: onPersonalSettingsPressed,
+      familyActions: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          StreamBuilder<SyncUxState>(
+            initialData: initialSyncState,
+            stream: syncStates,
+            builder: (context, snapshot) => FamilySyncStatusSection(
+              state: snapshot.data ?? initialSyncState,
+              onRetry: onRetrySync == null
+                  ? null
+                  : () => unawaited(onRetrySync!()),
+            ),
+          ),
+          SizedBox(height: context.theme.spacing.spacing2xl),
+          _FamilyActions(
+            onInviteCaregiverPressed: onInviteCaregiverPressed,
+            onFamilySettingsPressed: onFamilySettingsPressed,
+            onPersonalSettingsPressed: onPersonalSettingsPressed,
+          ),
+        ],
       ),
     );
   }

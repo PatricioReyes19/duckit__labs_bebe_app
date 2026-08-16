@@ -1,5 +1,6 @@
 import 'package:auth/auth.dart';
 import 'package:bloc_test/bloc_test.dart';
+import 'package:core/core.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:login/login.dart';
 

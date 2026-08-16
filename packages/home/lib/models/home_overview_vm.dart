@@ -10,6 +10,7 @@ class HomeOverviewVm extends Equatable {
     required this.recentInformation,
     required this.visualReminders,
     required this.hasCareData,
+    this.activeActivities = const [],
   });
 
   final HomeActiveBabyVm activeBaby;
@@ -18,6 +19,7 @@ class HomeOverviewVm extends Equatable {
   final HomeUpcomingHealthVm upcomingHealth;
   final HomeRecentInformationVm recentInformation;
   final List<HomeVisualReminderVm> visualReminders;
+  final List<HomeActiveActivityVm> activeActivities;
   final bool hasCareData;
 
   factory HomeOverviewVm.fromEntity(
@@ -31,7 +33,7 @@ class HomeOverviewVm extends Equatable {
     final recent = entity.mostRecentEvent;
     final recentIsOngoingSleep =
         recent?.type == domain.RegisterEventType.sleep &&
-            recent?.details['sleep_status'] == 'ongoing';
+            recent?.isActive == true;
     return HomeOverviewVm(
       activeBaby: HomeActiveBabyVm(
         id: entity.activeBaby.id,
@@ -106,23 +108,23 @@ class HomeOverviewVm extends Equatable {
         description: recent == null
             ? 'Los nuevos registros aparecerán en esta sección.'
             : recentIsOngoingSleep
-                ? 'El sueño sigue en curso. Registra el despertar desde el historial.'
-                : 'Registro guardado correctamente en este dispositivo.',
-        status: recent == null
-            ? HomeRecentStatus.information
-            : recentIsOngoingSleep
-                ? HomeRecentStatus.information
-                : HomeRecentStatus.success,
+                ? 'El sueño sigue en curso y puedes finalizarlo arriba.'
+                : 'Último registro disponible en el historial.',
+        status: HomeRecentStatus.information,
         statusLabel: recent == null
             ? 'Sin registros'
             : recentIsOngoingSleep
                 ? 'En curso'
-                : 'Completado',
+                : 'Registrado',
       ),
+      activeActivities: entity.activeRegisterEvents
+          .map(HomeActiveActivityVm.fromEntity)
+          .toList(growable: false),
       visualReminders: entity.careReminders
           .map(HomeVisualReminderVm.fromEntity)
           .toList(growable: false),
       hasCareData: entity.metrics.any((metric) => metric.count > 0) ||
+          entity.activeRegisterEvents.isNotEmpty ||
           upcoming != null ||
           recent != null ||
           entity.careReminders.isNotEmpty,
@@ -230,8 +232,65 @@ class HomeOverviewVm extends Equatable {
         upcomingHealth,
         recentInformation,
         visualReminders,
+        activeActivities,
         hasCareData,
       ];
+}
+
+enum HomeActiveActivityKind {
+  feeding,
+  sleep,
+  diaper,
+  observation,
+  medication,
+  measurement,
+}
+
+class HomeActiveActivityVm extends Equatable {
+  const HomeActiveActivityVm({
+    required this.id,
+    required this.kind,
+    required this.title,
+    required this.actionLabel,
+    required this.startedAt,
+  });
+
+  final String id;
+  final HomeActiveActivityKind kind;
+  final String title;
+  final String actionLabel;
+  final DateTime startedAt;
+
+  factory HomeActiveActivityVm.fromEntity(domain.RegisteredEvent event) {
+    final kind = switch (event.type) {
+      domain.RegisterEventType.feeding => HomeActiveActivityKind.feeding,
+      domain.RegisterEventType.sleep => HomeActiveActivityKind.sleep,
+      domain.RegisterEventType.diaper => HomeActiveActivityKind.diaper,
+      domain.RegisterEventType.clinicalObservation =>
+        HomeActiveActivityKind.observation,
+      domain.RegisterEventType.medication => HomeActiveActivityKind.medication,
+      domain.RegisterEventType.measurement =>
+        HomeActiveActivityKind.measurement,
+    };
+    final label = switch (kind) {
+      HomeActiveActivityKind.feeding => 'alimentación',
+      HomeActiveActivityKind.sleep => 'sueño',
+      HomeActiveActivityKind.diaper => 'cambio de pañal',
+      HomeActiveActivityKind.observation => 'observación',
+      HomeActiveActivityKind.medication => 'medicación',
+      HomeActiveActivityKind.measurement => 'medición',
+    };
+    return HomeActiveActivityVm(
+      id: event.id,
+      kind: kind,
+      title: '${label[0].toUpperCase()}${label.substring(1)} en curso',
+      actionLabel: 'Finalizar $label',
+      startedAt: event.startedAt.toLocal(),
+    );
+  }
+
+  @override
+  List<Object?> get props => [id, kind, title, actionLabel, startedAt];
 }
 
 enum HomeVisualReminderKind { feeding, bottle, formula, diaper, medication }

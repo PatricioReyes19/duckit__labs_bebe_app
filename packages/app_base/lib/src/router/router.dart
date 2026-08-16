@@ -19,6 +19,8 @@ import 'package:splash/splash.dart';
 import 'package:signup/signup.dart';
 
 import '../dependencies/dependencies.dart';
+import '../app/app_listeners.dart';
+import '../notifications/notification_reminder_coordinator.dart';
 import 'app_layout_configuration.dart';
 import 'navigation_session_store.dart';
 import 'startup_route_mapper.dart';
@@ -40,6 +42,10 @@ GoRouter createAppRouter({
     saveRegisterEvent: getIt<SaveRegisterEvent>(),
     healthRepository: getIt<HealthRepository>(),
     registerSyncService: getIt<RegisterEventSyncService>(),
+  );
+  final notificationReminders = NotificationReminderCoordinator(
+    notificationService: getIt<NotificationService>(),
+    getCurrentSession: getIt<GetCurrentSession>(),
   );
 
   return GoRouter(
@@ -111,8 +117,9 @@ GoRouter createAppRouter({
                         getFamilyOverview: (_) => getIt<GetFamilyOverview>(),
                         deleteRegisterEvent: (_) =>
                             getIt<DeleteRegisterEvent>(),
-                        updateRegisterEvent: (_) =>
-                            getIt<UpdateRegisterEvent>(),
+                        finishActiveRegisterEvent: (_) =>
+                            getIt<FinishActiveRegisterEvent>(),
+                        onEventDeleted: notificationReminders.cancelRegister,
                         syncService: (_) => getIt<RegisterEventSyncService>(),
                         onRegisterPressed: RegisterPage.open,
                       ),
@@ -144,6 +151,14 @@ GoRouter createAppRouter({
                         agendaRepository: getIt<AgendaRepository>(),
                         appSettingsRepository: getIt<AppSettingsRepository>(),
                         getFamilyOverview: getIt<GetFamilyOverview>(),
+                        onReminderChanged: (context, event) =>
+                            _scheduleAgendaReminderWithPermission(
+                          context,
+                          notificationReminders,
+                          event,
+                        ),
+                        onReminderDeleted: (_, eventId) =>
+                            notificationReminders.cancelAgenda(eventId),
                       ),
                       AgendaSubpage(
                         kind: AgendaSubpageKind.createReminder,
@@ -151,6 +166,14 @@ GoRouter createAppRouter({
                         agendaRepository: getIt<AgendaRepository>(),
                         appSettingsRepository: getIt<AppSettingsRepository>(),
                         getFamilyOverview: getIt<GetFamilyOverview>(),
+                        onReminderChanged: (context, event) =>
+                            _scheduleAgendaReminderWithPermission(
+                          context,
+                          notificationReminders,
+                          event,
+                        ),
+                        onReminderDeleted: (_, eventId) =>
+                            notificationReminders.cancelAgenda(eventId),
                       ),
                       AgendaSubpage(
                         kind: AgendaSubpageKind.eventDetail,
@@ -158,6 +181,14 @@ GoRouter createAppRouter({
                         agendaRepository: getIt<AgendaRepository>(),
                         appSettingsRepository: getIt<AppSettingsRepository>(),
                         getFamilyOverview: getIt<GetFamilyOverview>(),
+                        onReminderChanged: (context, event) =>
+                            _scheduleAgendaReminderWithPermission(
+                          context,
+                          notificationReminders,
+                          event,
+                        ),
+                        onReminderDeleted: (_, eventId) =>
+                            notificationReminders.cancelAgenda(eventId),
                       ),
                     ],
                   ),
@@ -222,6 +253,7 @@ GoRouter createAppRouter({
                 routes: [
                   FamilyPage(
                     familyBloc: (_) => getIt<FamilyBloc>(),
+                    syncCoordinator: (_) => getIt<InitialDataSyncCoordinator>(),
                     openPersonalSettings: SettingsPage.open,
                     openFamilySettings: (context) => context.push(
                       FamilySubpage.familyConfigurationPath,
@@ -375,12 +407,11 @@ GoRouter createAppRouter({
             invitationPending: invitationPending,
             onBackPressed: () => _backToAuthEntry(context),
             onAuthenticated: () {
-              _refreshAuthenticatedData();
               if (invitationPending) {
                 context.go(_invitationLocation(invitationCode));
                 return;
               }
-              unawaited(_openResolvedDestination(context));
+              context.go(StartupPaths.splash);
             },
             onSignUpPressed: () {
               context.pushReplacement(
@@ -407,11 +438,10 @@ GoRouter createAppRouter({
             invitationPending: invitationPending,
             onBackPressed: () => _backToAuthEntry(context),
             onAccountCreated: () {
-              _refreshAuthenticatedData();
               context.go(
                 invitationPending
                     ? _invitationLocation(invitationCode)
-                    : StartupPaths.onboarding,
+                    : StartupPaths.splash,
               );
             },
             onLoginPressed: () {
@@ -433,7 +463,7 @@ GoRouter createAppRouter({
         redirect: (_, __) => _requireSession(),
         onboardingRepository: (_) => getIt<OnboardingRepository>(),
         entry: OnboardingEntry.choice,
-        onCompleted: (context) => context.go(StartupPaths.home),
+        onCompleted: (context) => context.go(StartupPaths.splash),
         onExitRequested: (context) => _exitOnboarding(
           context,
           OnboardingEntry.choice,
@@ -449,7 +479,7 @@ GoRouter createAppRouter({
         ),
         onboardingRepository: (_) => getIt<OnboardingRepository>(),
         entry: OnboardingEntry.invitation,
-        onCompleted: (context) => context.go(StartupPaths.home),
+        onCompleted: (context) => context.go(StartupPaths.splash),
         onExitRequested: (context) => _exitOnboarding(
           context,
           OnboardingEntry.invitation,
@@ -479,7 +509,7 @@ GoRouter createAppRouter({
         redirect: (_, __) => _requireSession(),
         onboardingRepository: (_) => getIt<OnboardingRepository>(),
         entry: OnboardingEntry.babyProfile,
-        onCompleted: (context) => context.go(StartupPaths.home),
+        onCompleted: (context) => context.go(StartupPaths.splash),
         onExitRequested: (context) => _exitOnboarding(
           context,
           OnboardingEntry.babyProfile,
@@ -506,12 +536,17 @@ GoRouter createAppRouter({
         onBabyPressed: (context) =>
             unawaited(_selectActiveBabyFromSheet(context)),
         onSaved: (context, event) {
-          unawaited(_scheduleRegisterReminder(event));
+          unawaited(
+            _scheduleRegisterReminderWithPermission(
+              notificationReminders,
+              event,
+            ),
+          );
           BebeInAppSnackbar.show(
             context,
             title: 'Registro guardado',
-            message: 'Se guardó localmente y se sincronizará en segundo plano.',
-            variant: BebeInAppSnackbarVariant.syncing,
+            message: 'Ya está disponible en el historial.',
+            variant: BebeInAppSnackbarVariant.success,
           );
           if (context.canPop()) {
             context.pop();
@@ -535,96 +570,79 @@ GoRouter createAppRouter({
           notificationService: getIt<NotificationService>(),
           onBackPressed: () => _backOrHome(context),
           onNotificationPressed: (notification) =>
-              context.go(notification.route ?? '/notifications'),
+              unawaited(openNotificationSafely(notification)),
         ),
       ),
     ],
   );
 }
 
-void _refreshAuthenticatedData() {
-  unawaited(_refreshAuthenticatedDataSafely());
-}
-
-Future<void> _refreshAuthenticatedDataSafely() async {
-  try {
-    await getIt<InitialDataSyncCoordinator>().synchronize(
-      startRealtime: getIt<SupabaseRealtimeSyncCoordinator>().start,
+Future<void> _scheduleAgendaReminderWithPermission(
+  BuildContext context,
+  NotificationReminderCoordinator coordinator,
+  AgendaEventEntity event,
+) async {
+  var permission = await coordinator.permissionState();
+  if (permission == NotificationPermissionState.notDetermined &&
+      context.mounted) {
+    final shouldRequest = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Activar notificaciones'),
+        content: const Text(
+          'BebéApp necesita permiso para avisarte cuando llegue este recordatorio.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Ahora no'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Continuar'),
+          ),
+        ],
+      ),
     );
-    await getIt<NotificationService>().refreshInbox();
-  } on Object catch (error, stackTrace) {
-    debugPrint('Authenticated data refresh failed: $error');
-    debugPrintStack(stackTrace: stackTrace);
+    if (shouldRequest == true) {
+      permission = await coordinator.preparePermission();
+    }
   }
-}
-
-Future<void> _scheduleRegisterReminder(RegisteredEvent event) async {
-  final service = getIt<NotificationService>();
-  final details = event.details;
-
-  if (event.type == RegisterEventType.medication &&
-      details['schedule_next_doses'] == true) {
-    final interval = switch (details['frequency']) {
-      'Cada 4 horas' => const Duration(hours: 4),
-      'Cada 6 horas' => const Duration(hours: 6),
-      'Cada 8 horas' => const Duration(hours: 8),
-      'Cada 12 horas' => const Duration(hours: 12),
-      'Una vez al día' => const Duration(days: 1),
-      _ => null,
-    };
-    if (interval == null) return;
-    final explicitEnd = DateTime.tryParse(
-      (details['end_date'] as String?) ?? '',
-    )?.toLocal();
-    final horizon = explicitEnd ?? DateTime.now().add(const Duration(days: 30));
-    var next = event.occurredAt.toLocal().add(interval);
-    while (!next.isAfter(DateTime.now())) {
-      next = next.add(interval);
-    }
-    final name = (details['name'] as String?)?.trim();
-    var scheduled = 0;
-    while (!next.isAfter(horizon) && scheduled < 60) {
-      await service.scheduleReminder(
-        id: 'medication-${event.id}-${next.millisecondsSinceEpoch}',
-        title: 'Hora del medicamento',
-        body:
-            'Corresponde la próxima dosis de ${name?.isNotEmpty == true ? name : 'medicamento'}.',
-        scheduledAt: next,
-        route: '/agenda',
-      );
-      next = next.add(interval);
-      scheduled += 1;
-    }
+  if (permission.canDeliver) {
+    await coordinator.scheduleAgenda(event);
     return;
   }
+  if (!context.mounted) return;
+  BebeInAppSnackbar.show(
+    context,
+    message: 'El evento se guardó, pero las notificaciones están desactivadas.',
+    variant: BebeInAppSnackbarVariant.warning,
+    actionLabel: permission.requiresSettings ? 'Abrir configuración' : 'Ver',
+    onActionPressed: permission.requiresSettings
+        ? () => unawaited(coordinator.openSettings())
+        : () => context.push('/notifications'),
+  );
+}
 
-  final shouldSchedule = switch (event.type) {
-    RegisterEventType.feeding => details['schedule_next_feeding'] == true,
-    RegisterEventType.diaper => details['schedule_reminder'] == true,
-    _ => false,
-  };
-  final hours = (details['reminder_interval_hours'] as num?)?.toInt();
-  if (!shouldSchedule || hours == null || hours <= 0) return;
-  final scheduledAt = event.occurredAt.toLocal().add(Duration(hours: hours));
-  final (title, body, route) = switch (event.type) {
-    RegisterEventType.feeding => (
-        'Próxima toma',
-        'Es momento de revisar si corresponde una nueva mamadera o fórmula.',
-        '/register/feeding',
-      ),
-    RegisterEventType.diaper => (
-        'Próximo cambio de pañal',
-        'Revisa el pañal y registra el cambio cuando corresponda.',
-        '/register/diaper',
-      ),
-    _ => ('Recordatorio', 'Tienes una tarea pendiente.', '/agenda'),
-  };
-  await service.scheduleReminder(
-    id: '${event.type.name}-${event.id}-${scheduledAt.millisecondsSinceEpoch}',
-    title: title,
-    body: body,
-    scheduledAt: scheduledAt,
-    route: route,
+Future<void> _scheduleRegisterReminderWithPermission(
+  NotificationReminderCoordinator coordinator,
+  RegisteredEvent event,
+) async {
+  final permission = await coordinator.permissionState();
+  if (permission.canDeliver) {
+    await coordinator.scheduleRegister(event);
+    return;
+  }
+  final messenger = appScaffoldMessengerKey.currentState;
+  if (messenger == null) return;
+  BebeInAppSnackbar.showOn(
+    messenger,
+    message: 'El registro se guardó, pero el recordatorio necesita permiso.',
+    variant: BebeInAppSnackbarVariant.warning,
+    actionLabel: permission.requiresSettings ? 'Configuración' : 'Activar',
+    onActionPressed: permission.requiresSettings
+        ? () => unawaited(coordinator.openSettings())
+        : () => getIt<GoRouter>().push('/notifications'),
   );
 }
 
@@ -763,14 +781,6 @@ void _backOrHome(BuildContext context) {
   context.go(StartupPaths.home);
 }
 
-Future<void> _openResolvedDestination(BuildContext context) async {
-  final resolution = await getIt<ResolveEntryDestination>()();
-  if (!context.mounted) {
-    return;
-  }
-  context.go(const StartupRouteMapper().pathFor(resolution.destination));
-}
-
 void _exitOnboarding(BuildContext context, OnboardingEntry entry) {
   if (context.canPop()) {
     context.pop();
@@ -825,15 +835,12 @@ Future<void> _signOutAndOpenLogin(
   final destination = invitationPending
       ? _invitationAuthLocation(StartupPaths.login, invitationCode)
       : StartupPaths.authEntry;
-  getIt<GoRouter>().go(destination);
-
-  // La limpieza local ocurre después de navegar para que el botón responda
-  // inmediatamente. La base en disco permanece aislada por usuario.
   try {
     await getIt<BebeDatabase>().close();
   } on Object {
     // La sesión ya fue cerrada por la fuente de autenticación.
   }
+  getIt<GoRouter>().go(destination);
 }
 
 String _invitationLocation(String? code) => Uri(

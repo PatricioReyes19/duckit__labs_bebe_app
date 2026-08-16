@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:mocktail/mocktail.dart';
@@ -13,9 +14,12 @@ import 'package:notifications/src/notification_inbox_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
+import 'package:timezone/timezone.dart' as tz;
 
 void main() {
   late BebeTheme bebeTheme;
+  const permissionChannel =
+      MethodChannel('com.duckitlabs.bebeapp/notification_permission');
 
   setUpAll(() {
     final candidates = [
@@ -26,11 +30,24 @@ void main() {
     final file = candidates.firstWhere((candidate) => candidate.existsSync());
     final json = jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
     bebeTheme = BebeTheme.fromJson(json);
+    registerFallbackValue(const InitializationSettings());
+    registerFallbackValue(tz.TZDateTime.utc(2026));
+    registerFallbackValue(const NotificationDetails());
   });
 
   setUp(() {
     SharedPreferencesAsyncPlatform.instance =
         InMemorySharedPreferencesAsync.empty();
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(permissionChannel, (call) async {
+      if (call.method == 'status') return 'granted';
+      return null;
+    });
+  });
+
+  tearDown(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(permissionChannel, null);
   });
 
   group('AppNotification', () {
@@ -104,9 +121,13 @@ void main() {
         },
         wasOpened: remoteWasOpened,
       );
+      final auth = _MockFirebaseAuth();
+      final user = _MockUser();
+      when(() => auth.currentUser).thenReturn(user);
+      when(() => user.uid).thenReturn('user-a');
       final service = FirebaseNotificationService(
         messaging: _MockFirebaseMessaging(),
-        auth: _MockFirebaseAuth(),
+        auth: auth,
         localNotifications: _MockLocalNotifications(),
         inboxStore: NotificationInboxStore(
           preferences: SharedPreferencesAsync(),
@@ -170,11 +191,91 @@ void main() {
     await tester.tap(find.byType(IconButton));
     expect(pressed, isTrue);
   });
+
+  test('due reminders use an exact audible alarm', () async {
+    final messaging = _MockFirebaseMessaging();
+    final auth = _MockFirebaseAuth();
+    final user = _MockUser();
+    final localNotifications = _MockLocalNotifications();
+    when(() => auth.currentUser).thenReturn(user);
+    when(() => user.uid).thenReturn('user-1');
+    when(
+      () => messaging.setForegroundNotificationPresentationOptions(
+        alert: true,
+        badge: true,
+        sound: true,
+      ),
+    ).thenAnswer((_) async {});
+    when(
+      () => messaging.onTokenRefresh,
+    ).thenAnswer((_) => const Stream<String>.empty());
+    when(messaging.getInitialMessage).thenAnswer((_) async => null);
+    when(
+      () => auth.userChanges(),
+    ).thenAnswer((_) => const Stream<User?>.empty());
+    when(
+      () => localNotifications.initialize(
+        settings: any(named: 'settings'),
+        onDidReceiveNotificationResponse: any(
+          named: 'onDidReceiveNotificationResponse',
+        ),
+      ),
+    ).thenAnswer((_) async => true);
+    when(
+      localNotifications.getNotificationAppLaunchDetails,
+    ).thenAnswer((_) async => null);
+    when(
+      () => localNotifications.zonedSchedule(
+        id: any(named: 'id'),
+        title: any(named: 'title'),
+        body: any(named: 'body'),
+        scheduledDate: any(named: 'scheduledDate'),
+        notificationDetails: any(named: 'notificationDetails'),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        payload: any(named: 'payload'),
+      ),
+    ).thenAnswer((_) async {});
+    final service = FirebaseNotificationService(
+      messaging: messaging,
+      auth: auth,
+      localNotifications: localNotifications,
+      inboxStore: NotificationInboxStore(preferences: SharedPreferencesAsync()),
+    );
+
+    await service.scheduleReminder(
+      id: 'diaper-due',
+      title: 'Cambio de pañal',
+      body: 'Se cumplió el plazo del recordatorio.',
+      scheduledAt: DateTime.now().add(const Duration(hours: 1)),
+    );
+
+    final details =
+        verify(
+              () => localNotifications.zonedSchedule(
+                id: any(named: 'id'),
+                title: 'Cambio de pañal',
+                body: 'Se cumplió el plazo del recordatorio.',
+                scheduledDate: any(named: 'scheduledDate'),
+                notificationDetails: captureAny(named: 'notificationDetails'),
+                androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+                payload: any(named: 'payload'),
+              ),
+            ).captured.single
+            as NotificationDetails;
+    expect(details.android?.importance, Importance.max);
+    expect(details.android?.priority, Priority.max);
+    expect(details.android?.category, AndroidNotificationCategory.alarm);
+    expect(details.android?.audioAttributesUsage, AudioAttributesUsage.alarm);
+    expect(details.iOS?.presentSound, isTrue);
+    expect(details.iOS?.interruptionLevel, InterruptionLevel.timeSensitive);
+  });
 }
 
 class _MockFirebaseMessaging extends Mock implements FirebaseMessaging {}
 
 class _MockFirebaseAuth extends Mock implements FirebaseAuth {}
+
+class _MockUser extends Mock implements User {}
 
 class _MockLocalNotifications extends Mock
     implements FlutterLocalNotificationsPlugin {}

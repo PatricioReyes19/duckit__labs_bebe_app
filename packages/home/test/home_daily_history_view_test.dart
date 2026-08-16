@@ -154,7 +154,7 @@ void main() {
     final repository = _FakeRegisterEventRepository([event]);
     final cubit = HomeDailyHistoryCubit(
       getRegisterEvents: GetRegisterEvents(repository),
-      updateRegisterEvent: UpdateRegisterEvent(repository),
+      finishActiveRegisterEvent: FinishActiveRegisterEvent(repository),
       babyId: 'baby-1',
       clock: () => now,
     )..load();
@@ -208,7 +208,7 @@ void main() {
     final repository = _FakeRegisterEventRepository([event]);
     final cubit = HomeDailyHistoryCubit(
       getRegisterEvents: GetRegisterEvents(repository),
-      updateRegisterEvent: UpdateRegisterEvent(repository),
+      finishActiveRegisterEvent: FinishActiveRegisterEvent(repository),
       babyId: 'baby-1',
     );
     addTearDown(cubit.close);
@@ -240,7 +240,8 @@ class _FakeRegisterEventRepository implements RegisterEventRepository {
   Future<void> delete(String id) async {}
 
   @override
-  Future<RegisteredEvent?> findById(String id) async => null;
+  Future<RegisteredEvent?> findById(String id) async =>
+      events.where((event) => event.id == id).firstOrNull;
 
   @override
   Future<List<RegisteredEvent>> listByBaby(
@@ -274,6 +275,20 @@ class _FakeRegisterEventRepository implements RegisterEventRepository {
   Future<RegisteredEvent?> update(String id, RegisterEventPatch patch) async {
     updatedId = id;
     updatedPatch = patch;
-    return null;
+    final current = await findById(id);
+    if (current == null) return null;
+    return RegisteredEvent(
+      id: current.id,
+      babyId: current.babyId,
+      type: current.type,
+      occurredAt: current.occurredAt,
+      createdAt: current.createdAt,
+      updatedAt: current.updatedAt.add(const Duration(milliseconds: 1)),
+      details: {...current.details, ...?patch.details},
+      notes: current.notes,
+      caregiverId: current.caregiverId,
+      syncStatus: RegisterSyncStatus.pending,
+      schemaVersion: current.schemaVersion,
+    );
   }
 }

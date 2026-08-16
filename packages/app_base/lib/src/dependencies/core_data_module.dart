@@ -131,11 +131,13 @@ abstract class CoreDataModule {
     RegisterEventRepository registerRepository,
     HealthRepository healthRepository,
     AgendaRepository agendaRepository,
+    GetActiveRegisterEvents getActiveRegisterEvents,
   ) =>
       GetHomeOverview(
         familyRepository,
         registerRepository,
         healthRepository,
         agendaRepository: agendaRepository,
+        getActiveRegisterEvents: getActiveRegisterEvents,
       );
 }

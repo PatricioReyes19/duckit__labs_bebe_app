@@ -51,11 +51,6 @@ class HomeDailyHistoryView extends StatelessWidget {
                     onSelected:
                         context.read<HomeDailyHistoryCubit>().typeSelected,
                   ),
-                  if (_syncBanner(context, state.syncState)
-                      case final banner?) ...[
-                    SizedBox(height: spacing.spacingL),
-                    banner,
-                  ],
                   SizedBox(height: spacing.spacing2xl),
                   if (state.status == DailyHistoryStatus.loading ||
                       state.status == DailyHistoryStatus.initial)
@@ -109,7 +104,6 @@ class HomeDailyHistoryView extends StatelessWidget {
       description: presentation.description,
       icon: Icon(presentation.icon),
       variant: presentation.variant,
-      status: _syncBadge(event.syncStatus),
       metadata: event.caregiverId == null
           ? null
           : BebeMetadataItem(
@@ -266,8 +260,7 @@ class HomeDailyHistoryView extends StatelessWidget {
       builder: (dialogContext) => AlertDialog(
         title: const Text('Eliminar registro'),
         content: const Text(
-          'Se eliminará del historial local y la eliminación se sincronizará '
-          'con los demás dispositivos.',
+          'Se eliminará este registro del historial en todos tus dispositivos.',
         ),
         actions: [
           TextButton(
@@ -285,74 +278,6 @@ class HomeDailyHistoryView extends StatelessWidget {
     await context.read<HomeDailyHistoryCubit>().deleteEvent(event.id);
     if (context.mounted) Navigator.of(context).pop();
   }
-
-  Widget? _syncBanner(BuildContext context, RegisterSyncState syncState) {
-    return switch (syncState.phase) {
-      RegisterSyncPhase.disabled => const BebeStatusBanner(
-          compact: true,
-          type: BebeStatusBannerType.neutral,
-          title: 'Modo local',
-          description: 'Conecta Supabase para respaldar y compartir registros.',
-          leading: Icon(Icons.phone_android_rounded),
-        ),
-      RegisterSyncPhase.waitingForAuthentication => const BebeStatusBanner(
-          compact: true,
-          type: BebeStatusBannerType.warning,
-          title: 'Sincronización pendiente',
-          description: 'Inicia sesión para subir los registros locales.',
-          leading: Icon(Icons.lock_outline_rounded),
-        ),
-      RegisterSyncPhase.syncing => BebeStatusBanner(
-          compact: true,
-          type: BebeStatusBannerType.syncing,
-          title: 'Sincronizando',
-          description: syncState.pendingCount == 1
-              ? '1 cambio pendiente'
-              : '${syncState.pendingCount} cambios pendientes',
-          leading: const SizedBox.square(
-            dimension: 20,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
-        ),
-      RegisterSyncPhase.failed => BebeStatusBanner(
-          compact: true,
-          type: BebeStatusBannerType.error,
-          title: 'No se pudo completar la sincronización',
-          description:
-              'Los datos siguen seguros en este dispositivo. Toca para reintentar.',
-          leading: const Icon(Icons.sync_problem_rounded),
-          trailing: const Icon(Icons.refresh_rounded),
-          onPressed: context.read<HomeDailyHistoryCubit>().synchronize,
-        ),
-      RegisterSyncPhase.synced => const BebeStatusBanner(
-          compact: true,
-          type: BebeStatusBannerType.success,
-          title: 'Historial sincronizado',
-          leading: Icon(Icons.cloud_done_outlined),
-        ),
-      RegisterSyncPhase.idle => null,
-    };
-  }
-
-  static BebeStatusBadge _syncBadge(RegisterSyncStatus status) =>
-      switch (status) {
-        RegisterSyncStatus.pending => const BebeStatusBadge(
-            label: 'Pendiente',
-            variant: BebeStatusBadgeVariant.warning,
-          ),
-        RegisterSyncStatus.syncing => const BebeStatusBadge(
-            label: 'Sincronizando',
-            variant: BebeStatusBadgeVariant.information,
-          ),
-        RegisterSyncStatus.synced => const BebeStatusBadge(
-            label: 'Sincronizado',
-            variant: BebeStatusBadgeVariant.success,
-          ),
-        RegisterSyncStatus.failed => const BebeStatusBadge(
-            label: 'Error de sync',
-            variant: BebeStatusBadgeVariant.error,
-          ),
-      };
 
   static String _detailLabel(String key) {
     const labels = <String, String>{
@@ -443,9 +368,7 @@ class HomeDailyHistoryView extends StatelessWidget {
     return '${local.day} de ${months[local.month - 1]} de ${local.year}';
   }
 
-  static bool _isOngoingSleep(RegisteredEvent event) =>
-      event.type == RegisterEventType.sleep &&
-      event.details['sleep_status'] == 'ongoing';
+  static bool _isOngoingSleep(RegisteredEvent event) => event.isActive;
 }
 
 class _HistoryFilters extends StatelessWidget {
@@ -519,7 +442,7 @@ class _EventPresentation {
         ),
       RegisterEventType.sleep => _EventPresentation(
           title: 'Sueño',
-          description: details['sleep_status'] == 'ongoing'
+          description: event.isActive
               ? '${_sleepSubtype(details['subtype'])} · En curso'
               : '${_sleepSubtype(details['subtype'])} · ${_minutes(details['duration_minutes'])}',
           icon: Icons.bedtime_outlined,

@@ -109,6 +109,9 @@ class AppSettingsSyncService {
       return _emit(
         RegisterSyncState(
           phase: RegisterSyncPhase.failed,
+          pendingCount: local.syncStatus == AppSettingsSyncStatus.synced
+              ? 0
+              : 1,
           failedCount: 1,
           message: error.toString(),
         ),

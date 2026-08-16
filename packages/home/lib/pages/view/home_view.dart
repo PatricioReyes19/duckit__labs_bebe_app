@@ -154,6 +154,14 @@ class _LoadedHomeState extends State<_LoadedHome> {
 
     return BebeHomeTemplate(
       onRefresh: context.read<HomeBloc>().refreshFromRemote,
+      activeActivities: overview.activeActivities.isEmpty
+          ? null
+          : _HomeActiveActivitiesSection(
+              activities: overview.activeActivities,
+              clock: widget.clock,
+              onFinish: (activity) =>
+                  context.read<HomeBloc>().finishActiveActivity(activity.id),
+            ),
       visualReminder: _activeReminder == null
           ? null
           : _HomeVisualReminderBanner(
@@ -409,6 +417,160 @@ class _LoadedHomeState extends State<_LoadedHome> {
       },
     );
   }
+}
+
+class _HomeActiveActivitiesSection extends StatefulWidget {
+  const _HomeActiveActivitiesSection({
+    required this.activities,
+    required this.clock,
+    required this.onFinish,
+  });
+
+  final List<HomeActiveActivityVm> activities;
+  final HomeViewClock clock;
+  final Future<bool> Function(HomeActiveActivityVm activity) onFinish;
+
+  @override
+  State<_HomeActiveActivitiesSection> createState() =>
+      _HomeActiveActivitiesSectionState();
+}
+
+class _HomeActiveActivitiesSectionState
+    extends State<_HomeActiveActivitiesSection> {
+  Timer? _durationTimer;
+  final Set<String> _finishingIds = <String>{};
+
+  @override
+  void initState() {
+    super.initState();
+    _durationTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _durationTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    return Column(
+      key: const ValueKey('home-active-activities'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'ACTIVIDAD EN CURSO',
+          style: theme.typography.styles.label.lg.semibold.copyWith(
+            color: theme.colors.text.neutralTitle,
+          ),
+        ),
+        SizedBox(height: theme.spacing.spacingM),
+        for (var index = 0; index < widget.activities.length; index++) ...[
+          _activityCard(context, widget.activities[index]),
+          if (index != widget.activities.length - 1)
+            SizedBox(height: theme.spacing.spacingM),
+        ],
+      ],
+    );
+  }
+
+  Widget _activityCard(
+    BuildContext context,
+    HomeActiveActivityVm activity,
+  ) {
+    final finishing = _finishingIds.contains(activity.id);
+    return BebeStatusBanner(
+      key: ValueKey('home-active-${activity.id}'),
+      title: activity.title,
+      description: '${_startedLabel(activity.startedAt, widget.clock())}\n'
+          '${_durationLabel(widget.clock().difference(activity.startedAt))}',
+      type: BebeStatusBannerType.information,
+      leading: Icon(_activityIcon(activity.kind)),
+      semanticLabel:
+          '${activity.title}. ${_durationLabel(widget.clock().difference(activity.startedAt))}',
+      footer: SizedBox(
+        width: double.infinity,
+        child: FilledButton.icon(
+          key: ValueKey('finish-active-${activity.id}'),
+          onPressed: finishing ? null : () => _finish(activity),
+          icon: finishing
+              ? const SizedBox.square(
+                  dimension: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.stop_circle_outlined),
+          label: Text(finishing ? 'Finalizando…' : activity.actionLabel),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _finish(HomeActiveActivityVm activity) async {
+    setState(() => _finishingIds.add(activity.id));
+    try {
+      final finished = await widget.onFinish(activity);
+      if (!mounted) return;
+      if (finished) {
+        BebeInAppSnackbar.show(
+          context,
+          title: 'Actividad finalizada',
+          message: 'La duración quedó guardada en el registro original.',
+          variant: BebeInAppSnackbarVariant.success,
+        );
+      } else {
+        BebeInAppSnackbar.show(
+          context,
+          title: 'La actividad ya cambió',
+          message: 'Actualizamos Home con el estado más reciente.',
+          variant: BebeInAppSnackbarVariant.information,
+        );
+      }
+    } on Object {
+      if (!mounted) return;
+      BebeInAppSnackbar.show(
+        context,
+        title: 'No se pudo finalizar',
+        message: 'El registro sigue en curso. Intenta nuevamente.',
+        variant: BebeInAppSnackbarVariant.error,
+      );
+    } finally {
+      if (mounted) setState(() => _finishingIds.remove(activity.id));
+    }
+  }
+
+  static String _startedLabel(DateTime startedAt, DateTime now) {
+    final start = startedAt.toLocal();
+    final today = now.toLocal();
+    final time = '${start.hour.toString().padLeft(2, '0')}:'
+        '${start.minute.toString().padLeft(2, '0')}';
+    if (start.year == today.year &&
+        start.month == today.month &&
+        start.day == today.day) {
+      return 'Iniciado a las $time';
+    }
+    return 'Iniciado el ${start.day.toString().padLeft(2, '0')}/'
+        '${start.month.toString().padLeft(2, '0')} a las $time';
+  }
+
+  static String _durationLabel(Duration elapsed) {
+    final minutes = elapsed.isNegative ? 0 : elapsed.inMinutes;
+    final hours = minutes ~/ 60;
+    final remainder = minutes % 60;
+    if (hours == 0) return '$remainder min';
+    return remainder == 0 ? '$hours h' : '$hours h $remainder min';
+  }
+
+  static IconData _activityIcon(HomeActiveActivityKind kind) => switch (kind) {
+        HomeActiveActivityKind.feeding => LucideIcons.milk,
+        HomeActiveActivityKind.sleep => LucideIcons.moon,
+        HomeActiveActivityKind.diaper => LucideIcons.baby,
+        HomeActiveActivityKind.observation => Icons.edit_outlined,
+        HomeActiveActivityKind.medication => Icons.medication_outlined,
+        HomeActiveActivityKind.measurement => Icons.straighten_outlined,
+      };
 }
 
 class _HomeBabyChoice {

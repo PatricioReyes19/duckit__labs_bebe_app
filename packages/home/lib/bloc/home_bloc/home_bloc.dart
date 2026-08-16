@@ -14,9 +14,11 @@ typedef HomePresentationClock = DateTime Function();
 class HomeBloc extends Bloc<HomeEvent, HomeState> {
   HomeBloc({
     required GetHomeOverview getHomeOverview,
+    required FinishActiveRegisterEvent finishActiveRegisterEvent,
     RegisterEventSyncService? syncService,
     HomePresentationClock? clock,
   })  : _getHomeOverview = getHomeOverview,
+        _finishActiveRegisterEvent = finishActiveRegisterEvent,
         _clock = clock ?? DateTime.now,
         _syncService = syncService,
         super(const HomeState.initial()) {
@@ -29,6 +31,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   }
 
   final GetHomeOverview _getHomeOverview;
+  final FinishActiveRegisterEvent _finishActiveRegisterEvent;
   final HomePresentationClock _clock;
   final RegisterEventSyncService? _syncService;
   late final StreamSubscription<void> _registerEventsSubscription;
@@ -74,6 +77,18 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     );
     add(const HomeEvent.refreshed());
     await completed;
+  }
+
+  /// Completes the original active record for the baby currently shown.
+  Future<bool> finishActiveActivity(String eventId) async {
+    final current = state;
+    if (current is! HomeLoaded) return false;
+    final finished = await _finishActiveRegisterEvent(
+      eventId: eventId,
+      babyId: current.overview.activeBaby.id,
+      endedAt: _clock(),
+    );
+    return finished != null;
   }
 
   @override

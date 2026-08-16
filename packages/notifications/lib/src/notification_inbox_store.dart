@@ -6,16 +6,20 @@ import 'notification_message.dart';
 
 class NotificationInboxStore {
   NotificationInboxStore({SharedPreferencesAsync? preferences})
-      : _preferences = preferences ?? SharedPreferencesAsync();
+    : _preferences = preferences ?? SharedPreferencesAsync();
 
-  static const _storageKey = 'bebeapp.notifications.inbox.v1';
+  static const _storageKey = 'bebeapp.notifications.inbox.v2';
+  static const _legacyStorageKey = 'bebeapp.notifications.inbox.v1';
   static const _maximumItems = 100;
 
   final SharedPreferencesAsync _preferences;
 
-  Future<List<AppNotification>> load() async {
-    final encoded = await _preferences.getString(_storageKey);
+  Future<List<AppNotification>> load({String accountId = 'legacy'}) async {
+    final encoded = await _preferences.getString(_keyFor(accountId));
     if (encoded == null || encoded.isEmpty) {
+      if (accountId != 'legacy') {
+        await _preferences.remove(_legacyStorageKey);
+      }
       return <AppNotification>[];
     }
 
@@ -38,19 +42,25 @@ class NotificationInboxStore {
     }
   }
 
-  Future<List<AppNotification>> add(AppNotification notification) async {
-    final current = await load();
+  Future<List<AppNotification>> add(
+    AppNotification notification, {
+    String accountId = 'legacy',
+  }) async {
+    final current = await load(accountId: accountId);
     final updated = <AppNotification>[
       notification,
       ...current.where((item) => item.id != notification.id),
     ].take(_maximumItems).toList(growable: false);
-    await save(updated);
+    await save(updated, accountId: accountId);
     return updated;
   }
 
-  Future<void> save(List<AppNotification> notifications) {
+  Future<void> save(
+    List<AppNotification> notifications, {
+    String accountId = 'legacy',
+  }) {
     return _preferences.setString(
-      _storageKey,
+      _keyFor(accountId),
       jsonEncode(
         notifications
             .take(_maximumItems)
@@ -60,5 +70,9 @@ class NotificationInboxStore {
     );
   }
 
-  Future<void> clear() => _preferences.remove(_storageKey);
+  Future<void> clear({String accountId = 'legacy'}) =>
+      _preferences.remove(_keyFor(accountId));
+
+  static String _keyFor(String accountId) =>
+      '$_storageKey.${Uri.encodeComponent(accountId)}';
 }

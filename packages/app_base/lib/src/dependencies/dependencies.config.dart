@@ -24,6 +24,7 @@ import 'package:notifications/notifications.dart' as _i327;
 import 'package:onboarding/onboarding.dart' as _i706;
 import 'package:shared_preferences/shared_preferences.dart' as _i460;
 
+import '../startup/startup.dart' as _i663;
 import 'blocs_module.dart' as _i513;
 import 'config_module.dart' as _i689;
 import 'core_data_module.dart' as _i579;
@@ -71,6 +72,9 @@ extension GetItInjectableX on _i174.GetIt {
         () => startupModule.authGateway(gh<_i662.FirebaseAuthGateway>()));
     gh.lazySingleton<_i494.SessionRepository>(
         () => startupModule.sessionRepository(gh<_i662.FirebaseAuthGateway>()));
+    gh.lazySingleton<_i494.ActiveContextRepository>(() =>
+        startupModule.activeContextRepository(gh<_i460.SharedPreferencesAsync>(
+            instanceName: 'startupPreferences')));
     await gh.factoryAsync<bool>(
       () => configModule.initialIsDark(gh<_i494.ThemeStorage>()),
       instanceName: 'initialIsDark',
@@ -237,6 +241,16 @@ extension GetItInjectableX on _i174.GetIt {
           gh<_i494.FamilyRepository>(),
           gh<_i494.SupabaseRestClient>(),
         ));
+    gh.lazySingleton<_i663.AuthenticatedStartupCoordinator>(
+        () => startupModule.authenticatedStartupCoordinator(
+              gh<_i494.GetCurrentSession>(),
+              gh<_i494.BebeDatabase>(),
+              gh<_i494.InitialDataSyncCoordinator>(),
+              gh<_i494.FamilySyncService>(),
+              gh<_i494.SqliteFamilyRepository>(),
+              gh<_i494.ActiveContextRepository>(),
+              gh<_i494.SupabaseRealtimeSyncCoordinator>(),
+            ));
     gh.lazySingleton<_i494.CreateAgendaEvent>(
         () => registerModule.createAgendaEvent(gh<_i494.AgendaRepository>()));
     gh.lazySingleton<_i494.UpdateAgendaEvent>(
@@ -249,7 +263,7 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i494.ResolveEntryDestination>(
         () => startupModule.resolveEntryDestination(
               gh<_i662.AuthGateway>(),
-              gh<_i706.OnboardingRepository>(),
+              gh<_i663.AuthenticatedStartupCoordinator>(),
             ));
     gh.factory<_i1027.SettingsBloc>(() => blocsModule.settingsBloc(
           gh<_i494.GetAppSettings>(),
@@ -266,27 +280,33 @@ extension GetItInjectableX on _i174.GetIt {
         .deleteRegisterEvent(gh<_i494.RegisterEventRepository>()));
     gh.lazySingleton<_i494.UpdateRegisterEvent>(() => registerModule
         .updateRegisterEvent(gh<_i494.RegisterEventRepository>()));
+    gh.lazySingleton<_i494.GetActiveRegisterEvents>(() => registerModule
+        .getActiveRegisterEvents(gh<_i494.RegisterEventRepository>()));
+    gh.lazySingleton<_i494.FinishActiveRegisterEvent>(() => registerModule
+        .finishActiveRegisterEvent(gh<_i494.RegisterEventRepository>()));
     gh.lazySingleton<_i494.GetAgendaOverview>(
         () => coreDataModule.getAgendaOverview(
               gh<_i494.AgendaRepository>(),
               gh<_i494.RegisterEventRepository>(),
               gh<_i494.AppSettingsRepository>(),
             ));
-    gh.factory<_i914.AgendaBloc>(() => blocsModule.agendaBloc(
-          gh<_i494.GetAgendaOverview>(),
-          gh<_i494.GetFamilyOverview>(),
-          gh<_i494.AgendaEventSyncService>(),
-        ));
     gh.lazySingleton<_i494.GetHomeOverview>(
         () => coreDataModule.getHomeOverview(
               gh<_i494.FamilyRepository>(),
               gh<_i494.RegisterEventRepository>(),
               gh<_i494.HealthRepository>(),
               gh<_i494.AgendaRepository>(),
+              gh<_i494.GetActiveRegisterEvents>(),
             ));
     gh.factory<_i1024.HomeBloc>(() => blocsModule.homeBloc(
           gh<_i494.GetHomeOverview>(),
+          gh<_i494.FinishActiveRegisterEvent>(),
           gh<_i494.RegisterEventSyncService>(),
+        ));
+    gh.factory<_i914.AgendaBloc>(() => blocsModule.agendaBloc(
+          gh<_i494.GetAgendaOverview>(),
+          gh<_i494.GetFamilyOverview>(),
+          gh<_i494.AgendaEventSyncService>(),
         ));
     gh.factory<_i237.HealthBloc>(() => blocsModule.healthBloc(
           gh<_i494.GetHealthOverview>(),

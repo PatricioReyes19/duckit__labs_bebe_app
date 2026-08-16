@@ -7,6 +7,11 @@ import 'package:go_router/go_router.dart';
 
 enum AgendaSubpageKind { reminderSettings, createReminder, eventDetail }
 
+typedef AgendaReminderChanged =
+    Future<void> Function(BuildContext context, AgendaEventEntity event);
+typedef AgendaReminderDeleted =
+    Future<void> Function(BuildContext context, String eventId);
+
 extension AgendaSubpageKindPresentation on AgendaSubpageKind {
   String get relativePath => switch (this) {
     AgendaSubpageKind.reminderSettings => 'reminders/settings',
@@ -28,6 +33,8 @@ class AgendaSubpage extends GoRoute {
     required AgendaRepository agendaRepository,
     required AppSettingsRepository appSettingsRepository,
     GetFamilyOverview? getFamilyOverview,
+    AgendaReminderChanged? onReminderChanged,
+    AgendaReminderDeleted? onReminderDeleted,
     this.babyId,
     super.routes,
   }) : super(
@@ -45,6 +52,8 @@ class AgendaSubpage extends GoRoute {
              createAgendaEvent: createAgendaEvent,
              agendaRepository: agendaRepository,
              appSettingsRepository: appSettingsRepository,
+             onReminderChanged: onReminderChanged,
+             onReminderDeleted: onReminderDeleted,
              onCompleted: () => context.pop(),
            ),
          ),
@@ -68,6 +77,8 @@ class _AgendaSubpageView extends StatefulWidget {
     required this.agendaRepository,
     required this.appSettingsRepository,
     required this.onCompleted,
+    required this.onReminderChanged,
+    required this.onReminderDeleted,
     this.eventId,
   });
 
@@ -79,6 +90,8 @@ class _AgendaSubpageView extends StatefulWidget {
   final AgendaRepository agendaRepository;
   final AppSettingsRepository appSettingsRepository;
   final VoidCallback onCompleted;
+  final AgendaReminderChanged? onReminderChanged;
+  final AgendaReminderDeleted? onReminderDeleted;
 
   @override
   State<_AgendaSubpageView> createState() => _AgendaSubpageViewState();
@@ -568,7 +581,7 @@ class _AgendaSubpageViewState extends State<_AgendaSubpageView> {
                         dialogError = null;
                       });
                       try {
-                        await widget.agendaRepository.update(
+                        final updated = await widget.agendaRepository.update(
                           event.id,
                           AgendaEventPatch(
                             category: category,
@@ -577,6 +590,9 @@ class _AgendaSubpageViewState extends State<_AgendaSubpageView> {
                             startsAt: startsAt,
                           ),
                         );
+                        if (updated != null) {
+                          await _notifyReminderChanged(updated);
+                        }
                         if (dialogContext.mounted) {
                           Navigator.pop(dialogContext);
                         }
@@ -636,6 +652,7 @@ class _AgendaSubpageViewState extends State<_AgendaSubpageView> {
     setState(() => _saving = true);
     try {
       await widget.agendaRepository.delete(event.id);
+      await _notifyReminderDeleted(event.id);
       if (mounted) widget.onCompleted();
     } on Object {
       if (mounted) {
@@ -690,7 +707,7 @@ class _AgendaSubpageViewState extends State<_AgendaSubpageView> {
       if (resolvedBabyId == null || resolvedBabyId.isEmpty) {
         throw StateError('No active baby is available for Agenda.');
       }
-      await widget.createAgendaEvent(
+      final created = await widget.createAgendaEvent(
         AgendaEventDraft(
           babyId: resolvedBabyId,
           category: _category,
@@ -699,6 +716,7 @@ class _AgendaSubpageViewState extends State<_AgendaSubpageView> {
           startsAt: startsAt,
         ),
       );
+      await _notifyReminderChanged(created);
       if (mounted) widget.onCompleted();
     } on Object {
       if (mounted) {
@@ -713,6 +731,24 @@ class _AgendaSubpageViewState extends State<_AgendaSubpageView> {
   static String _formatDate(DateTime value) =>
       '${value.day.toString().padLeft(2, '0')}/'
       '${value.month.toString().padLeft(2, '0')}/${value.year}';
+
+  Future<void> _notifyReminderChanged(AgendaEventEntity event) async {
+    try {
+      await widget.onReminderChanged?.call(context, event);
+    } on Object catch (error, stackTrace) {
+      debugPrint('No se pudo programar el recordatorio local: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
+  }
+
+  Future<void> _notifyReminderDeleted(String eventId) async {
+    try {
+      await widget.onReminderDeleted?.call(context, eventId);
+    } on Object catch (error, stackTrace) {
+      debugPrint('No se pudo cancelar el recordatorio local: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
+  }
 
   static String _categoryLabel(AgendaCategory category) => switch (category) {
     AgendaCategory.vaccines => 'Vacuna',

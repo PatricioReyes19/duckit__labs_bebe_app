@@ -4,12 +4,14 @@ import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
 import 'notification_inbox_store.dart';
 import 'notification_message.dart';
+import 'notification_schedule_store.dart';
 import 'notification_service.dart';
 
 bool _backgroundHandlerRegistered = false;
@@ -25,9 +27,10 @@ void registerNotificationBackgroundHandler() {
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   try {
-    await NotificationInboxStore().add(
-      AppNotification.fromRemoteMessage(message),
-    );
+    final notification = AppNotification.fromRemoteMessage(message);
+    final accountId = notification.accountId;
+    if (accountId == null) return;
+    await NotificationInboxStore().add(notification, accountId: accountId);
   } on Object catch (error) {
     debugPrint('No se pudo guardar la notificación en segundo plano: $error');
   }
@@ -39,21 +42,23 @@ class FirebaseNotificationService implements NotificationService {
     FirebaseAuth? auth,
     FlutterLocalNotificationsPlugin? localNotifications,
     NotificationInboxStore? inboxStore,
+    NotificationScheduleStore? scheduleStore,
     RegisterRemoteNotificationDevice? registerRemoteDevice,
     UnregisterRemoteNotificationDevice? unregisterRemoteDevice,
     LoadRemoteNotifications? loadRemoteNotifications,
     MarkRemoteNotificationRead? markRemoteNotificationRead,
     MarkAllRemoteNotificationsRead? markAllRemoteNotificationsRead,
-  })  : _messaging = messaging ?? FirebaseMessaging.instance,
-        _auth = auth ?? FirebaseAuth.instance,
-        _localNotifications =
-            localNotifications ?? FlutterLocalNotificationsPlugin(),
-        _inboxStore = inboxStore ?? NotificationInboxStore(),
-        _registerRemoteDevice = registerRemoteDevice,
-        _unregisterRemoteDevice = unregisterRemoteDevice,
-        _loadRemoteNotifications = loadRemoteNotifications,
-        _markRemoteNotificationRead = markRemoteNotificationRead,
-        _markAllRemoteNotificationsRead = markAllRemoteNotificationsRead;
+  }) : _messaging = messaging ?? FirebaseMessaging.instance,
+       _auth = auth ?? FirebaseAuth.instance,
+       _localNotifications =
+           localNotifications ?? FlutterLocalNotificationsPlugin(),
+       _inboxStore = inboxStore ?? NotificationInboxStore(),
+       _scheduleStore = scheduleStore ?? NotificationScheduleStore(),
+       _registerRemoteDevice = registerRemoteDevice,
+       _unregisterRemoteDevice = unregisterRemoteDevice,
+       _loadRemoteNotifications = loadRemoteNotifications,
+       _markRemoteNotificationRead = markRemoteNotificationRead,
+       _markAllRemoteNotificationsRead = markAllRemoteNotificationsRead;
 
   static const _channel = AndroidNotificationChannel(
     'bebeapp_high_importance',
@@ -75,6 +80,7 @@ class FirebaseNotificationService implements NotificationService {
   final FirebaseAuth _auth;
   final FlutterLocalNotificationsPlugin _localNotifications;
   final NotificationInboxStore _inboxStore;
+  final NotificationScheduleStore _scheduleStore;
   final RegisterRemoteNotificationDevice? _registerRemoteDevice;
   final UnregisterRemoteNotificationDevice? _unregisterRemoteDevice;
   final LoadRemoteNotifications? _loadRemoteNotifications;
@@ -92,6 +98,10 @@ class FirebaseNotificationService implements NotificationService {
   String? _registeredUserId;
   String? _registeredToken;
   bool _initialized = false;
+
+  static const _permissionChannel = MethodChannel(
+    'com.duckitlabs.bebeapp/notification_permission',
+  );
 
   @override
   List<AppNotification> get currentNotifications =>
@@ -137,12 +147,12 @@ class FirebaseNotificationService implements NotificationService {
       )
       ..add(
         _auth.userChanges().listen(
-              (user) => unawaited(_handleAuthenticatedUser(user)),
-            ),
+          (user) => unawaited(_handleAuthenticatedUser(user)),
+        ),
       );
 
-    final localLaunch =
-        await _localNotifications.getNotificationAppLaunchDetails();
+    final localLaunch = await _localNotifications
+        .getNotificationAppLaunchDetails();
     final localResponse = localLaunch?.notificationResponse;
     if (localLaunch?.didNotificationLaunchApp ?? false) {
       await _handleLocalNotificationTap(localResponse?.payload);
@@ -174,11 +184,13 @@ class FirebaseNotificationService implements NotificationService {
 
     await _localNotifications
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.createNotificationChannel(_channel);
     await _localNotifications
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.createNotificationChannel(_reminderChannel);
   }
 
@@ -190,17 +202,33 @@ class FirebaseNotificationService implements NotificationService {
     required DateTime scheduledAt,
     String route = '/agenda',
   }) async {
-    if (kIsWeb || !scheduledAt.isAfter(DateTime.now())) return;
+    final accountId = _auth.currentUser?.uid;
+    if (kIsWeb ||
+        accountId == null ||
+        !scheduledAt.isAfter(DateTime.now()) ||
+        !(await permissionState()).canDeliver) {
+      return;
+    }
     await initialize();
+    final replacement = await _scheduleStore.replace(
+      ownerId: id,
+      accountId: accountId,
+      babyId: '',
+      reminderIds: [id],
+    );
+    for (final previousId in replacement.previousPlatformIds) {
+      await _localNotifications.cancel(id: previousId);
+    }
+    final platformId = replacement.platformIdsByReminder[id]!;
     final notification = AppNotification(
       id: id,
       title: title,
       body: body,
       receivedAt: scheduledAt,
-      data: {'route': route},
+      data: {'route': route, 'account_id': accountId},
     );
     await _localNotifications.zonedSchedule(
-      id: id.hashCode & 0x7fffffff,
+      id: platformId,
       title: title,
       body: body,
       scheduledDate: tz.TZDateTime.from(scheduledAt.toUtc(), tz.UTC),
@@ -228,9 +256,100 @@ class FirebaseNotificationService implements NotificationService {
     );
   }
 
+  @override
+  Future<void> replaceReminders({
+    required String ownerId,
+    required String accountId,
+    required String babyId,
+    required List<NotificationReminder> reminders,
+  }) async {
+    if (kIsWeb ||
+        accountId.isEmpty ||
+        ownerId.isEmpty ||
+        _auth.currentUser?.uid != accountId) {
+      return;
+    }
+    final permission = await permissionState();
+    await initialize();
+    final futureReminders = permission.canDeliver
+        ? reminders
+              .where((reminder) => reminder.scheduledAt.isAfter(DateTime.now()))
+              .toList(growable: false)
+        : const <NotificationReminder>[];
+    final replacement = await _scheduleStore.replace(
+      ownerId: ownerId,
+      accountId: accountId,
+      babyId: babyId,
+      reminderIds: futureReminders.map((reminder) => reminder.id),
+    );
+    for (final previousId in replacement.previousPlatformIds) {
+      await _localNotifications.cancel(id: previousId);
+    }
+    for (final reminder in futureReminders) {
+      final platformId = replacement.platformIdsByReminder[reminder.id];
+      if (platformId == null) continue;
+      final notification = AppNotification(
+        id: reminder.id,
+        title: reminder.title,
+        body: reminder.body,
+        receivedAt: reminder.scheduledAt,
+        data: {
+          'route': reminder.route,
+          'account_id': accountId,
+          if (babyId.isNotEmpty) 'baby_id': babyId,
+        },
+      );
+      await _localNotifications.zonedSchedule(
+        id: platformId,
+        title: reminder.title,
+        body: reminder.body,
+        scheduledDate: tz.TZDateTime.from(reminder.scheduledAt.toUtc(), tz.UTC),
+        notificationDetails: const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'bebeapp_reminders',
+            'Alarmas y recordatorios',
+            channelDescription:
+                'Alarmas y recordatorios configurados en BebéApp.',
+            importance: Importance.max,
+            priority: Priority.max,
+            category: AndroidNotificationCategory.alarm,
+            audioAttributesUsage: AudioAttributesUsage.alarm,
+            ticker: 'Recordatorio de BebéApp',
+          ),
+          iOS: DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+            interruptionLevel: InterruptionLevel.timeSensitive,
+          ),
+        ),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        payload: jsonEncode(notification.toJson()),
+      );
+    }
+  }
+
+  @override
+  Future<void> cancelReminders(String ownerId) async {
+    if (ownerId.isEmpty) return;
+    final platformIds = await _scheduleStore.removeOwner(ownerId);
+    for (final platformId in platformIds) {
+      await _localNotifications.cancel(id: platformId);
+    }
+  }
+
+  @override
+  Future<void> cancelRemindersForAccount(String accountId) async {
+    if (accountId.isEmpty) return;
+    final platformIds = await _scheduleStore.removeAccount(accountId);
+    for (final platformId in platformIds) {
+      await _localNotifications.cancel(id: platformId);
+    }
+  }
+
   Future<void> _handleForegroundMessage(RemoteMessage message) async {
     final notification = AppNotification.fromRemoteMessage(message);
-    await _record(notification);
+    if (!await _record(notification)) return;
 
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       await _localNotifications.show(
@@ -257,7 +376,7 @@ class FirebaseNotificationService implements NotificationService {
       message,
       wasOpened: true,
     );
-    await _record(notification);
+    if (!await _record(notification)) return;
     await _tryMarkRemoteRead(notification.id);
     _publishOpened(notification);
   }
@@ -275,7 +394,7 @@ class FirebaseNotificationService implements NotificationService {
       final notification = AppNotification.fromJson(
         raw.map((key, value) => MapEntry(key.toString(), value)),
       ).copyWith(wasOpened: true);
-      await _record(notification);
+      if (!await _record(notification)) return;
       await _tryMarkRemoteRead(notification.id);
       _publishOpened(notification);
     } on Object {
@@ -283,9 +402,24 @@ class FirebaseNotificationService implements NotificationService {
     }
   }
 
-  Future<void> _record(AppNotification notification) async {
-    _currentNotifications = await _inboxStore.add(notification);
+  Future<bool> _record(AppNotification notification) async {
+    final currentAccountId = _auth.currentUser?.uid;
+    if (currentAccountId == null ||
+        (notification.accountId != null &&
+            notification.accountId != currentAccountId)) {
+      return false;
+    }
+    final scoped = notification.accountId == null
+        ? notification.copyWith(
+            data: {...notification.data, 'account_id': currentAccountId},
+          )
+        : notification;
+    _currentNotifications = await _inboxStore.add(
+      scoped,
+      accountId: currentAccountId,
+    );
     _emitNotifications();
+    return true;
   }
 
   void _publishOpened(AppNotification notification) {
@@ -305,34 +439,48 @@ class FirebaseNotificationService implements NotificationService {
 
   @override
   Future<void> refreshInbox() async {
-    final local = await _inboxStore.load();
+    final accountId = _auth.currentUser?.uid;
+    if (accountId == null) {
+      _currentNotifications = <AppNotification>[];
+      _pendingOpenedNotification = null;
+      _emitNotifications();
+      return;
+    }
+    final local = await _inboxStore.load(accountId: accountId);
     var remote = const <AppNotification>[];
     try {
       remote = await _loadRemoteNotifications?.call() ?? const [];
     } on Object catch (error) {
       debugPrint('No se pudo actualizar la bandeja desde Supabase: $error');
     }
-    final merged = <String, AppNotification>{
-      for (final item in local) item.id: item,
-      for (final item in remote) item.id: item,
-    }.values.toList()
-      ..sort(
-        (first, second) => second.receivedAt.compareTo(first.receivedAt),
-      );
+    final merged =
+        <String, AppNotification>{
+          for (final item in local) item.id: item,
+          for (final item in remote)
+            item.id: item.copyWith(
+              data: {...item.data, 'account_id': accountId},
+            ),
+        }.values.toList()..sort(
+          (first, second) => second.receivedAt.compareTo(first.receivedAt),
+        );
     _currentNotifications = merged.take(100).toList(growable: false);
-    await _inboxStore.save(_currentNotifications);
+    await _inboxStore.save(_currentNotifications, accountId: accountId);
     _emitNotifications();
   }
 
   @override
   Future<void> clearAll() async {
+    final accountId = _auth.currentUser?.uid ?? _registeredUserId;
     try {
       await _markAllRemoteNotificationsRead?.call();
     } on Object catch (error) {
       debugPrint('No se pudo marcar la bandeja remota como leída: $error');
     } finally {
-      await _inboxStore.clear();
+      if (accountId != null) {
+        await _inboxStore.clear(accountId: accountId);
+      }
       _currentNotifications = <AppNotification>[];
+      _pendingOpenedNotification = null;
       _emitNotifications();
     }
   }
@@ -344,7 +492,10 @@ class FirebaseNotificationService implements NotificationService {
       for (final item in _currentNotifications)
         if (item.id == notification.id) opened else item,
     ];
-    await _inboxStore.save(_currentNotifications);
+    final accountId = _auth.currentUser?.uid;
+    if (accountId != null) {
+      await _inboxStore.save(_currentNotifications, accountId: accountId);
+    }
     _emitNotifications();
     await _tryMarkRemoteRead(notification.id);
   }
@@ -365,12 +516,44 @@ class FirebaseNotificationService implements NotificationService {
 
   @override
   Future<NotificationPermissionState> permissionState() async {
-    final settings = await _messaging.getNotificationSettings();
-    return _mapAuthorizationStatus(settings.authorizationStatus);
+    if (!kIsWeb) {
+      try {
+        final value = await _permissionChannel.invokeMethod<String>('status');
+        final nativeState = _permissionStateFromName(value);
+        if (nativeState != NotificationPermissionState.unknown) {
+          return nativeState;
+        }
+      } on MissingPluginException {
+        // Unit tests and unsupported platforms use the Firebase fallback.
+      } on PlatformException {
+        // A permission query must never break the main feature.
+      }
+    }
+    try {
+      final settings = await _messaging.getNotificationSettings();
+      return mapNotificationAuthorizationStatus(
+        settings.authorizationStatus,
+        deniedIsPermanent:
+            !kIsWeb &&
+            (defaultTargetPlatform == TargetPlatform.iOS ||
+                defaultTargetPlatform == TargetPlatform.macOS),
+      );
+    } on Object {
+      return NotificationPermissionState.unknown;
+    }
   }
 
   @override
   Future<NotificationPermissionState> requestPermission() async {
+    final current = await permissionState();
+    if (current.requiresSettings) return current;
+    if (!kIsWeb) {
+      try {
+        await _permissionChannel.invokeMethod<void>('markRequested');
+      } on Object {
+        // Firebase still owns the system permission dialog.
+      }
+    }
     final settings = await _messaging.requestPermission(
       alert: true,
       announcement: false,
@@ -380,15 +563,26 @@ class FirebaseNotificationService implements NotificationService {
       provisional: false,
       sound: true,
     );
-    final state = _mapAuthorizationStatus(settings.authorizationStatus);
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+    var state = await permissionState();
+    if (state == NotificationPermissionState.unknown) {
+      state = mapNotificationAuthorizationStatus(
+        settings.authorizationStatus,
+        deniedIsPermanent:
+            !kIsWeb &&
+            (defaultTargetPlatform == TargetPlatform.iOS ||
+                defaultTargetPlatform == TargetPlatform.macOS),
+      );
+    }
+    if (state.canDeliver &&
+        !kIsWeb &&
+        defaultTargetPlatform == TargetPlatform.android) {
       await _localNotifications
           .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>()
+            AndroidFlutterLocalNotificationsPlugin
+          >()
           ?.requestExactAlarmsPermission();
     }
-    if (state == NotificationPermissionState.authorized ||
-        state == NotificationPermissionState.provisional) {
+    if (state.canDeliver) {
       final token = await _getTokenWhenAvailable();
       if (token != null) {
         await _registerToken(token);
@@ -397,17 +591,15 @@ class FirebaseNotificationService implements NotificationService {
     return state;
   }
 
-  NotificationPermissionState _mapAuthorizationStatus(
-    AuthorizationStatus status,
-  ) {
-    return switch (status) {
-      AuthorizationStatus.authorized => NotificationPermissionState.authorized,
-      AuthorizationStatus.provisional =>
-        NotificationPermissionState.provisional,
-      AuthorizationStatus.denied => NotificationPermissionState.denied,
-      AuthorizationStatus.notDetermined =>
-        NotificationPermissionState.notDetermined,
-    };
+  @override
+  Future<bool> openNotificationSettings() async {
+    if (kIsWeb) return false;
+    try {
+      return await _permissionChannel.invokeMethod<bool>('openSettings') ??
+          false;
+    } on Object {
+      return false;
+    }
   }
 
   Future<void> _handleAuthenticatedUser(User? user) async {
@@ -420,8 +612,8 @@ class FirebaseNotificationService implements NotificationService {
 
     try {
       final state = await permissionState();
-      if (state == NotificationPermissionState.authorized ||
-          state == NotificationPermissionState.provisional) {
+      await refreshInbox();
+      if (state.canDeliver) {
         final token = await _getTokenWhenAvailable();
         if (token != null) await _registerToken(token);
       }
@@ -477,6 +669,7 @@ class FirebaseNotificationService implements NotificationService {
   @override
   Future<void> unregisterCurrentDevice() async {
     final user = _auth.currentUser;
+    final accountId = user?.uid ?? _registeredUserId;
     String? token = _registeredToken;
 
     try {
@@ -494,9 +687,39 @@ class FirebaseNotificationService implements NotificationService {
     } on Object catch (error) {
       debugPrint('No se pudo eliminar el token FCM local: $error');
     } finally {
+      if (accountId != null) {
+        await cancelRemindersForAccount(accountId);
+        await _inboxStore.clear(accountId: accountId);
+      }
+      _currentNotifications = <AppNotification>[];
+      _pendingOpenedNotification = null;
+      _emitNotifications();
       _registeredUserId = null;
       _registeredToken = null;
-      await clearAll();
     }
   }
 }
+
+NotificationPermissionState mapNotificationAuthorizationStatus(
+  AuthorizationStatus status, {
+  bool deniedIsPermanent = false,
+}) => switch (status) {
+  AuthorizationStatus.authorized ||
+  AuthorizationStatus.provisional => NotificationPermissionState.granted,
+  AuthorizationStatus.denied =>
+    deniedIsPermanent
+        ? NotificationPermissionState.permanentlyDenied
+        : NotificationPermissionState.denied,
+  AuthorizationStatus.notDetermined =>
+    NotificationPermissionState.notDetermined,
+};
+
+NotificationPermissionState _permissionStateFromName(String? value) =>
+    switch (value) {
+      'notDetermined' => NotificationPermissionState.notDetermined,
+      'granted' => NotificationPermissionState.granted,
+      'denied' => NotificationPermissionState.denied,
+      'permanentlyDenied' => NotificationPermissionState.permanentlyDenied,
+      'restricted' => NotificationPermissionState.restricted,
+      _ => NotificationPermissionState.unknown,
+    };

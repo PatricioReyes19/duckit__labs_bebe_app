@@ -9,7 +9,7 @@ void main() {
   final now = DateTime.utc(2026, 8, 12, 12);
 
   test(
-    'cold start hydrates parents before children and starts Realtime last',
+    'IT-RESTORE-002: clean local storage restores remote history before home',
     () async {
       final trace = <String>[];
       final harness = await _SyncHarness.create(now: now, trace: trace);
@@ -31,6 +31,8 @@ void main() {
         await harness.agenda.listDerivedBySource('remote-medication'),
         hasLength(1),
       );
+      expect((await harness.health.getOverview('baby-1')).events, hasLength(1));
+      expect((await harness.settings.get()).name, 'Remote Owner');
       expect(
         trace,
         containsAllInOrder([
@@ -47,6 +49,27 @@ void main() {
       expect(trace.last, 'realtime');
     },
   );
+
+  test('context barrier stops child sync until context is valid', () async {
+    final trace = <String>[];
+    final harness = await _SyncHarness.create(now: now, trace: trace);
+    addTearDown(harness.close);
+
+    final result = await harness.initial.synchronize(
+      beforeDomainSync: () async {
+        trace.add('context');
+        return false;
+      },
+      startRealtime: () async => trace.add('realtime'),
+    );
+
+    expect(result.phase, InitialDataSyncPhase.ready);
+    expect(trace, ['profile', 'family', 'context']);
+    expect(result.registerState, isNull);
+    expect(result.agendaState, isNull);
+    expect(result.healthState, isNull);
+    expect(result.preferencesState, isNull);
+  });
 
   test('out-of-order child waits for Family and later converges', () async {
     final trace = <String>[];
@@ -83,6 +106,26 @@ void main() {
       await harness.agenda.listDerivedBySource('remote-medication'),
       hasLength(1),
     );
+  });
+
+  test('IT-SYNCUX-003 retry success returns the status to synced', () async {
+    final trace = <String>[];
+    final familyRemote = _FamilyRemote(trace, failPull: true);
+    final harness = await _SyncHarness.create(
+      now: now,
+      trace: trace,
+      familyRemote: familyRemote,
+    );
+    addTearDown(harness.close);
+
+    await harness.initial.synchronize();
+    expect(harness.initial.syncUxState.status, SyncUxStatus.error);
+
+    familyRemote.failPull = false;
+    final recovered = await harness.initial.retry();
+
+    expect(recovered.status, SyncUxStatus.synced);
+    expect(recovered.lastSuccessfulSyncAt, now);
   });
 
   test(
@@ -487,7 +530,18 @@ class _HealthRemote implements HealthEventRemoteDataSource {
   @override
   Future<List<HealthEventEntity>> pull({DateTime? updatedAfter}) async {
     trace.add('health');
-    return const [];
+    return [
+      HealthEventEntity(
+        id: 'remote-health',
+        babyId: 'baby-1',
+        type: HealthEventType.pediatricControl,
+        title: 'Control remoto',
+        description: 'Historial restaurado',
+        startsAt: DateTime.utc(2026, 8, 10),
+        status: HealthEventStatus.completed,
+        syncStatus: HealthSyncStatus.synced,
+      ),
+    ];
   }
 
   @override
@@ -508,7 +562,24 @@ class _SettingsRemote implements AppSettingsRemoteDataSource {
   @override
   Future<AppSettingsSyncRecord?> pull() async {
     trace.add('preferences');
-    return null;
+    return AppSettingsSyncRecord(
+      settings: const AppSettingsEntity(
+        theme: AppThemePreference.system,
+        highContrast: false,
+        personalReminders: true,
+        familyActivity: true,
+        dailySummary: false,
+        reduceMotion: false,
+        wifiOnly: false,
+        name: 'Remote Owner',
+        email: 'owner@example.com',
+        language: 'Español',
+        timeFormat: '24 horas',
+        textSize: 'Predeterminado',
+      ),
+      updatedAt: DateTime.utc(2026, 8, 12),
+      syncStatus: AppSettingsSyncStatus.synced,
+    );
   }
 
   @override

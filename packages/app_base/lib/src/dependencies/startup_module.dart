@@ -5,11 +5,19 @@ import 'package:notifications/notifications.dart';
 import 'package:onboarding/onboarding.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../startup/startup.dart';
+
 @module
 abstract class StartupModule {
   @Named('startupPreferences')
   @lazySingleton
   SharedPreferencesAsync get startupPreferences => SharedPreferencesAsync();
+
+  @lazySingleton
+  ActiveContextRepository activeContextRepository(
+    @Named('startupPreferences') SharedPreferencesAsync preferences,
+  ) =>
+      SharedPreferencesActiveContextRepository(preferences);
 
   @lazySingleton
   FirebaseAuthGateway firebaseAuthGateway() => FirebaseAuthGateway();
@@ -106,40 +114,75 @@ abstract class StartupModule {
   @lazySingleton
   ResolveEntryDestination resolveEntryDestination(
     AuthGateway authGateway,
-    OnboardingRepository onboardingRepository,
+    AuthenticatedStartupCoordinator authenticatedStartupCoordinator,
   ) =>
-      LocalResolveEntryDestination(authGateway, onboardingRepository);
+      LocalResolveEntryDestination(
+          authGateway, authenticatedStartupCoordinator);
+
+  @lazySingleton
+  AuthenticatedStartupCoordinator authenticatedStartupCoordinator(
+    GetCurrentSession getCurrentSession,
+    BebeDatabase database,
+    InitialDataSyncCoordinator initialDataSyncCoordinator,
+    FamilySyncService familySyncService,
+    SqliteFamilyRepository familyRepository,
+    ActiveContextRepository activeContextRepository,
+    SupabaseRealtimeSyncCoordinator realtimeSyncCoordinator,
+  ) =>
+      AuthenticatedStartupCoordinator(
+        getCurrentSession: getCurrentSession.call,
+        openAccountStorage: () async {
+          await database.database;
+        },
+        synchronizeInitialData: initialDataSyncCoordinator.synchronize,
+        readAuthoritativeFamilies: () => familySyncService.lastPulledSnapshots,
+        readCachedFamilies: familyRepository.listAvailable,
+        activateFamilyBaby: familyRepository.setActiveBaby,
+        activeContextRepository: activeContextRepository,
+        startRealtime: realtimeSyncCoordinator.start,
+      );
 }
 
 class LocalResolveEntryDestination implements ResolveEntryDestination {
-  const LocalResolveEntryDestination(
+  LocalResolveEntryDestination(
     this._authGateway,
-    this._onboardingRepository,
-  );
+    this._authenticatedStartupCoordinator, {
+    StartupTraceSink trace = emitStartupTrace,
+  }) : _trace = trace;
 
   final AuthGateway _authGateway;
-  final OnboardingRepository _onboardingRepository;
+  final AuthenticatedStartupCoordinator _authenticatedStartupCoordinator;
+  final StartupTraceSink _trace;
 
   @override
   Future<EntryResolution> call() async {
-    final session = await _authGateway.currentSession();
-    if (session == null) {
-      return const EntryResolution(
-        destination: EntryDestination.authEntry,
-        reason: 'No existe una sesión activa.',
-      );
+    final stopwatch = Stopwatch()..start();
+    _trace('entry_resolution_started', const {'result': 'started'});
+    try {
+      final session = await _authGateway.currentSession();
+      if (session == null) {
+        _trace('session_resolved', {
+          'durationMs': stopwatch.elapsedMilliseconds,
+          'result': 'none',
+        });
+        _trace('entry_resolution_completed', {
+          'durationMs': stopwatch.elapsedMilliseconds,
+          'result': 'success',
+          'destination': EntryDestination.authEntry.name,
+        });
+        return const EntryResolution(
+          destination: EntryDestination.authEntry,
+          reason: 'No existe una sesión activa.',
+        );
+      }
+      return _authenticatedStartupCoordinator.resolve(user: session.user);
+    } on Object catch (error) {
+      _trace('entry_resolution_failed', {
+        'durationMs': stopwatch.elapsedMilliseconds,
+        'result': 'failure',
+        'errorType': error.runtimeType.toString(),
+      });
+      rethrow;
     }
-
-    if (!await _onboardingRepository.isCompleted()) {
-      return const EntryResolution(
-        destination: EntryDestination.onboarding,
-        reason: 'El onboarding está pendiente.',
-      );
-    }
-
-    return const EntryResolution(
-      destination: EntryDestination.home,
-      reason: 'Sesión y contexto inicial disponibles.',
-    );
   }
 }

@@ -8,6 +8,7 @@ import '../../repositories/agenda/agenda_repository.dart';
 import '../../repositories/family/family_repository.dart';
 import '../../repositories/health/health_repository.dart';
 import '../../repositories/register_event/register_event_repository.dart';
+import '../register/get_active_register_events.dart';
 
 typedef HomeClock = DateTime Function();
 
@@ -17,14 +18,19 @@ class GetHomeOverview {
     this._registerRepository,
     this._healthRepository, {
     required AgendaRepository agendaRepository,
+    GetActiveRegisterEvents? getActiveRegisterEvents,
     HomeClock? clock,
   }) : _agendaRepository = agendaRepository,
+       _getActiveRegisterEvents =
+           getActiveRegisterEvents ??
+           GetActiveRegisterEvents(_registerRepository),
        _clock = clock ?? DateTime.now;
 
   final FamilyRepository _familyRepository;
   final RegisterEventRepository _registerRepository;
   final HealthRepository _healthRepository;
   final AgendaRepository _agendaRepository;
+  final GetActiveRegisterEvents _getActiveRegisterEvents;
   final HomeClock _clock;
 
   Stream<void> get changes {
@@ -57,17 +63,20 @@ class GetHomeOverview {
     final now = _clock();
     final results = await Future.wait<Object>([
       _registerRepository.listByBaby(baby.id, limit: 200),
+      _getActiveRegisterEvents(baby.id),
       _healthRepository.getOverview(baby.id),
       _agendaRepository.getOverview(baby.id),
     ]);
     final events = results[0] as List<RegisteredEvent>;
-    final health = results[1] as HealthOverviewEntity;
-    final agenda = results[2] as AgendaOverviewEntity;
+    final activeEvents = results[1] as List<RegisteredEvent>;
+    final health = results[2] as HealthOverviewEntity;
+    final agenda = results[3] as AgendaOverviewEntity;
     final today = events.where(
       (event) =>
           _sameLocalDay(event.occurredAt, now) ||
+          event.isActive ||
           (event.type == RegisterEventType.sleep &&
-              event.details['sleep_status'] == 'ongoing'),
+              _sameLocalDayIfPresent(event.endedAt, now)),
     );
     final metrics = HomeMetricType.values
         .map((type) {
@@ -80,17 +89,13 @@ class GetHomeOverview {
             totalMinutes: type == HomeMetricType.sleep
                 ? matching.fold<int>(
                     0,
-                    (total, event) => event.details['sleep_status'] == 'ongoing'
+                    (total, event) => event.isActive
                         ? total
                         : total + _intValue(event.details['duration_minutes']),
                   )
                 : 0,
             ongoingCount: type == HomeMetricType.sleep
-                ? matching
-                      .where(
-                        (event) => event.details['sleep_status'] == 'ongoing',
-                      )
-                      .length
+                ? matching.where((event) => event.isActive).length
                 : 0,
             lastOccurredAt: matching.isEmpty ? null : matching.first.occurredAt,
           );
@@ -109,6 +114,7 @@ class GetHomeOverview {
       family: family,
       activeBaby: baby,
       metrics: metrics,
+      activeRegisterEvents: activeEvents,
       upcomingHealthEvent: upcoming.isEmpty ? null : upcoming.first,
       mostRecentEvent: sortedEvents.isEmpty ? null : sortedEvents.first,
       careReminders: careReminders,
@@ -170,6 +176,9 @@ class GetHomeOverview {
     final b = second.toLocal();
     return a.year == b.year && a.month == b.month && a.day == b.day;
   }
+
+  static bool _sameLocalDayIfPresent(DateTime? first, DateTime second) =>
+      first != null && _sameLocalDay(first, second);
 
   static bool _matches(HomeMetricType type, RegisteredEvent event) =>
       switch (type) {

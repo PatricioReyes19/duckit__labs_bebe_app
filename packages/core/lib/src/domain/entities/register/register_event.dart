@@ -7,6 +7,14 @@ enum RegisterEventType {
   measurement,
 }
 
+extension RegisterEventTypeLifecycle on RegisterEventType {
+  /// Whether records of this type can remain open after being created.
+  ///
+  /// Feeding stores a duration, but its form always records a completed fact;
+  /// only sleep currently exposes an explicit ongoing/completed lifecycle.
+  bool get supportsActiveLifecycle => this == RegisterEventType.sleep;
+}
+
 enum RegisterSyncStatus { pending, syncing, synced, failed }
 
 /// Input accepted by the register domain.
@@ -67,6 +75,32 @@ class RegisteredEvent {
   final int schemaVersion;
 
   bool get isDeleted => deletedAt != null;
+
+  /// Start of the temporal record in the existing persistence model.
+  DateTime get startedAt => occurredAt;
+
+  /// End of the temporal record, when the event type supports one.
+  DateTime? get endedAt {
+    final value = details['end_at'];
+    return switch (value) {
+      final DateTime date => date,
+      final String date when date.isNotEmpty => DateTime.tryParse(date),
+      _ => null,
+    };
+  }
+
+  /// Canonical active-state rule shared by domain and presentation.
+  ///
+  /// `sleep_status` is retained because it is the existing persisted state;
+  /// `end_at == null` prevents a malformed completed row from appearing active.
+  bool get isActive =>
+      !isDeleted &&
+      type.supportsActiveLifecycle &&
+      details['sleep_status'] == 'ongoing' &&
+      endedAt == null;
+
+  bool get isFinished =>
+      type.supportsActiveLifecycle && !isDeleted && !isActive;
 }
 
 /// Partial changes accepted by the register domain.

@@ -4,9 +4,8 @@ import 'package:app_base/src/router/app_layout_configuration.dart';
 import 'package:app_base/src/router/navigation_session_store.dart';
 import 'package:app_base/src/router/startup_route_mapper.dart';
 import 'package:auth/auth.dart';
-import 'package:core/core.dart' hide BabyDraft;
+import 'package:core/core.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:onboarding/onboarding.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -18,7 +17,8 @@ void main() {
     test('sin sesión abre la entrada de autenticación', () async {
       final resolver = LocalResolveEntryDestination(
         _FakeAuthGateway(),
-        _FakeOnboardingRepository(completed: false),
+        _startupCoordinator(const []),
+        trace: (_, __) {},
       );
 
       final result = await resolver();
@@ -26,26 +26,28 @@ void main() {
       expect(result.destination, EntryDestination.authEntry);
     });
 
-    test('con sesión y onboarding pendiente abre onboarding', () async {
+    test('con sesión y contexto remoto existente abre home', () async {
       final resolver = LocalResolveEntryDestination(
         _FakeAuthGateway(session: _session),
-        _FakeOnboardingRepository(completed: false),
-      );
-
-      final result = await resolver();
-
-      expect(result.destination, EntryDestination.onboarding);
-    });
-
-    test('con sesión y onboarding completo abre home', () async {
-      final resolver = LocalResolveEntryDestination(
-        _FakeAuthGateway(session: _session),
-        _FakeOnboardingRepository(completed: true),
+        _startupCoordinator([_family]),
+        trace: (_, __) {},
       );
 
       final result = await resolver();
 
       expect(result.destination, EntryDestination.home);
+    });
+
+    test('con resolución remota vacía abre onboarding', () async {
+      final resolver = LocalResolveEntryDestination(
+        _FakeAuthGateway(session: _session),
+        _startupCoordinator(const []),
+        trace: (_, __) {},
+      );
+
+      final result = await resolver();
+
+      expect(result.destination, EntryDestination.onboarding);
     });
   });
 
@@ -213,27 +215,70 @@ class _FakeAuthGateway implements AuthGateway {
       _session;
 }
 
-class _FakeOnboardingRepository implements OnboardingRepository {
-  _FakeOnboardingRepository({required this.completed});
+final _family = FamilyOverviewEntity(
+  id: 'family-1',
+  name: 'Familia',
+  activeBabyId: 'baby-1',
+  babies: [
+    BabyEntity(
+      id: 'baby-1',
+      familyId: 'family-1',
+      name: 'Emma',
+      birthDate: DateTime.utc(2026),
+    ),
+  ],
+  members: const [],
+);
 
-  final bool completed;
+app_base.AuthenticatedStartupCoordinator _startupCoordinator(
+  List<FamilyOverviewEntity> families,
+) {
+  final contextRepository = _MemoryActiveContextRepository();
+  return app_base.AuthenticatedStartupCoordinator(
+    getCurrentSession: () async => _session,
+    openAccountStorage: () async {},
+    synchronizeInitialData: (
+        {startRealtime, onMilestone, beforeDomainSync}) async {
+      onMilestone?.call(InitialDataSyncMilestone.profileHydrated);
+      onMilestone?.call(InitialDataSyncMilestone.familyHydrated);
+      final continueSync = await beforeDomainSync?.call() ?? true;
+      if (continueSync) {
+        onMilestone?.call(InitialDataSyncMilestone.domainSyncStarted);
+        await startRealtime?.call();
+        onMilestone?.call(InitialDataSyncMilestone.domainSyncCompleted);
+      }
+      return InitialDataSyncState(
+        phase: InitialDataSyncPhase.ready,
+        familyState: const RegisterSyncState(
+          phase: RegisterSyncPhase.synced,
+        ),
+      );
+    },
+    readAuthoritativeFamilies: () => families
+        .map(
+          (family) => FamilySyncSnapshot(
+            overview: family,
+            updatedAt: DateTime.utc(2026),
+          ),
+        )
+        .toList(growable: false),
+    readCachedFamilies: () async => const [],
+    activateFamilyBaby: (_) async => families.single,
+    activeContextRepository: contextRepository,
+    startRealtime: () async {},
+    trace: (_, __) {},
+  );
+}
+
+class _MemoryActiveContextRepository implements ActiveContextRepository {
+  ActiveContext? value;
 
   @override
-  Future<void> acceptInvitation(CareInvitation invitation) async {}
+  Future<void> clear() async => value = null;
 
   @override
-  Future<void> complete() async {}
+  Future<ActiveContext?> read() async => value;
 
   @override
-  Future<BabyProfile> createBaby(BabyDraft draft) => throw UnimplementedError();
-
-  @override
-  Future<void> declineInvitation(CareInvitation invitation) async {}
-
-  @override
-  Future<InvitationLookupResult> findInvitation(String code) =>
-      throw UnimplementedError();
-
-  @override
-  Future<bool> isCompleted() async => completed;
+  Future<void> save(ActiveContext context) async => value = context;
 }

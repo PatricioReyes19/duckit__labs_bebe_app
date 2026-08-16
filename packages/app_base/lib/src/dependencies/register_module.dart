@@ -164,6 +164,18 @@ abstract class RegisterModule {
   }
 
   @lazySingleton
+  GetActiveRegisterEvents getActiveRegisterEvents(
+    RegisterEventRepository repository,
+  ) =>
+      GetActiveRegisterEvents(repository);
+
+  @lazySingleton
+  FinishActiveRegisterEvent finishActiveRegisterEvent(
+    RegisterEventRepository repository,
+  ) =>
+      FinishActiveRegisterEvent(repository);
+
+  @lazySingleton
   CreateAgendaEvent createAgendaEvent(AgendaRepository repository) =>
       CreateAgendaEvent(repository);
 

@@ -63,10 +63,12 @@ abstract class BlocsModule {
 
   HomeBloc homeBloc(
     GetHomeOverview getHomeOverview,
+    FinishActiveRegisterEvent finishActiveRegisterEvent,
     RegisterEventSyncService syncService,
   ) {
     return HomeBloc(
       getHomeOverview: getHomeOverview,
+      finishActiveRegisterEvent: finishActiveRegisterEvent,
       syncService: syncService,
     );
   }

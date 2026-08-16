@@ -19,67 +19,43 @@ class AppWrappers extends StatefulWidget {
 
 class _AppWrappersState extends State<AppWrappers> {
   StreamSubscription<void>? _settingsSubscription;
-  StreamSubscription<RegisterSyncState>? _registerSyncSubscription;
-  StreamSubscription<RegisterSyncState>? _agendaSyncSubscription;
+  StreamSubscription<SyncUxState>? _syncUxSubscription;
+  final _syncAlertDeduplicator = SyncErrorAlertDeduplicator();
   bool _use24HourFormat = true;
   bool _reduceMotion = false;
   bool _highContrast = false;
   double _textScaleFactor = 1;
-  late RegisterSyncState _registerSyncState;
-  late RegisterSyncState _agendaSyncState;
 
   @override
   void initState() {
     super.initState();
     final repository = getIt<AppSettingsRepository>();
-    _registerSyncState = getIt<RegisterEventSyncService>().state;
-    _agendaSyncState = getIt<AgendaEventSyncService>().state;
+    final syncCoordinator = getIt<InitialDataSyncCoordinator>();
     _settingsSubscription = repository.changes.listen((_) => _loadSettings());
-    _registerSyncSubscription = getIt<RegisterEventSyncService>().states.listen(
-          (state) => _syncChanged(register: state),
-        );
-    _agendaSyncSubscription = getIt<AgendaEventSyncService>().states.listen(
-          (state) => _syncChanged(agenda: state),
-        );
+    _syncUxSubscription = syncCoordinator.syncUxStates.listen(_syncChanged);
+    _syncChanged(syncCoordinator.syncUxState);
     unawaited(_loadSettings());
   }
 
-  void _syncChanged({RegisterSyncState? register, RegisterSyncState? agenda}) {
-    final wasSyncing = _isSyncing;
-    setState(() {
-      if (register != null) _registerSyncState = register;
-      if (agenda != null) _agendaSyncState = agenda;
+  void _syncChanged(SyncUxState state) {
+    if (!_syncAlertDeduplicator.shouldAlert(state)) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final messenger = appScaffoldMessengerKey.currentState;
+      if (messenger == null) return;
+      BebeInAppSnackbar.showOn(
+        messenger,
+        title: 'Error de sincronización',
+        message: state.hasLocallyPersistedChanges
+            ? 'Tus cambios siguen guardados en este dispositivo. Reintenta desde Familia.'
+            : 'No pudimos actualizar algunos datos. Reintenta desde Familia.',
+        variant: BebeInAppSnackbarVariant.error,
+        actionLabel: 'Reintentar',
+        onActionPressed: () =>
+            unawaited(getIt<InitialDataSyncCoordinator>().retry()),
+      );
     });
-    if (wasSyncing && !_isSyncing) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        final failed = _hasSyncFailure;
-        final messenger = appScaffoldMessengerKey.currentState;
-        if (messenger != null) {
-          BebeInAppSnackbar.showOn(
-            messenger,
-            title: failed ? 'Error de sincronización' : 'Sincronización lista',
-            message: failed
-                ? 'Algunos datos no pudieron sincronizarse. Se reintentará automáticamente.'
-                : 'Datos sincronizados y actualizados.',
-            variant: failed
-                ? BebeInAppSnackbarVariant.error
-                : BebeInAppSnackbarVariant.syncing,
-          );
-        }
-      });
-    }
   }
-
-  bool get _isSyncing =>
-      _registerSyncState.phase == RegisterSyncPhase.syncing ||
-      _agendaSyncState.phase == RegisterSyncPhase.syncing;
-
-  bool get _hasSyncFailure =>
-      _registerSyncState.phase == RegisterSyncPhase.failed ||
-      _agendaSyncState.phase == RegisterSyncPhase.failed;
-
-  int get _pendingSyncCount =>
-      _registerSyncState.pendingCount + _agendaSyncState.pendingCount;
 
   Future<void> _loadSettings() async {
     try {
@@ -104,15 +80,14 @@ class _AppWrappersState extends State<AppWrappers> {
   @override
   void dispose() {
     unawaited(_settingsSubscription?.cancel());
-    unawaited(_registerSyncSubscription?.cancel());
-    unawaited(_agendaSyncSubscription?.cancel());
+    unawaited(_syncUxSubscription?.cancel());
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
-    final wrappedChild = MediaQuery(
+    return MediaQuery(
       data: media.copyWith(
         alwaysUse24HourFormat: _use24HourFormat,
         disableAnimations: media.disableAnimations || _reduceMotion,
@@ -122,32 +97,6 @@ class _AppWrappersState extends State<AppWrappers> {
         ),
       ),
       child: widget.child,
-    );
-    return Stack(
-      children: [
-        wrappedChild,
-        if (_isSyncing)
-          Positioned(
-            top: media.padding.top + 8,
-            left: 16,
-            right: 16,
-            child: SafeArea(
-              bottom: false,
-              child: BebeStatusBanner(
-                title: 'Sincronizando datos',
-                description: _pendingSyncCount == 0
-                    ? 'Descargando y actualizando información…'
-                    : 'Subiendo $_pendingSyncCount cambios y actualizando información…',
-                type: BebeStatusBannerType.information,
-                leading: const SizedBox.square(
-                  dimension: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2.5),
-                ),
-                compact: true,
-              ),
-            ),
-          ),
-      ],
     );
   }
 }

@@ -268,6 +268,28 @@ void main() {
     expect((await families.getCurrent()).id, 'family-new');
   });
 
+  test('an explicitly activated baby also selects its care circle', () async {
+    await families.joinCareCircle(
+      JoinedCareCircleDraft(
+        familyId: 'family-new',
+        familyName: 'CÃ­rculo de Amanda',
+        babyId: 'baby-amanda',
+        babyName: 'Amanda',
+        babyBirthDate: DateTime.utc(2026, 4, 2),
+        memberId: 'member-user-family-new',
+        memberName: 'Paula PÃ©rez',
+        memberEmail: 'paula@example.com',
+      ),
+    );
+
+    expect(await families.listAvailable(), hasLength(2));
+    await families.setActiveBaby(BebeSeedData.activeBabyId);
+
+    final selected = await families.getCurrent();
+    expect(selected.id, BebeSeedData.familyId);
+    expect(selected.activeBabyId, BebeSeedData.activeBabyId);
+  });
+
   test('supports POST and PATCH semantics for agenda and settings', () async {
     final created = await agenda.create(
       AgendaEventDraft(
@@ -430,6 +452,26 @@ void main() {
       expect(sleep.count, baselineSleep.count + 1);
       expect(sleep.ongoingCount, baselineSleep.ongoingCount + 1);
       expect(sleep.totalMinutes, baselineSleep.totalMinutes);
+      expect(overview.activeRegisterEvents.map((event) => event.id), [
+        'ongoing-sleep',
+      ]);
+
+      await FinishActiveRegisterEvent(registerRepository)(
+        eventId: 'ongoing-sleep',
+        babyId: BebeSeedData.activeBabyId,
+        endedAt: now,
+      );
+      final completedOverview = await getOverview();
+      final completedSleep = completedOverview.metrics.firstWhere(
+        (metric) => metric.type == HomeMetricType.sleep,
+      );
+      expect(completedSleep.count, baselineSleep.count + 1);
+      expect(completedSleep.ongoingCount, baselineSleep.ongoingCount);
+      expect(
+        completedSleep.totalMinutes,
+        baselineSleep.totalMinutes + const Duration(hours: 9).inMinutes,
+      );
+      expect(completedOverview.activeRegisterEvents, isEmpty);
     },
   );
 
