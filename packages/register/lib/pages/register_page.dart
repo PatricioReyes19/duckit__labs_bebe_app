@@ -158,6 +158,16 @@ class RegisterPage extends GoRoute {
   static void openForEdit(BuildContext context, RegisteredEvent event) {
     context.push(locationFor(_kindForType(event.type)), extra: event);
   }
+
+  static Future<void> openForEditAndWait(
+    BuildContext context,
+    RegisteredEvent event,
+  ) async {
+    await context.push<void>(
+      locationFor(_kindForType(event.type)),
+      extra: event,
+    );
+  }
 }
 
 Page<void> _buildPage({

@@ -38,7 +38,7 @@ class BebeQuickRegistrationActions extends StatelessWidget {
   final EdgeInsetsGeometry contentPadding;
 
   static const int _maximumVisibleItems = 5;
-  static const double _minimumTileWidth = 80;
+  static const double _minimumTileWidth = 92;
   static const double _accessibleTileWidth = 112;
   static const double _maximumCompactTextScale = 1.3;
 
@@ -140,6 +140,7 @@ class _QuickRegistrationActionTile extends StatelessWidget {
       variant: item.type.toTitleVariant(),
       label: item.label,
       icon: item.icon,
+      compact: true,
       semanticLabel: item.semanticLabel,
       onPressed: () => onPressed(item.id),
     );
@@ -177,7 +178,7 @@ class BebeQuickRegistrationActionsSkeleton extends StatelessWidget {
             spacing: spacing.spacingS,
             children: List.generate(
               itemCount,
-              (_) => const BebeSkeleton(width: 80, height: 88),
+              (_) => const BebeSkeleton(width: 92, height: 72),
             ),
           ),
         ),

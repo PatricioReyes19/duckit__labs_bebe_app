@@ -470,7 +470,25 @@ class _HealthOverviewLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(child: CircularProgressIndicator());
+    final spacing = context.theme.spacing;
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      label: 'Cargando resumen de salud',
+      child: ExcludeSemantics(
+        child: BebeHealthOverviewTemplate(
+          primaryActions: const BebeSkeleton(height: 196),
+          supportAction: const BebeSkeleton(height: 92),
+          upcomingHeader: const BebeSkeleton.line(width: 190, height: 20),
+          upcomingCarousel: Padding(
+            padding: EdgeInsets.symmetric(horizontal: spacing.spacingL),
+            child: const BebeSkeleton(height: 148),
+          ),
+          quickSummary: const BebeSkeleton(height: 132),
+          historyAction: const BebeSkeleton(height: 72),
+        ),
+      ),
+    );
   }
 }
 

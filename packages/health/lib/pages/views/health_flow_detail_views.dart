@@ -1150,6 +1150,7 @@ class _HealthRecordDetailView extends StatelessWidget {
         ),
         onTap: () => openFlow(HealthFlowAction.sync),
       ),
+      ..._recordManagementActions(context),
     ];
   }
 
@@ -1242,6 +1243,7 @@ class _HealthRecordDetailView extends StatelessWidget {
           subtitle: consultation.notes,
         ),
       ],
+      ..._recordManagementActions(context),
       const SizedBox(height: 18),
       HealthPrimaryButton(
         label: 'Ver reportes',
@@ -1325,6 +1327,7 @@ class _HealthRecordDetailView extends StatelessWidget {
           subtitle: pediatrician.notes,
         ),
       ],
+      ..._recordManagementActions(context),
       const SizedBox(height: 18),
       HealthPrimaryButton(
         label: 'Comparar experiencias',
@@ -1386,7 +1389,70 @@ class _HealthRecordDetailView extends StatelessWidget {
         subtitle: 'Consulta el estado del respaldo.',
         onTap: () => openFlow(HealthFlowAction.sync),
       ),
+      ..._recordManagementActions(context),
     ];
+  }
+
+  List<Widget> _recordManagementActions(BuildContext context) {
+    if (!controller.selectedRecordCanBeManaged) return const [];
+    return [
+      const SizedBox(height: 18),
+      if (controller.selectedRecordCanBeEdited) ...[
+        HealthPrimaryButton(
+          label: 'Editar registro',
+          icon: Icons.edit_outlined,
+          outlined: true,
+          onPressed: () => openFlow(HealthFlowAction.edit),
+        ),
+        const SizedBox(height: 10),
+      ],
+      OutlinedButton.icon(
+        key: const ValueKey('health-delete-record'),
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size.fromHeight(52),
+          foregroundColor: Theme.of(context).colorScheme.error,
+        ),
+        onPressed: () => _confirmDelete(context),
+        icon: const Icon(Icons.delete_outline_rounded),
+        label: const Text('Eliminar registro'),
+      ),
+    ];
+  }
+
+  Future<void> _confirmDelete(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('¿Eliminar este registro?'),
+        content: const Text(
+          'Se quitará del historial y de los reportes. La eliminación se '
+          'sincronizará con los demás cuidadores.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    try {
+      final deleted = await controller.deleteSelectedRecord();
+      if (deleted && context.mounted) Navigator.of(context).maybePop();
+    } on Object catch (_) {
+      if (!context.mounted) return;
+      BebeInAppSnackbar.show(
+        context,
+        title: 'No pudimos eliminarlo',
+        message: 'El registro sigue guardado. Intenta nuevamente.',
+        variant: BebeInAppSnackbarVariant.error,
+      );
+    }
   }
 }
 

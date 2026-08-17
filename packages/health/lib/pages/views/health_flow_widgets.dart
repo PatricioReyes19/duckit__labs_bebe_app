@@ -52,8 +52,8 @@ class _HealthFlowBodyState extends State<HealthFlowBody> {
     return BlocBuilder<HealthFlowBloc, HealthFlowState>(
       bloc: _bloc,
       builder: (context, state) {
-        if (state.isLoading && widget.controller.activeBaby == null) {
-          return const Center(child: CircularProgressIndicator());
+        if (state.isLoading) {
+          return HealthFlowSkeleton(padding: widget.padding);
         }
         if (state.error != null && widget.controller.activeBaby == null) {
           return HealthFlowError(
@@ -69,6 +69,42 @@ class _HealthFlowBodyState extends State<HealthFlowBody> {
           ),
         );
       },
+    );
+  }
+}
+
+class HealthFlowSkeleton extends StatelessWidget {
+  const HealthFlowSkeleton({
+    this.padding = const EdgeInsets.fromLTRB(20, 12, 20, 28),
+    super.key,
+  });
+
+  final EdgeInsets padding;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      label: 'Cargando información de salud',
+      child: ExcludeSemantics(
+        child: ListView(
+          key: const ValueKey('health-flow-skeleton'),
+          padding: padding,
+          physics: const NeverScrollableScrollPhysics(),
+          children: const [
+            BebeSkeleton.line(width: 210, height: 22),
+            SizedBox(height: 10),
+            BebeSkeleton.line(width: 280, height: 12),
+            SizedBox(height: 22),
+            BebeSkeleton(height: 148),
+            SizedBox(height: 16),
+            BebeSkeleton(height: 96),
+            SizedBox(height: 16),
+            BebeSkeleton(height: 180),
+          ],
+        ),
+      ),
     );
   }
 }

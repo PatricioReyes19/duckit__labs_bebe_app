@@ -1,4 +1,5 @@
 import 'package:core/core.dart';
+import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -44,6 +45,9 @@ class HomeDailyHistoryPage extends GoRoute {
   }) : super(
           path: relativePath,
           pageBuilder: (context, state) {
+            final initialType = _typeFromRoute(
+              state.uri.queryParameters['type'],
+            );
             return MaterialPage<void>(
               key: const ValueKey('home-daily-history'),
               name: name ?? nameRoute,
@@ -58,13 +62,25 @@ class HomeDailyHistoryPage extends GoRoute {
                       babyName: babyName,
                       onRegisterPressed: onRegisterPressed,
                       onEditEvent: onEditEvent,
+                      initialType: initialType,
                     )
                   : FutureBuilder<FamilyOverviewEntity>(
                       future: getFamilyOverview(context)(),
                       builder: (context, snapshot) {
+                        if (snapshot.connectionState != ConnectionState.done) {
+                          return const HomeDailyHistorySkeleton();
+                        }
                         if (!snapshot.hasData) {
                           return const Center(
-                            child: SizedBox.shrink(),
+                            child: Padding(
+                              padding: EdgeInsets.all(24),
+                              child: BebeStatePanel(
+                                title: 'No pudimos cargar el historial',
+                                description:
+                                    'No fue posible resolver el bebé activo.',
+                                variant: BebeStatePanelVariant.error,
+                              ),
+                            ),
                           );
                         }
                         final baby = snapshot.data!.activeBaby;
@@ -78,6 +94,7 @@ class HomeDailyHistoryPage extends GoRoute {
                           babyName: baby.name,
                           onRegisterPressed: onRegisterPressed,
                           onEditEvent: onEditEvent,
+                          initialType: initialType,
                         );
                       },
                     ),
@@ -97,6 +114,18 @@ class HomeDailyHistoryPage extends GoRoute {
   static const nameRoute = 'HomeDailyHistory';
   static const relativePath = 'history';
   static const fullPath = '/home/history';
+
+  static String locationFor([RegisterEventType? type]) => Uri(
+        path: fullPath,
+        queryParameters: type == null ? null : {'type': type.name},
+      ).toString();
+
+  static RegisterEventType? _typeFromRoute(String? value) {
+    for (final type in RegisterEventType.values) {
+      if (type.name == value) return type;
+    }
+    return null;
+  }
 }
 
 class _HomeDailyHistoryContent extends StatelessWidget {
@@ -110,6 +139,7 @@ class _HomeDailyHistoryContent extends StatelessWidget {
     required this.babyName,
     required this.onRegisterPressed,
     required this.onEditEvent,
+    required this.initialType,
   });
 
   final GetRegisterEventsFactory getRegisterEvents;
@@ -121,6 +151,7 @@ class _HomeDailyHistoryContent extends StatelessWidget {
   final String babyName;
   final HomeDailyHistoryAction onRegisterPressed;
   final HomeDailyHistoryEditAction? onEditEvent;
+  final RegisterEventType? initialType;
 
   @override
   Widget build(BuildContext context) => BlocProvider(
@@ -131,6 +162,7 @@ class _HomeDailyHistoryContent extends StatelessWidget {
           onEventDeleted: onEventDeleted,
           syncService: syncService?.call(context),
           babyId: babyId,
+          initialType: initialType,
         )..load(),
         child: HomeDailyHistoryView(
           babyName: babyName,

@@ -42,10 +42,16 @@ class AppSettingsSyncService {
   }
 
   Future<RegisterSyncState> _synchronizeOnce() async {
+    final local = await _local.readSyncRecord();
+    final pendingCount =
+        local == null || local.syncStatus == AppSettingsSyncStatus.synced
+        ? 0
+        : 1;
     if (!_remote.isConfigured) {
       return _emit(
-        const RegisterSyncState(
+        RegisterSyncState(
           phase: RegisterSyncPhase.disabled,
+          pendingCount: pendingCount,
           message:
               'Supabase no está configurado; las preferencias siguen locales.',
         ),
@@ -53,13 +59,13 @@ class AppSettingsSyncService {
     }
     if (!await _remote.isAuthenticated()) {
       return _emit(
-        const RegisterSyncState(
+        RegisterSyncState(
           phase: RegisterSyncPhase.waitingForAuthentication,
+          pendingCount: pendingCount,
           message: 'Inicia sesión para sincronizar las preferencias.',
         ),
       );
     }
-    final local = await _local.readSyncRecord();
     if (local == null) {
       _emit(const RegisterSyncState(phase: RegisterSyncPhase.syncing));
       try {
@@ -85,7 +91,7 @@ class AppSettingsSyncService {
     _emit(
       RegisterSyncState(
         phase: RegisterSyncPhase.syncing,
-        pendingCount: local.syncStatus == AppSettingsSyncStatus.synced ? 0 : 1,
+        pendingCount: pendingCount,
       ),
     );
     try {
@@ -105,11 +111,16 @@ class AppSettingsSyncService {
         ),
       );
     } on Object catch (error) {
-      await _local.markFailed(local, error);
+      if (local.syncStatus != AppSettingsSyncStatus.synced) {
+        await _local.markFailed(local, error);
+      }
+      final remaining = await _local.readSyncRecord();
       return _emit(
         RegisterSyncState(
           phase: RegisterSyncPhase.failed,
-          pendingCount: local.syncStatus == AppSettingsSyncStatus.synced
+          pendingCount:
+              remaining == null ||
+                  remaining.syncStatus == AppSettingsSyncStatus.synced
               ? 0
               : 1,
           failedCount: 1,

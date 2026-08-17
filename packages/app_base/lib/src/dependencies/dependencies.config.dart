@@ -302,16 +302,19 @@ extension GetItInjectableX on _i174.GetIt {
           gh<_i494.GetHomeOverview>(),
           gh<_i494.FinishActiveRegisterEvent>(),
           gh<_i494.RegisterEventSyncService>(),
+          gh<_i494.InitialDataSyncCoordinator>(),
         ));
     gh.factory<_i914.AgendaBloc>(() => blocsModule.agendaBloc(
           gh<_i494.GetAgendaOverview>(),
           gh<_i494.GetFamilyOverview>(),
           gh<_i494.AgendaEventSyncService>(),
+          gh<_i494.InitialDataSyncCoordinator>(),
         ));
     gh.factory<_i237.HealthBloc>(() => blocsModule.healthBloc(
           gh<_i494.GetHealthOverview>(),
           gh<_i494.GetRegisterEvents>(),
           gh<_i494.GetFamilyOverview>(),
+          gh<_i494.InitialDataSyncCoordinator>(),
         ));
     return this;
   }

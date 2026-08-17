@@ -94,16 +94,26 @@ class InitialDataSyncCoordinator {
   final RegisterAgendaCoordinator _registerAgendaCoordinator;
   final _states = StreamController<InitialDataSyncState>.broadcast();
   final _syncUxStates = StreamController<SyncUxState>.broadcast();
+  final _domainHydrationStates = StreamController<bool>.broadcast();
   final _syncSubscriptions = <StreamSubscription<RegisterSyncState>>[];
 
   InitialDataSyncState _state = const InitialDataSyncState.idle();
   SyncUxState _syncUxState = const SyncUxState.pending();
+  bool _hasHydratedDomains = false;
   Future<void> _tail = Future<void>.value();
 
   InitialDataSyncState get state => _state;
   Stream<InitialDataSyncState> get states => _states.stream;
   SyncUxState get syncUxState => _syncUxState;
   Stream<SyncUxState> get syncUxStates => _syncUxStates.stream;
+
+  /// Indica que Register, Agenda, Salud y Preferencias ya terminaron su
+  /// primer intento de hidratación para el contexto autenticado actual.
+  ///
+  /// Un fallo también completa el intento: las vistas dejan el skeleton y
+  /// pueden mostrar el cache local junto con el estado accionable de sync.
+  bool get hasHydratedDomains => _hasHydratedDomains;
+  Stream<bool> get domainHydrationStates => _domainHydrationStates.stream;
 
   Future<InitialDataSyncState> synchronize({
     Future<void> Function()? startRealtime,
@@ -127,6 +137,7 @@ class InitialDataSyncCoordinator {
     InitialDataSyncObserver? onMilestone,
     InitialDataSyncContextBarrier? beforeDomainSync,
   ) async {
+    if (beforeDomainSync != null) _setDomainsHydrated(false);
     final session = await _sessionRepository.currentSession();
     if (session == null) {
       return _emit(
@@ -137,6 +148,8 @@ class InitialDataSyncCoordinator {
       );
     }
 
+    final completesInitialDomainHydration =
+        beforeDomainSync == null && !_hasHydratedDomains;
     _emit(const InitialDataSyncState(phase: InitialDataSyncPhase.syncing));
     try {
       // A persisted Firebase session does not pass through AuthService's
@@ -214,6 +227,8 @@ class InitialDataSyncCoordinator {
           message: error.toString(),
         ),
       );
+    } finally {
+      if (completesInitialDomainHydration) _setDomainsHydrated(true);
     }
   }
 
@@ -269,6 +284,14 @@ class InitialDataSyncCoordinator {
     return value;
   }
 
+  void _setDomainsHydrated(bool value) {
+    if (_hasHydratedDomains == value) return;
+    _hasHydratedDomains = value;
+    if (!_domainHydrationStates.isClosed) {
+      _domainHydrationStates.add(value);
+    }
+  }
+
   void _observe(Stream<RegisterSyncState> states) {
     _syncSubscriptions.add(states.listen((_) => _refreshSyncUxState()));
   }
@@ -313,5 +336,6 @@ class InitialDataSyncCoordinator {
     }
     await _states.close();
     await _syncUxStates.close();
+    await _domainHydrationStates.close();
   }
 }

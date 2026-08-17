@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:core/core.dart' show RegisterEventType;
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -24,7 +25,10 @@ class HomeView extends StatelessWidget {
   final void Function(BuildContext context, String actionId) openRegister;
   final void Function(BuildContext context) openAgenda;
   final void Function(BuildContext context) openHealth;
-  final void Function(BuildContext context) openTodayHistory;
+  final void Function(
+    BuildContext context,
+    RegisterEventType? type,
+  ) openTodayHistory;
   final HomeBabySwitcher switchBaby;
   final HomeViewClock? clock;
 
@@ -82,7 +86,10 @@ class _LoadedHome extends StatefulWidget {
   final void Function(BuildContext context, String actionId) openRegister;
   final void Function(BuildContext context) openAgenda;
   final void Function(BuildContext context) openHealth;
-  final void Function(BuildContext context) openTodayHistory;
+  final void Function(
+    BuildContext context,
+    RegisterEventType? type,
+  ) openTodayHistory;
   final HomeBabySwitcher switchBaby;
   final HomeViewClock clock;
 
@@ -94,13 +101,15 @@ class _LoadedHomeState extends State<_LoadedHome> {
   Timer? _reminderTimer;
   HomeVisualReminderVm? _activeReminder;
   final Set<String> _dismissedReminderIds = <String>{};
+  final Set<String> _finishingSummaryIds = <String>{};
   String? _switchingBabyId;
 
   HomeOverviewVm get overview => widget.overview;
   void Function(BuildContext, String) get openRegister => widget.openRegister;
   void Function(BuildContext) get openAgenda => widget.openAgenda;
   void Function(BuildContext) get openHealth => widget.openHealth;
-  void Function(BuildContext) get openTodayHistory => widget.openTodayHistory;
+  void Function(BuildContext, RegisterEventType?) get openTodayHistory =>
+      widget.openTodayHistory;
 
   @override
   void initState() {
@@ -151,13 +160,16 @@ class _LoadedHomeState extends State<_LoadedHome> {
     final scrollContentPadding = EdgeInsets.symmetric(
       horizontal: context.theme.spacing.spacing2xl,
     );
+    final bannerActivities = overview.activeActivities
+        .where((activity) => activity.kind != HomeActiveActivityKind.sleep)
+        .toList(growable: false);
 
     return BebeHomeTemplate(
       onRefresh: context.read<HomeBloc>().refreshFromRemote,
-      activeActivities: overview.activeActivities.isEmpty
+      activeActivities: bannerActivities.isEmpty
           ? null
           : _HomeActiveActivitiesSection(
-              activities: overview.activeActivities,
+              activities: bannerActivities,
               clock: widget.clock,
               onFinish: (activity) =>
                   context.read<HomeBloc>().finishActiveActivity(activity.id),
@@ -198,9 +210,11 @@ class _LoadedHomeState extends State<_LoadedHome> {
             : null,
       ),
       todaySummary: BebeTodaySummary(
-        title: 'Actividad del día',
-        items: overview.todayMetrics.map(_metric).toList(growable: false),
-        onHistoryPressed: () => openTodayHistory(context),
+        title: 'Resumen de hoy',
+        items: overview.todayMetrics
+            .map((metric) => _metric(context, metric))
+            .toList(growable: false),
+        onHistoryPressed: () => openTodayHistory(context, null),
         contentPadding: scrollContentPadding,
       ),
       quickActions: BebeQuickRegistrationActions(
@@ -209,11 +223,15 @@ class _LoadedHomeState extends State<_LoadedHome> {
         contentPadding: scrollContentPadding,
       ),
       upcomingHealth: BebeUpcomingHealthSection(
+        isEmpty: !health.hasUpcomingHealth,
+        titleActionLabel: health.hasUpcomingHealth ? 'Ver más' : 'Ver Salud',
+        onTitleActionPressed: () => openHealth(context),
         data: BebeUpcomingHealthData(
           title: health.title,
           dateLabel: health.dateLabel,
           timeLabel: health.timeLabel,
-          caregiverLabel: health.caregiverLabel,
+          caregiverLabel:
+              health.caregiverLabel.isEmpty ? null : health.caregiverLabel,
           type: switch (health.type) {
             HomeUpcomingHealthKind.control => BebeUpcomingHealthType.control,
             HomeUpcomingHealthKind.vaccine => BebeUpcomingHealthType.vaccine,
@@ -377,7 +395,11 @@ class _LoadedHomeState extends State<_LoadedHome> {
     );
   }
 
-  BebeTodayMetricData _metric(HomeTodayMetricVm metric) {
+  BebeTodayMetricData _metric(
+    BuildContext context,
+    HomeTodayMetricVm metric,
+  ) {
+    final activeEventId = metric.activeEventId;
     return BebeTodayMetricData(
       variant: switch (metric.type) {
         HomeMetricType.feeding => BebeMetricCardVariant.feeding,
@@ -394,8 +416,52 @@ class _LoadedHomeState extends State<_LoadedHome> {
         HomeMetricType.sleep => const Icon(LucideIcons.moon),
         HomeMetricType.diaper => const Icon(LucideIcons.baby),
       },
+      onPressed: activeEventId == null
+          ? () => openTodayHistory(context, _registerType(metric.type))
+          : null,
+      actionLabel: activeEventId == null ? null : 'Detener',
+      isActionLoading:
+          activeEventId != null && _finishingSummaryIds.contains(activeEventId),
+      onActionPressed: activeEventId == null
+          ? null
+          : () => _finishSummaryActivity(activeEventId),
     );
   }
+
+  Future<void> _finishSummaryActivity(String eventId) async {
+    if (_finishingSummaryIds.contains(eventId)) return;
+    setState(() => _finishingSummaryIds.add(eventId));
+    try {
+      final finished = await context.read<HomeBloc>().finishActiveActivity(
+            eventId,
+          );
+      if (!mounted) return;
+      if (!finished) {
+        BebeInAppSnackbar.show(
+          context,
+          title: 'El sueño ya cambió',
+          message: 'Actualizamos Home con el estado más reciente.',
+          variant: BebeInAppSnackbarVariant.information,
+        );
+      }
+    } on Object {
+      if (!mounted) return;
+      BebeInAppSnackbar.show(
+        context,
+        title: 'No se pudo detener el sueño',
+        message: 'El registro sigue en curso. Intenta nuevamente.',
+        variant: BebeInAppSnackbarVariant.error,
+      );
+    } finally {
+      if (mounted) setState(() => _finishingSummaryIds.remove(eventId));
+    }
+  }
+
+  static RegisterEventType _registerType(HomeMetricType type) => switch (type) {
+        HomeMetricType.feeding => RegisterEventType.feeding,
+        HomeMetricType.sleep => RegisterEventType.sleep,
+        HomeMetricType.diaper => RegisterEventType.diaper,
+      };
 
   BebeQuickActionData _action(HomeQuickActionVm action) {
     return BebeQuickActionData(
@@ -677,52 +743,19 @@ class _HomeFirstSteps extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = context.theme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: theme.colors.background.neutralsSurface,
-        borderRadius: BorderRadius.circular(theme.borderRadius.radius3xl),
-        border: Border.all(color: theme.colors.border.neutralDefault),
-        boxShadow: theme.elevation.low,
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(theme.spacing.spacingXl),
-        child: Column(
-          children: [
-            Image.asset(
-              BebeIllustrationAssets.emptyHome,
-              package: BebeIllustrationAssets.packageName,
-              height: 190,
-              fit: BoxFit.contain,
-              semanticLabel:
-                  'Elefante bebé con mamadera para comenzar los registros',
-            ),
-            SizedBox(height: theme.spacing.spacingL),
-            Text(
-              'Aún no hay registros de $babyName',
-              textAlign: TextAlign.center,
-              style: theme.typography.styles.title.md.semibold.copyWith(
-                color: theme.colors.text.neutralTitle,
-              ),
-            ),
-            SizedBox(height: theme.spacing.spacingS),
-            Text(
-              'Cada cuidado cuenta. Empieza con su primera alimentación, sueño o cambio de pañal.',
-              textAlign: TextAlign.center,
-              style: theme.typography.styles.body.md.regular.copyWith(
-                color: theme.colors.text.neutralBody,
-              ),
-            ),
-            SizedBox(height: theme.spacing.spacingXl),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: onRegisterPressed,
-                icon: const Icon(Icons.add_rounded),
-                label: const Text('Registrar primer cuidado'),
-              ),
-            ),
-          ],
+    return BebeStatusBanner(
+      key: const ValueKey('home-first-steps'),
+      title: 'Comienza los registros de $babyName',
+      description:
+          'Alimentación, sueño y pañales aparecerán en el resumen del día.',
+      type: BebeStatusBannerType.information,
+      leading: const Icon(Icons.auto_awesome_outlined),
+      footer: Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton.icon(
+          onPressed: onRegisterPressed,
+          icon: const Icon(Icons.add_rounded),
+          label: const Text('Registrar primer cuidado'),
         ),
       ),
     );

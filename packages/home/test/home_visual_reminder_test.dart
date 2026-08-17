@@ -173,7 +173,7 @@ void main() {
             openRegister: (_, action) => openedRegister = action,
             openAgenda: (_) {},
             openHealth: (_) {},
-            openTodayHistory: (_) {},
+            openTodayHistory: (_, __) {},
             switchBaby: (_) async {},
           ),
         ),

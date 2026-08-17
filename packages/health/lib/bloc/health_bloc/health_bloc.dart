@@ -14,9 +14,11 @@ class HealthBloc extends Bloc<HealthEvent, HealthState> {
     required this._getHealthOverview,
     required this._getRegisterEvents,
     GetFamilyOverview? getFamilyOverview,
+    InitialDataSyncCoordinator? initialDataSyncCoordinator,
     this.babyId,
   }) : super(const HealthState.initial()) {
     _getFamilyOverview = getFamilyOverview;
+    _initialDataSyncCoordinator = initialDataSyncCoordinator;
     on<_Started>(_onLoad);
     on<_Retried>(_onLoad);
     _familyChangesSubscription = getFamilyOverview?.activeBabyChanges.listen((
@@ -24,17 +26,24 @@ class HealthBloc extends Bloc<HealthEvent, HealthState> {
     ) {
       if (!isClosed) add(const HealthEvent.started());
     });
+    _hydrationSubscription = _initialDataSyncCoordinator?.domainHydrationStates
+        .listen((ready) {
+          if (!ready && !isClosed) add(const HealthEvent.started());
+        });
   }
 
   final GetHealthOverview _getHealthOverview;
   final GetRegisterEvents _getRegisterEvents;
   late final GetFamilyOverview? _getFamilyOverview;
+  late final InitialDataSyncCoordinator? _initialDataSyncCoordinator;
   final String? babyId;
   StreamSubscription<String>? _familyChangesSubscription;
+  StreamSubscription<bool>? _hydrationSubscription;
 
   Future<void> _onLoad(HealthEvent event, Emitter<HealthState> emit) async {
     emit(const HealthState.loading());
     try {
+      await _waitForInitialHydration();
       final resolvedBabyId =
           babyId ?? (await _getFamilyOverview?.call())?.activeBabyId;
       if (resolvedBabyId == null || resolvedBabyId.isEmpty) {
@@ -61,9 +70,16 @@ class HealthBloc extends Bloc<HealthEvent, HealthState> {
     }
   }
 
+  Future<void> _waitForInitialHydration() async {
+    final coordinator = _initialDataSyncCoordinator;
+    if (coordinator == null || coordinator.hasHydratedDomains) return;
+    await coordinator.domainHydrationStates.firstWhere((ready) => ready);
+  }
+
   @override
   Future<void> close() async {
     await _familyChangesSubscription?.cancel();
+    await _hydrationSubscription?.cancel();
     return super.close();
   }
 }

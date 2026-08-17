@@ -44,49 +44,59 @@ class HealthEventSyncService {
   }
 
   Future<RegisterSyncState> _synchronizeOnce() async {
+    var pendingCount = await _local.countPending();
     if (!_remote.isConfigured) {
       return _emit(
-        const RegisterSyncState(
+        RegisterSyncState(
           phase: RegisterSyncPhase.disabled,
+          pendingCount: pendingCount,
           message: 'Supabase no está configurado; Salud sigue local.',
         ),
       );
     }
     if (!await _remote.isAuthenticated()) {
       return _emit(
-        const RegisterSyncState(
+        RegisterSyncState(
           phase: RegisterSyncPhase.waitingForAuthentication,
+          pendingCount: pendingCount,
           message: 'Inicia sesión para sincronizar Salud.',
         ),
       );
     }
 
-    final blockedByParent = await waitForParentSync(_parentSyncBarrier);
+    final blockedByParent = await waitForParentSync(
+      _parentSyncBarrier,
+      pendingCount: pendingCount,
+    );
     if (blockedByParent != null) return _emit(blockedByParent);
 
-    final pending = await _local.listPending();
     _emit(
       RegisterSyncState(
         phase: RegisterSyncPhase.syncing,
-        pendingCount: pending.length,
+        pendingCount: pendingCount,
       ),
     );
     var failedCount = 0;
     Object? lastError;
     var newest = await _local.readSyncCursor();
     var pullCompleted = false;
-    for (final event in pending) {
-      try {
-        await _local.markSyncing(event);
-        final remote = await _remote.push(event);
-        await _local.markSynced(event);
-        await _local.mergeRemote(remote);
-        newest = _newest(newest, remote.updatedAt);
-      } on Object catch (error) {
-        failedCount += 1;
-        lastError = error;
-        await _local.markFailed(event, error);
+    while (pendingCount > 0 && failedCount == 0) {
+      final pending = await _local.listPending();
+      if (pending.isEmpty) break;
+      for (final event in pending) {
+        try {
+          await _local.markSyncing(event);
+          final remote = await _remote.push(event);
+          await _local.markSynced(event);
+          await _local.mergeRemote(remote);
+          newest = _newest(newest, remote.updatedAt);
+        } on Object catch (error) {
+          failedCount += 1;
+          lastError = error;
+          await _local.markFailed(event, error);
+        }
       }
+      pendingCount = await _local.countPending();
     }
     try {
       final pulled = await _remote.pull(
@@ -102,6 +112,16 @@ class HealthEventSyncService {
       lastError = error;
     }
     if (pullCompleted && newest != null) await _local.writeSyncCursor(newest);
+    pendingCount = await _local.countPending();
+    if (failedCount == 0 && pendingCount > 0) {
+      _rerunRequested = true;
+      return _emit(
+        RegisterSyncState(
+          phase: RegisterSyncPhase.syncing,
+          pendingCount: pendingCount,
+        ),
+      );
+    }
     final now = _clock().toUtc();
     return failedCount == 0
         ? _emit(
@@ -113,7 +133,7 @@ class HealthEventSyncService {
         : _emit(
             RegisterSyncState(
               phase: RegisterSyncPhase.failed,
-              pendingCount: pending.length,
+              pendingCount: pendingCount,
               failedCount: failedCount,
               lastSyncedAt: newest == null ? null : now,
               message: lastError?.toString(),

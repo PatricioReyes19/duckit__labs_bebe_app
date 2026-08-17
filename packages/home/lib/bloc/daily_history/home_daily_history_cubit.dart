@@ -17,13 +17,19 @@ class HomeDailyHistoryCubit extends Cubit<HomeDailyHistoryState> {
     Future<void> Function(String eventId)? onEventDeleted,
     RegisterEventSyncService? syncService,
     DailyHistoryClock? clock,
+    RegisterEventType? initialType,
   })  : _getRegisterEvents = getRegisterEvents,
         _deleteRegisterEvent = deleteRegisterEvent,
         _finishActiveRegisterEvent = finishActiveRegisterEvent,
         _onEventDeleted = onEventDeleted,
         _syncService = syncService,
         _clock = clock ?? DateTime.now,
-        super(HomeDailyHistoryState.initial(referenceDate: clock?.call()));
+        super(
+          HomeDailyHistoryState.initial(
+            referenceDate: clock?.call(),
+            selectedType: initialType,
+          ),
+        );
 
   final GetRegisterEvents _getRegisterEvents;
   final DeleteRegisterEvent? _deleteRegisterEvent;

@@ -16,17 +16,25 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     required GetHomeOverview getHomeOverview,
     required FinishActiveRegisterEvent finishActiveRegisterEvent,
     RegisterEventSyncService? syncService,
+    InitialDataSyncCoordinator? initialDataSyncCoordinator,
     HomePresentationClock? clock,
   })  : _getHomeOverview = getHomeOverview,
         _finishActiveRegisterEvent = finishActiveRegisterEvent,
         _clock = clock ?? DateTime.now,
         _syncService = syncService,
+        _initialDataSyncCoordinator = initialDataSyncCoordinator,
         super(const HomeState.initial()) {
     on<_Started>((event, emit) => _load(emit, showLoading: true));
-    on<_Refreshed>((event, emit) => _load(emit, showLoading: false));
-    on<_Retried>((event, emit) => _load(emit, showLoading: true));
+    on<_Refreshed>((event, emit) => _load(emit, showLoading: true));
+    on<_Retried>(
+      (event, emit) => _load(emit, showLoading: true, requestSync: true),
+    );
     _registerEventsSubscription = _getHomeOverview.changes.listen((_) {
-      if (!isClosed) add(const HomeEvent.refreshed());
+      if (!isClosed && !_isSynchronizing) add(const HomeEvent.refreshed());
+    });
+    _hydrationSubscription =
+        _initialDataSyncCoordinator?.domainHydrationStates.listen((ready) {
+      if (!ready && !isClosed) add(const HomeEvent.started());
     });
   }
 
@@ -34,11 +42,15 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   final FinishActiveRegisterEvent _finishActiveRegisterEvent;
   final HomePresentationClock _clock;
   final RegisterEventSyncService? _syncService;
+  final InitialDataSyncCoordinator? _initialDataSyncCoordinator;
   late final StreamSubscription<void> _registerEventsSubscription;
+  StreamSubscription<bool>? _hydrationSubscription;
+  bool _isSynchronizing = false;
 
   Future<void> _load(
     Emitter<HomeState> emit, {
     required bool showLoading,
+    bool requestSync = false,
   }) async {
     final current = state;
     if (showLoading) {
@@ -47,6 +59,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       emit(current.copyWith(isRefreshing: true));
     }
     try {
+      await _waitForInitialHydration();
+      if (requestSync) await _synchronize();
       final entity = await _getHomeOverview();
       emit(
         HomeState.loaded(
@@ -65,17 +79,31 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     }
   }
 
-  Future<void> refreshFromRemote() async {
+  Future<void> _waitForInitialHydration() async {
+    final coordinator = _initialDataSyncCoordinator;
+    if (coordinator == null || coordinator.hasHydratedDomains) return;
+    await coordinator.domainHydrationStates.firstWhere((ready) => ready);
+  }
+
+  Future<void> _synchronize() async {
+    final syncService = _syncService;
+    if (syncService == null) return;
+    _isSynchronizing = true;
     try {
-      await _syncService?.synchronize();
+      await syncService.synchronize();
     } on Object {
       // Home remains local-first when the remote source is unavailable.
+    } finally {
+      _isSynchronizing = false;
     }
+  }
+
+  Future<void> refreshFromRemote() async {
     if (isClosed) return;
     final completed = stream.firstWhere(
       (next) => next is HomeLoaded || next is HomeFailure,
     );
-    add(const HomeEvent.refreshed());
+    add(const HomeEvent.retried());
     await completed;
   }
 
@@ -94,6 +122,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   @override
   Future<void> close() async {
     await _registerEventsSubscription.cancel();
+    await _hydrationSubscription?.cancel();
     return super.close();
   }
 }

@@ -99,6 +99,55 @@ void main() {
     expect(remote.rows.keys, contains(saved.id));
   });
 
+  test(
+    'reports local pending rows while authentication is unavailable',
+    () async {
+      await local.save(_feedingDraft(now));
+      remote.authenticated = false;
+
+      final waiting = await syncService.synchronize();
+
+      expect(waiting.phase, RegisterSyncPhase.waitingForAuthentication);
+      expect(waiting.pendingCount, 1);
+      expect(await local.countPending(), 1);
+    },
+  );
+
+  test('drains every pending batch before reporting synced', () async {
+    for (var index = 0; index < 101; index += 1) {
+      await local.save(_feedingDraft(now));
+    }
+
+    final result = await syncService.synchronize();
+
+    expect(result.phase, RegisterSyncPhase.synced);
+    expect(remote.rows, hasLength(101));
+    expect(await local.countPending(), 0);
+  });
+
+  test(
+    'reports only rows that remain pending after a partial failure',
+    () async {
+      final first = await local.save(_feedingDraft(now));
+      final second = await local.save(_feedingDraft(now));
+      remote.failedIds.add(second.id);
+
+      final result = await syncService.synchronize();
+
+      expect(result.phase, RegisterSyncPhase.failed);
+      expect(result.pendingCount, 1);
+      expect(result.failedCount, 1);
+      expect(
+        (await local.findById(first.id))?.syncStatus,
+        RegisterSyncStatus.synced,
+      );
+      expect(
+        (await local.findById(second.id))?.syncStatus,
+        RegisterSyncStatus.failed,
+      );
+    },
+  );
+
   test('waits for the Baby profile before uploading child rows', () async {
     final saved = await local.save(_feedingDraft(now));
     parentState = const RegisterSyncState(
@@ -149,13 +198,15 @@ RegisterEventDraft _feedingDraft(DateTime now) => RegisterEventDraft(
 
 class _MemoryRemote implements RegisterEventRemoteDataSource {
   final rows = <String, RegisteredEvent>{};
+  final failedIds = <String>{};
+  bool authenticated = true;
   bool failPushes = false;
 
   @override
   bool get isConfigured => true;
 
   @override
-  Future<bool> isAuthenticated() async => true;
+  Future<bool> isAuthenticated() async => authenticated;
 
   @override
   Future<List<RegisteredEvent>> pull({DateTime? updatedAfter}) async => rows
@@ -168,7 +219,9 @@ class _MemoryRemote implements RegisterEventRemoteDataSource {
 
   @override
   Future<RegisteredEvent> push(RegisteredEvent event) async {
-    if (failPushes) throw StateError('offline');
+    if (failPushes || failedIds.contains(event.id)) {
+      throw StateError('offline');
+    }
     final remote = RegisteredEvent(
       id: event.id,
       babyId: event.babyId,

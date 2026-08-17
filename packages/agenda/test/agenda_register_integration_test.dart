@@ -8,6 +8,7 @@ import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 void main() {
@@ -301,6 +302,66 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('WT-AGENDA-SERIES-001 deletes a recurring medication series', (
+    tester,
+  ) async {
+    final event = AgendaEventEntity(
+      id: 'dose-source-1-1',
+      babyId: 'baby-1',
+      category: AgendaCategory.medication,
+      title: 'Próxima dosis: Vitamina D',
+      description: '5 gotas · Cada 12 horas',
+      startsAt: DateTime(2026, 8, 18, 8),
+      sourceRegisterEventId: 'source-1',
+      syncStatus: AgendaSyncStatus.synced,
+    );
+    final repository = _FakeAgendaRepository(
+      AgendaOverviewEntity(
+        events: [event],
+        remindersEnabled: true,
+        isOffline: false,
+      ),
+    );
+    String? deletedSourceId;
+    final router = GoRouter(
+      initialLocation: '/agenda/events/${event.id}',
+      routes: [
+        GoRoute(
+          path: '/agenda',
+          builder: (_, _) => const Scaffold(body: Text('Agenda')),
+          routes: [
+            AgendaSubpage(
+              kind: AgendaSubpageKind.eventDetail,
+              createAgendaEvent: CreateAgendaEvent(repository),
+              agendaRepository: repository,
+              appSettingsRepository: _FakeAppSettingsRepository(),
+              onMedicationSeriesDeleted: (_, sourceEventId) async {
+                deletedSourceId = sourceEventId;
+              },
+            ),
+          ],
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp.router(theme: bebeTheme.lightTheme(), routerConfig: router),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Eliminar serie'), findsOneWidget);
+    expect(find.text('Eliminar esta dosis'), findsNothing);
+    await tester.tap(find.text('Eliminar serie'));
+    await tester.pumpAndSettle();
+    expect(find.text('¿Eliminar toda la serie?'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Eliminar serie'));
+    await tester.pumpAndSettle();
+
+    expect(deletedSourceId, 'source-1');
+    expect(tester.takeException(), isNull);
+  });
+
   test(
     'opening and refreshing Agenda never creates a sync feedback loop',
     () async {
@@ -391,7 +452,12 @@ class _FakeAgendaRepository implements AgendaRepository {
   Future<void> delete(String id) async {}
 
   @override
-  Future<AgendaEventEntity?> findById(String id) async => null;
+  Future<AgendaEventEntity?> findById(String id) async {
+    for (final event in overview.events) {
+      if (event.id == id) return event;
+    }
+    return null;
+  }
 
   @override
   Future<AgendaOverviewEntity> getOverview(String babyId) async => overview;
@@ -440,4 +506,30 @@ class _FakeRegisterRepository implements RegisterEventRepository {
   @override
   Future<RegisteredEvent?> update(String id, RegisterEventPatch patch) async =>
       null;
+}
+
+class _FakeAppSettingsRepository implements AppSettingsRepository {
+  static const settings = AppSettingsEntity(
+    theme: AppThemePreference.system,
+    highContrast: false,
+    personalReminders: true,
+    familyActivity: true,
+    dailySummary: false,
+    reduceMotion: false,
+    wifiOnly: false,
+    name: 'Test',
+    email: 'test@example.com',
+    language: 'es',
+    timeFormat: '24h',
+    textSize: 'normal',
+  );
+
+  @override
+  Stream<void> get changes => const Stream.empty();
+
+  @override
+  Future<AppSettingsEntity> get() async => settings;
+
+  @override
+  Future<AppSettingsEntity> update(AppSettingsPatch patch) async => settings;
 }

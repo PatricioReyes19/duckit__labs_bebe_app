@@ -42,10 +42,11 @@ void main() {
     );
 
     expect(week.records.map((event) => event.id), ['day-6']);
-    expect(
-      month.records.map((event) => event.id),
-      ['day-6', 'day-8', 'day-29'],
-    );
+    expect(month.records.map((event) => event.id), [
+      'day-6',
+      'day-8',
+      'day-29',
+    ]);
   });
 
   test('UT-REPORT-004: no-data is different from a recorded zero', () {
@@ -57,11 +58,7 @@ void main() {
     );
     final recordedZero = HealthReportSnapshot.project(
       records: [
-        _event(
-          'feeding-zero',
-          now,
-          details: const {'amount_ml': 0},
-        ),
+        _event('feeding-zero', now, details: const {'amount_ml': 0}),
       ],
       babyId: 'baby-1',
       range: HealthReportRange.day,
@@ -108,7 +105,9 @@ void main() {
           details: {
             'sleep_status': 'completed',
             'duration_minutes': 90,
-            'end_at': now.subtract(const Duration(minutes: 30)).toIso8601String(),
+            'end_at': now
+                .subtract(const Duration(minutes: 30))
+                .toIso8601String(),
           },
         ),
       ],

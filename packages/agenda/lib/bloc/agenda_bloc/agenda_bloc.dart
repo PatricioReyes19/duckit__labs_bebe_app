@@ -16,23 +16,29 @@ class AgendaBloc extends Bloc<AgendaEvent, AgendaState> {
     required this._getAgendaOverview,
     GetFamilyOverview? getFamilyOverview,
     AgendaEventSyncService? syncService,
+    InitialDataSyncCoordinator? initialDataSyncCoordinator,
     this.babyId,
     AgendaClock? clock,
   }) : _clock = clock ?? DateTime.now,
        // The public DI parameter intentionally omits the private underscore.
        // ignore: prefer_initializing_formals
        _syncService = syncService,
+       _initialDataSyncCoordinator = initialDataSyncCoordinator,
        // El parámetro público omite intencionalmente el prefijo privado.
        // ignore: prefer_initializing_formals
        _getFamilyOverview = getFamilyOverview,
        super(const AgendaState.initial()) {
     on<_Started>(
-      (event, emit) => _load(emit, showLoading: true, requestSync: true),
+      (event, emit) => _load(
+        emit,
+        showLoading: true,
+        requestSync: _initialDataSyncCoordinator == null,
+      ),
     );
     on<_Retried>(
       (event, emit) => _load(emit, showLoading: true, requestSync: true),
     );
-    on<_Refreshed>((event, emit) => _load(emit, showLoading: false));
+    on<_Refreshed>((event, emit) => _load(emit, showLoading: true));
     on<_DaySelected>(_onDaySelected);
     on<_WeekChanged>(_onWeekChanged);
     on<_MonthDaySelected>(_onMonthDaySelected);
@@ -52,18 +58,25 @@ class AgendaBloc extends Bloc<AgendaEvent, AgendaState> {
     ) {
       if (!isClosed) add(const AgendaEvent.started());
     });
+    _hydrationSubscription = _initialDataSyncCoordinator?.domainHydrationStates
+        .listen((ready) {
+          if (!ready && !isClosed) add(const AgendaEvent.started());
+        });
   }
 
   final GetAgendaOverview _getAgendaOverview;
   final GetFamilyOverview? _getFamilyOverview;
   final AgendaEventSyncService? _syncService;
+  final InitialDataSyncCoordinator? _initialDataSyncCoordinator;
   final String? babyId;
   final AgendaClock _clock;
   late final StreamSubscription<void> _changesSubscription;
   StreamSubscription<RegisterSyncState>? _syncSubscription;
   StreamSubscription<String>? _familyChangesSubscription;
+  StreamSubscription<bool>? _hydrationSubscription;
   Timer? _reloadDebounce;
   bool _remoteUnavailable = false;
+  bool _isSynchronizing = false;
 
   Future<void> _load(
     Emitter<AgendaState> emit, {
@@ -73,10 +86,11 @@ class AgendaBloc extends Bloc<AgendaEvent, AgendaState> {
     final previous = _currentOverview;
     if (showLoading) emit(const AgendaState.loading());
     final syncService = _syncService;
-    if (requestSync && syncService != null) {
-      unawaited(_synchronize(syncService));
-    }
     try {
+      await _waitForInitialHydration();
+      if (requestSync && syncService != null) {
+        await _synchronize(syncService);
+      }
       final resolvedBabyId =
           babyId ?? (await _getFamilyOverview?.call())?.activeBabyId;
       if (resolvedBabyId == null || resolvedBabyId.isEmpty) {
@@ -112,28 +126,34 @@ class AgendaBloc extends Bloc<AgendaEvent, AgendaState> {
   }
 
   Future<void> _synchronize(AgendaEventSyncService syncService) async {
+    _isSynchronizing = true;
     try {
       await syncService.synchronize();
     } on Object {
       _remoteUnavailable = true;
-      _scheduleReload();
+    } finally {
+      _isSynchronizing = false;
     }
   }
 
+  Future<void> _waitForInitialHydration() async {
+    final coordinator = _initialDataSyncCoordinator;
+    if (coordinator == null || coordinator.hasHydratedDomains) return;
+    await coordinator.domainHydrationStates.firstWhere((ready) => ready);
+  }
+
   Future<void> refreshFromRemote() async {
-    final syncService = _syncService;
-    if (syncService != null) await _synchronize(syncService);
     if (isClosed) return;
     final completed = stream.firstWhere(
       (next) =>
           next is AgendaLoaded || next is AgendaEmpty || next is AgendaFailure,
     );
-    add(const AgendaEvent.refreshed());
+    add(const AgendaEvent.retried());
     await completed;
   }
 
   void _scheduleReload() {
-    if (isClosed) return;
+    if (isClosed || _isSynchronizing) return;
     _reloadDebounce?.cancel();
     _reloadDebounce = Timer(const Duration(milliseconds: 32), () {
       if (!isClosed) add(const AgendaEvent.refreshed());
@@ -198,6 +218,7 @@ class AgendaBloc extends Bloc<AgendaEvent, AgendaState> {
     await _changesSubscription.cancel();
     await _syncSubscription?.cancel();
     await _familyChangesSubscription?.cancel();
+    await _hydrationSubscription?.cancel();
     return super.close();
   }
 }

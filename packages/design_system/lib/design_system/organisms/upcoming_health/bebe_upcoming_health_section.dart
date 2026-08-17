@@ -36,6 +36,11 @@ class BebeUpcomingHealthSection extends StatelessWidget {
     this.openHealthLabel = 'Ir a Salud',
     this.viewAgendaIcon = const Icon(Icons.calendar_month_outlined),
     this.openHealthIcon = const Icon(Icons.health_and_safety_outlined),
+    this.isEmpty = false,
+    this.emptyTitle = 'No tienes controles próximos',
+    this.emptyDescription = 'Agenda al día',
+    this.titleActionLabel,
+    this.onTitleActionPressed,
     this.onCardPressed,
     this.onViewAgendaPressed,
     this.onOpenHealthPressed,
@@ -50,6 +55,11 @@ class BebeUpcomingHealthSection extends StatelessWidget {
 
   final Widget viewAgendaIcon;
   final Widget openHealthIcon;
+  final bool isEmpty;
+  final String emptyTitle;
+  final String emptyDescription;
+  final String? titleActionLabel;
+  final VoidCallback? onTitleActionPressed;
 
   final VoidCallback? onCardPressed;
   final VoidCallback? onViewAgendaPressed;
@@ -75,29 +85,115 @@ class BebeUpcomingHealthSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          BebeTitleSection(title: title),
-          SizedBox(height: spacing.spacingXl),
-          BebeUpcomingHealthCard(
-            title: data.title,
-            dateLabel: data.dateLabel,
-            timeLabel: data.timeLabel,
-            caregiverLabel: data.caregiverLabel,
-            icon: data.icon,
-            variant: data.type.toCardVariant(),
-            semanticLabel: data.semanticLabel,
-            onPressed: onCardPressed,
-            footer: _hasFooterActions
-                ? BebeUpcomingHealthActions(
-                    viewAgendaLabel: viewAgendaLabel,
-                    openHealthLabel: openHealthLabel,
-                    viewAgendaIcon: viewAgendaIcon,
-                    openHealthIcon: openHealthIcon,
-                    onViewAgendaPressed: onViewAgendaPressed!,
-                    onOpenHealthPressed: onOpenHealthPressed!,
-                  )
-                : null,
+          BebeTitleSection(
+            title: title,
+            actionLabel: titleActionLabel,
+            onActionPressed: onTitleActionPressed,
           ),
+          SizedBox(height: isEmpty ? spacing.spacingM : spacing.spacingXl),
+          if (isEmpty)
+            _UpcomingHealthEmptyCard(
+              title: emptyTitle,
+              description: emptyDescription,
+              onPressed: onCardPressed,
+            )
+          else
+            BebeUpcomingHealthCard(
+              title: data.title,
+              dateLabel: data.dateLabel,
+              timeLabel: data.timeLabel,
+              caregiverLabel: data.caregiverLabel,
+              icon: data.icon,
+              variant: data.type.toCardVariant(),
+              semanticLabel: data.semanticLabel,
+              onPressed: onCardPressed,
+              footer: _hasFooterActions
+                  ? BebeUpcomingHealthActions(
+                      viewAgendaLabel: viewAgendaLabel,
+                      openHealthLabel: openHealthLabel,
+                      viewAgendaIcon: viewAgendaIcon,
+                      openHealthIcon: openHealthIcon,
+                      onViewAgendaPressed: onViewAgendaPressed!,
+                      onOpenHealthPressed: onOpenHealthPressed!,
+                    )
+                  : null,
+            ),
         ],
+      ),
+    );
+  }
+}
+
+class _UpcomingHealthEmptyCard extends StatelessWidget {
+  const _UpcomingHealthEmptyCard({
+    required this.title,
+    required this.description,
+    required this.onPressed,
+  });
+
+  final String title;
+  final String description;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    final radius = BorderRadius.circular(theme.borderRadius.radius3xl);
+    return Semantics(
+      button: onPressed != null,
+      label: '$title. $description',
+      child: Material(
+        color: theme.colors.background.neutralsSurface,
+        shape: RoundedRectangleBorder(
+          borderRadius: radius,
+          side: BorderSide(color: theme.colors.border.neutralDefault),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onPressed,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 80),
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: theme.spacing.spacingL,
+                vertical: theme.spacing.spacingM,
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.event_available_outlined,
+                    color: theme.colors.icons.brandDefault,
+                  ),
+                  SizedBox(width: theme.spacing.spacingM),
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: theme.typography.styles.label.lg.semibold
+                              .copyWith(color: theme.colors.text.neutralTitle),
+                        ),
+                        SizedBox(height: theme.spacing.spacingXs),
+                        Text(
+                          description,
+                          style: theme.typography.styles.body.sm.regular
+                              .copyWith(color: theme.colors.text.neutralBody),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (onPressed != null)
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      color: theme.colors.icons.brandDefault,
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

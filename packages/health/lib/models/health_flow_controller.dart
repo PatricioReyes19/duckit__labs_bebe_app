@@ -30,17 +30,18 @@ class HealthReportSnapshot {
   }) {
     final end = now.toUtc();
     final start = end.subtract(Duration(days: range.days));
-    final visible = records
-        .where(
-          (event) =>
-              event.babyId == babyId &&
-              !event.isDeleted &&
-              event.details['observation_type'] != 'pediatrician_profile' &&
-              !event.occurredAt.toUtc().isBefore(start) &&
-              !event.occurredAt.toUtc().isAfter(end),
-        )
-        .toList(growable: false)
-      ..sort((a, b) => b.occurredAt.compareTo(a.occurredAt));
+    final visible =
+        records
+            .where(
+              (event) =>
+                  event.babyId == babyId &&
+                  !event.isDeleted &&
+                  event.details['observation_type'] != 'pediatrician_profile' &&
+                  !event.occurredAt.toUtc().isBefore(start) &&
+                  !event.occurredAt.toUtc().isAfter(end),
+            )
+            .toList(growable: false)
+          ..sort((a, b) => b.occurredAt.compareTo(a.occurredAt));
     return HealthReportSnapshot._(
       range: range,
       generatedAt: end,
@@ -54,9 +55,8 @@ class HealthReportSnapshot {
   final DateTime startsAt;
   final List<RegisteredEvent> records;
 
-  List<RegisteredEvent> ofType(RegisterEventType type) => records
-      .where((event) => event.type == type)
-      .toList(growable: false);
+  List<RegisteredEvent> ofType(RegisterEventType type) =>
+      records.where((event) => event.type == type).toList(growable: false);
 
   List<RegisteredEvent> get feedings => ofType(RegisterEventType.feeding);
   List<RegisteredEvent> get diapers => ofType(RegisterEventType.diaper);
@@ -227,16 +227,20 @@ class HealthFlowController extends ChangeNotifier {
     required GetHealthOverview getHealthOverview,
     required GetRegisterEvents getRegisterEvents,
     required SaveRegisterEvent saveRegisterEvent,
+    required DeleteRegisterEvent deleteRegisterEvent,
     required HealthRepository healthRepository,
     required RegisterEventSyncService registerSyncService,
+    InitialDataSyncCoordinator? initialDataSyncCoordinator,
     Connectivity? connectivity,
     DateTime Function()? clock,
   }) : _getFamilyOverview = getFamilyOverview,
        _getHealthOverview = getHealthOverview,
        _getRegisterEvents = getRegisterEvents,
        _saveRegisterEvent = saveRegisterEvent,
+       _deleteRegisterEvent = deleteRegisterEvent,
        _healthRepository = healthRepository,
        _registerSyncService = registerSyncService,
+       _initialDataSyncCoordinator = initialDataSyncCoordinator,
        _connectivity = connectivity ?? Connectivity(),
        _clock = clock ?? DateTime.now,
        _syncState = registerSyncService.state {
@@ -255,6 +259,17 @@ class HealthFlowController extends ChangeNotifier {
         unawaited(load(force: true));
       }
     });
+    _domainHydrationSubscription = _initialDataSyncCoordinator
+        ?.domainHydrationStates
+        .listen((ready) {
+          if (!ready) {
+            _loadedOnce = false;
+            _error = null;
+            notifyListeners();
+          } else if (!_isLoading) {
+            unawaited(load(force: true));
+          }
+        });
     unawaited(_refreshConnectivity());
   }
 
@@ -262,13 +277,16 @@ class HealthFlowController extends ChangeNotifier {
   final GetHealthOverview _getHealthOverview;
   final GetRegisterEvents _getRegisterEvents;
   final SaveRegisterEvent _saveRegisterEvent;
+  final DeleteRegisterEvent _deleteRegisterEvent;
   final HealthRepository _healthRepository;
   final RegisterEventSyncService _registerSyncService;
+  final InitialDataSyncCoordinator? _initialDataSyncCoordinator;
   final Connectivity _connectivity;
   final DateTime Function() _clock;
 
   late final StreamSubscription<RegisterSyncState> _syncSubscription;
   late final StreamSubscription<String> _activeBabySubscription;
+  StreamSubscription<bool>? _domainHydrationSubscription;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   FamilyOverviewEntity? _family;
   HealthOverviewEntity? _overview;
@@ -297,7 +315,10 @@ class HealthFlowController extends ChangeNotifier {
     range: _reportRange,
     now: _clock(),
   );
-  bool get isLoading => _isLoading;
+  bool get isLoading =>
+      _isLoading ||
+      (_initialDataSyncCoordinator != null &&
+          !_initialDataSyncCoordinator.hasHydratedDomains);
   bool get offlineMode => _manualOfflineMode || !_hasConnectivity;
   bool get networkUnavailable => !_hasConnectivity;
   Object? get error => _error;
@@ -445,6 +466,16 @@ class HealthFlowController extends ChangeNotifier {
   RegisteredEvent? get selectedRecord =>
       _firstWhereOrNull(_records, (record) => record.id == _selectedRecordId);
 
+  bool get selectedRecordCanBeManaged => selectedRecord != null;
+  bool get selectedRecordCanBeEdited {
+    final record = selectedRecord;
+    if (record == null) return false;
+    if (record.type == RegisterEventType.measurement) return true;
+    if (record.type != RegisterEventType.clinicalObservation) return false;
+    final observationType = record.details['observation_type'];
+    return observationType == null || observationType == 'clinical_note';
+  }
+
   HealthPediatricianSummary? get selectedPediatrician => _firstWhereOrNull(
     pediatricians,
     (pediatrician) =>
@@ -499,6 +530,14 @@ class HealthFlowController extends ChangeNotifier {
 
   void selectPediatrician(HealthPediatricianSummary pediatrician) {
     _selectedPediatricianName = pediatrician.name.toLowerCase();
+    final profile = _firstWhereOrNull(
+      clinicalRecords,
+      (event) =>
+          event.details['observation_type'] == 'pediatrician_profile' &&
+          _text(event.details['name'])?.toLowerCase() ==
+              _selectedPediatricianName,
+    );
+    _selectedRecordId = profile?.id;
   }
 
   int get pendingSyncCount => _records
@@ -515,6 +554,10 @@ class HealthFlowController extends ChangeNotifier {
     _error = null;
     notifyListeners();
     try {
+      final coordinator = _initialDataSyncCoordinator;
+      if (coordinator != null && !coordinator.hasHydratedDomains) {
+        await coordinator.domainHydrationStates.firstWhere((ready) => ready);
+      }
       final family = await _getFamilyOverview();
       final results = await Future.wait<Object>([
         _getHealthOverview(family.activeBabyId),
@@ -736,6 +779,16 @@ class HealthFlowController extends ChangeNotifier {
     await load(force: true);
   }
 
+  Future<bool> deleteSelectedRecord() async {
+    final record = selectedRecord;
+    if (record == null) return false;
+    await _deleteRegisterEvent(record.id);
+    _selectedRecordId = null;
+    await load(force: true);
+    if (!offlineMode) unawaited(_registerSyncService.synchronize());
+    return true;
+  }
+
   Future<String> _requireBabyId() async {
     if (_family == null) await load();
     final value = _family?.activeBabyId;
@@ -774,6 +827,7 @@ class HealthFlowController extends ChangeNotifier {
   void dispose() {
     unawaited(_syncSubscription.cancel());
     unawaited(_activeBabySubscription.cancel());
+    unawaited(_domainHydrationSubscription?.cancel());
     unawaited(_connectivitySubscription?.cancel());
     super.dispose();
   }

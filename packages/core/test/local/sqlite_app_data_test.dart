@@ -455,6 +455,7 @@ void main() {
       expect(overview.activeRegisterEvents.map((event) => event.id), [
         'ongoing-sleep',
       ]);
+      expect(overview.mostRecentEvent?.id, isNot('ongoing-sleep'));
 
       await FinishActiveRegisterEvent(registerRepository)(
         eventId: 'ongoing-sleep',
@@ -472,6 +473,7 @@ void main() {
         baselineSleep.totalMinutes + const Duration(hours: 9).inMinutes,
       );
       expect(completedOverview.activeRegisterEvents, isEmpty);
+      expect(completedOverview.mostRecentEvent?.id, 'ongoing-sleep');
     },
   );
 

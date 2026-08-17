@@ -21,6 +21,10 @@ class HomeDailyHistoryView extends StatelessWidget {
     final spacing = context.theme.spacing;
     return BlocBuilder<HomeDailyHistoryCubit, HomeDailyHistoryState>(
       builder: (context, state) {
+        if (state.status == DailyHistoryStatus.loading ||
+            state.status == DailyHistoryStatus.initial) {
+          return const HomeDailyHistorySkeleton();
+        }
         final filtered = state.filteredEvents;
         return ColoredBox(
           color: context.theme.colors.background.neutralsSurface,
@@ -54,10 +58,7 @@ class HomeDailyHistoryView extends StatelessWidget {
                         context.read<HomeDailyHistoryCubit>().typeSelected,
                   ),
                   SizedBox(height: spacing.spacing2xl),
-                  if (state.status == DailyHistoryStatus.loading ||
-                      state.status == DailyHistoryStatus.initial)
-                    const Center(child: CircularProgressIndicator())
-                  else if (state.status == DailyHistoryStatus.failure)
+                  if (state.status == DailyHistoryStatus.failure)
                     BebeStatePanel(
                       title: 'No pudimos cargar el historial',
                       description:
@@ -422,6 +423,48 @@ class HomeDailyHistoryView extends StatelessWidget {
   }
 
   static bool _isOngoingSleep(RegisteredEvent event) => event.isActive;
+}
+
+class HomeDailyHistorySkeleton extends StatelessWidget {
+  const HomeDailyHistorySkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final spacing = context.theme.spacing;
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      label: 'Cargando historial diario',
+      child: ExcludeSemantics(
+        child: ColoredBox(
+          color: context.theme.colors.background.neutralsSurface,
+          child: ListView(
+            key: const ValueKey('home-daily-history-skeleton'),
+            padding: EdgeInsets.fromLTRB(
+              spacing.spacingXl,
+              spacing.spacingL,
+              spacing.spacingXl,
+              spacing.spacing2xl,
+            ),
+            physics: const NeverScrollableScrollPhysics(),
+            children: const [
+              BebeSkeleton.line(width: 180, height: 22),
+              SizedBox(height: 10),
+              BebeSkeleton.line(width: 120, height: 12),
+              SizedBox(height: 22),
+              BebeSkeleton(height: 42),
+              SizedBox(height: 24),
+              BebeSkeleton(height: 92),
+              SizedBox(height: 12),
+              BebeSkeleton(height: 92),
+              SizedBox(height: 12),
+              BebeSkeleton(height: 92),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _HistoryFilters extends StatelessWidget {

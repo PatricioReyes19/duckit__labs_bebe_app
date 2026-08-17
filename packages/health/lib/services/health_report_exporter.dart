@@ -194,30 +194,29 @@ class HealthReportExporter {
     );
   }
 
-  static pw.Widget _summaryItem(String label, String value) =>
-      pw.Expanded(
-        child: pw.Container(
-          padding: const pw.EdgeInsets.all(12),
-          decoration: pw.BoxDecoration(
-            color: PdfColors.teal50,
-            borderRadius: pw.BorderRadius.circular(8),
+  static pw.Widget _summaryItem(String label, String value) => pw.Expanded(
+    child: pw.Container(
+      padding: const pw.EdgeInsets.all(12),
+      decoration: pw.BoxDecoration(
+        color: PdfColors.teal50,
+        borderRadius: pw.BorderRadius.circular(8),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text(label, style: const pw.TextStyle(fontSize: 9)),
+          pw.Text(
+            value,
+            style: pw.TextStyle(
+              fontSize: 16,
+              color: PdfColors.teal700,
+              fontWeight: pw.FontWeight.bold,
+            ),
           ),
-          child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Text(label, style: const pw.TextStyle(fontSize: 9)),
-              pw.Text(
-                value,
-                style: pw.TextStyle(
-                  fontSize: 16,
-                  color: PdfColors.teal700,
-                  fontWeight: pw.FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
+        ],
+      ),
+    ),
+  );
 
   static pw.Widget _sectionTitle(String value) => pw.Padding(
     padding: const pw.EdgeInsets.only(bottom: 8),
@@ -290,8 +289,7 @@ class HealthReportExporter {
 
   static bool _inRange(DateTime value, HealthReportSnapshot report) {
     final utc = value.toUtc();
-    return !utc.isBefore(report.startsAt) &&
-        !utc.isAfter(report.generatedAt);
+    return !utc.isBefore(report.startsAt) && !utc.isAfter(report.generatedAt);
   }
 
   static String _sleepDuration(int minutes) {

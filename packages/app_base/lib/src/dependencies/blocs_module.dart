@@ -65,11 +65,13 @@ abstract class BlocsModule {
     GetHomeOverview getHomeOverview,
     FinishActiveRegisterEvent finishActiveRegisterEvent,
     RegisterEventSyncService syncService,
+    InitialDataSyncCoordinator initialDataSyncCoordinator,
   ) {
     return HomeBloc(
       getHomeOverview: getHomeOverview,
       finishActiveRegisterEvent: finishActiveRegisterEvent,
       syncService: syncService,
+      initialDataSyncCoordinator: initialDataSyncCoordinator,
     );
   }
 
@@ -81,11 +83,13 @@ abstract class BlocsModule {
     GetAgendaOverview getAgendaOverview,
     GetFamilyOverview getFamilyOverview,
     AgendaEventSyncService syncService,
+    InitialDataSyncCoordinator initialDataSyncCoordinator,
   ) {
     return AgendaBloc(
       getAgendaOverview: getAgendaOverview,
       getFamilyOverview: getFamilyOverview,
       syncService: syncService,
+      initialDataSyncCoordinator: initialDataSyncCoordinator,
     );
   }
 
@@ -97,11 +101,13 @@ abstract class BlocsModule {
     GetHealthOverview getHealthOverview,
     GetRegisterEvents getRegisterEvents,
     GetFamilyOverview getFamilyOverview,
+    InitialDataSyncCoordinator initialDataSyncCoordinator,
   ) {
     return HealthBloc(
       getHealthOverview: getHealthOverview,
       getRegisterEvents: getRegisterEvents,
       getFamilyOverview: getFamilyOverview,
+      initialDataSyncCoordinator: initialDataSyncCoordinator,
     );
   }
 

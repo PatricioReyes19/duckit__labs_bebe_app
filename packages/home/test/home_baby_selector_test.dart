@@ -61,7 +61,7 @@ void main() {
               openRegister: (_, __) {},
               openAgenda: (_) {},
               openHealth: (_) {},
-              openTodayHistory: (_) {},
+              openTodayHistory: (_, __) {},
               switchBaby: (babyId) {
                 requestedBabyId = babyId;
                 return switchCompleted.future;

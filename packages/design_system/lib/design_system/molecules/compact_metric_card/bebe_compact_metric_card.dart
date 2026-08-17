@@ -152,6 +152,13 @@ class BebeCompactMetricCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(onTap: onPressed, child: content),
     );
+    final decoratedCard = DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        boxShadow: theme.elevation.low,
+      ),
+      child: card,
+    );
 
     final generatedLabel = [
       label,
@@ -165,15 +172,9 @@ class BebeCompactMetricCard extends StatelessWidget {
       button: onPressed != null,
       enabled: onPressed != null,
       label: semanticLabel ?? generatedLabel,
-      child: ExcludeSemantics(
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: radius,
-            boxShadow: theme.elevation.low,
-          ),
-          child: card,
-        ),
-      ),
+      child: trend == null
+          ? ExcludeSemantics(child: decoratedCard)
+          : decoratedCard,
     );
   }
 

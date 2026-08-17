@@ -1,6 +1,7 @@
 import '../../domain/entities/family/family.dart';
 import '../../domain/repositories/family/family_repository.dart';
 import '../repositories/sqlite_family_repository.dart';
+import 'background_sync.dart';
 import 'family_sync_service.dart';
 import 'register_event_sync_service.dart';
 
@@ -25,21 +26,21 @@ class OfflineFirstFamilyRepository implements FamilyRepository {
     InitialFamilyDraft draft,
   ) async {
     final result = await _local.createInitialFamily(draft);
-    await _syncService.synchronize();
+    _scheduleSync();
     return result;
   }
 
   @override
   Future<BabyEntity> createBaby(BabyDraft draft) async {
     final result = await _local.createBaby(draft);
-    await _syncService.synchronize();
+    _scheduleSync();
     return result;
   }
 
   @override
   Future<BabyEntity?> updateBaby(String id, BabyPatch patch) async {
     final result = await _local.updateBaby(id, patch);
-    await _syncService.synchronize();
+    if (result != null) _scheduleSync();
     return result;
   }
 
@@ -68,4 +69,9 @@ class OfflineFirstFamilyRepository implements FamilyRepository {
     if (syncState.phase != RegisterSyncPhase.synced) return localResult;
     return _local.getCurrent();
   }
+
+  void _scheduleSync() => scheduleBackgroundSync(
+    _syncService.synchronize,
+    operation: 'Family background synchronization',
+  );
 }

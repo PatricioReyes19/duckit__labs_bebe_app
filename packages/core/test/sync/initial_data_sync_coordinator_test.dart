@@ -20,6 +20,7 @@ void main() {
       );
 
       expect(result.phase, InitialDataSyncPhase.ready);
+      expect(harness.initial.hasHydratedDomains, isTrue);
       expect(await harness.families.containsBaby('baby-1'), isTrue);
       expect(
         await harness.registers.listByTypeIncludingDeleted(
@@ -69,6 +70,11 @@ void main() {
     expect(result.agendaState, isNull);
     expect(result.healthState, isNull);
     expect(result.preferencesState, isNull);
+    expect(harness.initial.hasHydratedDomains, isFalse);
+
+    await harness.initial.synchronize();
+
+    expect(harness.initial.hasHydratedDomains, isTrue);
   });
 
   test('out-of-order child waits for Family and later converges', () async {
@@ -120,6 +126,11 @@ void main() {
 
     await harness.initial.synchronize();
     expect(harness.initial.syncUxState.status, SyncUxStatus.error);
+    expect(
+      harness.initial.hasHydratedDomains,
+      isTrue,
+      reason: 'un fallo libera el skeleton y permite mostrar el cache local',
+    );
 
     familyRemote.failPull = false;
     final recovered = await harness.initial.retry();

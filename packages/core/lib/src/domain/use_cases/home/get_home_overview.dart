@@ -106,7 +106,7 @@ class GetHomeOverview {
             .where((event) => event.startsAt.isAfter(now))
             .toList(growable: false)
           ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
-    final sortedEvents = [...events]
+    final sortedEvents = events.where((event) => !event.isActive).toList()
       ..sort((a, b) => b.occurredAt.compareTo(a.occurredAt));
     final careReminders = _careReminders(events, agenda.events, now);
 

@@ -105,7 +105,7 @@ class _SettingsDetailView extends StatelessWidget {
     return BlocBuilder<SettingsBloc, SettingsState>(
       builder: (context, state) {
         if (state.isLoading) {
-          return const Center(child: CircularProgressIndicator());
+          return const _SettingsDetailSkeleton();
         }
         if (state.errorMessage != null) {
           return _DetailPage(
@@ -157,6 +157,24 @@ class _SettingsDetailView extends StatelessWidget {
           SettingsSectionKind.reportProblem => const _ProblemReportView(),
         };
       },
+    );
+  }
+}
+
+class _SettingsDetailSkeleton extends StatelessWidget {
+  const _SettingsDetailSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return const _DetailPage(
+      description: '',
+      children: [
+        BebeSkeleton.line(width: 260, height: 14),
+        SizedBox(height: 20),
+        BebeSkeleton(height: 220),
+        SizedBox(height: 16),
+        BebeSkeleton(height: 72),
+      ],
     );
   }
 }

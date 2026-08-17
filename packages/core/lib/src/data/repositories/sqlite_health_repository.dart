@@ -121,6 +121,16 @@ class SqliteHealthRepository implements HealthRepository {
         .toList(growable: false);
   }
 
+  Future<int> countPending() async {
+    final database = await _database.database;
+    final rows = await database.rawQuery(
+      'SELECT COUNT(*) FROM ${BebeDatabaseSchema.healthEvents} '
+      'WHERE sync_status != ?',
+      [HealthSyncStatus.synced.name],
+    );
+    return sqlite.Sqflite.firstIntValue(rows) ?? 0;
+  }
+
   Future<void> markSyncing(HealthEventEntity event) =>
       _setSyncStatus(event, HealthSyncStatus.syncing);
 

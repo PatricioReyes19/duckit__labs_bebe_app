@@ -25,24 +25,19 @@ void main() {
     ).lightTheme();
   });
 
-  testWidgets('WT-HOME-ACT-001 Home shows an active activity', (tester) async {
+  testWidgets('WT-HOME-ACT-001 Home shows active sleep inside its metric', (
+    tester,
+  ) async {
     final bloc = _MockHomeBloc();
     final state = HomeState.loaded(overview: _overview(now: now));
     whenListen(bloc, const Stream<HomeState>.empty(), initialState: state);
 
     await tester.pumpWidget(_app(theme, bloc, now));
 
-    expect(
-        find.byKey(const ValueKey('home-active-activities')), findsOneWidget);
-    expect(find.text('ACTIVIDAD EN CURSO'), findsOneWidget);
-    expect(find.text('Sueño en curso'), findsOneWidget);
-    expect(
-      find.descendant(
-        of: find.byKey(const ValueKey('home-active-sleep-1')),
-        matching: find.textContaining('36 h'),
-      ),
-      findsOneWidget,
-    );
+    expect(find.byKey(const ValueKey('home-active-activities')), findsNothing);
+    expect(find.text('En curso'), findsOneWidget);
+    expect(find.text('Iniciado: 00:00'), findsOneWidget);
+    expect(find.text('Detener'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
   });
@@ -71,11 +66,10 @@ void main() {
         .thenAnswer((_) async => true);
 
     await tester.pumpWidget(_app(theme, bloc, now));
-    await tester.tap(find.byKey(const ValueKey('finish-active-sleep-1')));
+    await tester.tap(find.text('Detener'));
     await tester.pumpAndSettle();
 
     verify(() => bloc.finishActiveActivity('sleep-1')).called(1);
-    expect(find.text('Actividad finalizada'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
   });
@@ -94,6 +88,26 @@ void main() {
 
     expect(find.textContaining('Aún no hay registros'), findsNothing);
     expect(find.byType(BebeActiveBabyHeaderSkeleton), findsOneWidget);
+  });
+
+  testWidgets('WT-HOME-REFRESH-001 refresh keeps hydrated metrics visible', (
+    tester,
+  ) async {
+    final bloc = _MockHomeBloc();
+    whenListen(
+      bloc,
+      const Stream<HomeState>.empty(),
+      initialState: HomeState.loaded(
+        overview: _overview(now: now),
+        isRefreshing: true,
+      ),
+    );
+
+    await tester.pumpWidget(_app(theme, bloc, now));
+
+    expect(find.byType(BebeActiveBabyHeaderSkeleton), findsNothing);
+    expect(find.text('En curso'), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
   });
 
   testWidgets('WT-HOME-ACT-005 error offers retry', (tester) async {
@@ -121,7 +135,7 @@ Widget _app(ThemeData theme, HomeBloc bloc, DateTime now) => MaterialApp(
             openRegister: (_, __) {},
             openAgenda: (_) {},
             openHealth: (_) {},
-            openTodayHistory: (_) {},
+            openTodayHistory: (_, __) {},
             switchBaby: (_) async {},
           ),
         ),
@@ -140,14 +154,16 @@ HomeOverviewVm _overview({
         avatarAssetPath: null,
         familyContextLabel: 'Familia Mateo',
       ),
-      todayMetrics: const [
+      todayMetrics: [
         HomeTodayMetricVm(
           type: HomeMetricType.sleep,
           label: 'Sueño',
           value: 'En curso',
-          unit: 'ahora',
-          lastLabel: 'Última vez',
-          lastValue: 'Hace 36 h',
+          unit: null,
+          lastLabel: 'Iniciado',
+          lastValue: '00:00',
+          activeEventId: 'sleep-1',
+          activeStartedAt: now.subtract(const Duration(hours: 36)),
         ),
       ],
       quickActions: const [

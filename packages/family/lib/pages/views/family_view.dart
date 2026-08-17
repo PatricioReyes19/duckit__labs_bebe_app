@@ -460,18 +460,7 @@ class _FamilySkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = context.theme;
-
-    return SizedBox(
-      height: height,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: theme.colors.background.neutralsActive,
-          borderRadius: BorderRadius.circular(theme.borderRadius.radius3xl),
-          border: Border.all(color: theme.colors.border.neutralDefault),
-        ),
-      ),
-    );
+    return BebeSkeleton(height: height);
   }
 }
 

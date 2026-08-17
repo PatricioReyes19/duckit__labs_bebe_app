@@ -44,26 +44,38 @@ class FamilySyncService {
 
   Future<RegisterSyncState> _synchronizeOnce() async {
     _lastPulledSnapshots = null;
+    FamilySyncSnapshot? pending;
+    try {
+      pending = await _local.readPendingSnapshot();
+    } on Object catch (error) {
+      return _emit(
+        RegisterSyncState(
+          phase: RegisterSyncPhase.failed,
+          failedCount: 1,
+          message: error.toString(),
+        ),
+      );
+    }
     if (!_remote.isConfigured) {
       return _emit(
-        const RegisterSyncState(
+        RegisterSyncState(
           phase: RegisterSyncPhase.disabled,
+          pendingCount: pending == null ? 0 : 1,
           message: 'Supabase no está configurado; Familia sigue local.',
         ),
       );
     }
     if (!await _remote.isAuthenticated()) {
       return _emit(
-        const RegisterSyncState(
+        RegisterSyncState(
           phase: RegisterSyncPhase.waitingForAuthentication,
+          pendingCount: pending == null ? 0 : 1,
           message: 'Inicia sesión para sincronizar Familia.',
         ),
       );
     }
 
-    FamilySyncSnapshot? pending;
     try {
-      pending = await _local.readPendingSnapshot();
       _emit(
         RegisterSyncState(
           phase: RegisterSyncPhase.syncing,
@@ -98,10 +110,11 @@ class FamilySyncService {
         ),
       );
     } on Object catch (error) {
+      final remaining = await _local.readPendingSnapshot();
       return _emit(
         RegisterSyncState(
           phase: RegisterSyncPhase.failed,
-          pendingCount: pending == null ? 0 : 1,
+          pendingCount: remaining == null ? 0 : 1,
           failedCount: 1,
           message: error.toString(),
         ),

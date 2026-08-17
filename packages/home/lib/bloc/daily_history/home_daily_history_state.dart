@@ -12,11 +12,15 @@ class HomeDailyHistoryState extends Equatable {
     this.errorMessage,
   });
 
-  factory HomeDailyHistoryState.initial({DateTime? referenceDate}) =>
+  factory HomeDailyHistoryState.initial({
+    DateTime? referenceDate,
+    RegisterEventType? selectedType,
+  }) =>
       HomeDailyHistoryState(
         status: DailyHistoryStatus.initial,
         events: const [],
         referenceDate: referenceDate ?? DateTime.now(),
+        selectedType: selectedType,
       );
 
   final DailyHistoryStatus status;

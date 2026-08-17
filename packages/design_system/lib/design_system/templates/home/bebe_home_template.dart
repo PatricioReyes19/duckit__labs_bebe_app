@@ -82,19 +82,16 @@ class BebeHomeTemplate extends StatelessWidget {
               maxWidth: maximumContentWidth,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                spacing: spacing.spacing4xl,
+                spacing: spacing.spacing2xl,
                 children: [
                   padded(activeBabyHeader),
+                  todaySummary,
+                  quickActions,
+                  if (isEmpty && emptyState != null) padded(emptyState!),
                   if (activeActivities != null) padded(activeActivities!),
                   if (visualReminder != null) padded(visualReminder!),
-                  if (isEmpty)
-                    padded(emptyState ?? const SizedBox.shrink())
-                  else ...[
-                    todaySummary,
-                    quickActions,
-                    padded(upcomingHealth),
-                    padded(recentInformation),
-                  ],
+                  padded(upcomingHealth),
+                  padded(recentInformation),
                 ],
               ),
             ),
@@ -190,7 +187,7 @@ class _HomeLoadingState extends StatelessWidget {
             maxWidth: BebeLayout.pageContentMaxWidth,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
-              spacing: spacing.spacing4xl,
+              spacing: spacing.spacing2xl,
               children: [
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: horizontalPadding),

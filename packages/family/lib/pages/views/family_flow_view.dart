@@ -37,7 +37,7 @@ class FamilyFlowView extends StatelessWidget {
     future: getFamilyOverview(),
     builder: (context, snapshot) {
       if (snapshot.connectionState != ConnectionState.done) {
-        return const Center(child: CircularProgressIndicator());
+        return const _FamilyFlowSkeleton();
       }
       final family = snapshot.data;
       if (family == null) {
@@ -75,6 +75,44 @@ class FamilyFlowView extends StatelessWidget {
       };
     },
   );
+}
+
+class _FamilyFlowSkeleton extends StatelessWidget {
+  const _FamilyFlowSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final spacing = context.theme.spacing;
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      label: 'Cargando información de familia',
+      child: ExcludeSemantics(
+        child: ColoredBox(
+          color: context.theme.colors.background.neutralsPage,
+          child: ListView(
+            key: const ValueKey('family-flow-skeleton'),
+            padding: EdgeInsets.fromLTRB(
+              spacing.spacingL,
+              spacing.spacingL,
+              spacing.spacingL,
+              spacing.spacing5xl,
+            ),
+            physics: const NeverScrollableScrollPhysics(),
+            children: const [
+              BebeSkeleton.line(width: 260, height: 14),
+              SizedBox(height: 24),
+              BebeSkeleton(height: 124),
+              SizedBox(height: 16),
+              BebeSkeleton(height: 188),
+              SizedBox(height: 16),
+              BebeSkeleton(height: 88),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _FlowPage extends StatelessWidget {
@@ -588,8 +626,7 @@ class _BabyProfileEditSheetState extends State<_BabyProfileEditSheet> {
                   _InitialAvatar(
                     initials: _initials(_nameController.text),
                     size: 96,
-                    imagePath:
-                        _photoSourcePath ?? widget.baby.avatarAssetPath,
+                    imagePath: _photoSourcePath ?? widget.baby.avatarAssetPath,
                   ),
                   Material(
                     color: theme.colors.background.brandDefault,
@@ -625,9 +662,9 @@ class _BabyProfileEditSheetState extends State<_BabyProfileEditSheet> {
                   border: OutlineInputBorder(),
                 ),
                 child: Text(
-                  MaterialLocalizations.of(context).formatMediumDate(
-                    _birthDate,
-                  ),
+                  MaterialLocalizations.of(
+                    context,
+                  ).formatMediumDate(_birthDate),
                 ),
               ),
             ),
@@ -658,7 +695,7 @@ class _BabyProfileEditSheetState extends State<_BabyProfileEditSheet> {
     final now = DateTime.now();
     final date = await showDatePicker(
       context: context,
-      firstDate: DateTime(now.year - 18),
+      firstDate: DateTime(now.year - 5),
       lastDate: now,
       initialDate: _birthDate.isAfter(now) ? now : _birthDate,
       helpText: 'Fecha de nacimiento',
@@ -1563,13 +1600,8 @@ Future<String> _persistBabyPhoto(String sourcePath, String babyId) async {
   final rawExtension = separator < 0
       ? '.jpg'
       : sourcePath.substring(separator).toLowerCase();
-  final extension = const {
-    '.jpg',
-    '.jpeg',
-    '.png',
-    '.webp',
-    '.heic',
-  }.contains(rawExtension)
+  final extension =
+      const {'.jpg', '.jpeg', '.png', '.webp', '.heic'}.contains(rawExtension)
       ? rawExtension
       : '.jpg';
   final destination = File(

@@ -35,20 +35,23 @@ typedef ParentSyncBarrier = Future<RegisterSyncState> Function();
 /// Prevents Baby-owned data from reaching Supabase before the canonical
 /// Family/Baby aggregate. Local rows remain pending and are retried later.
 Future<RegisterSyncState?> waitForParentSync(
-  ParentSyncBarrier? parentSyncBarrier,
-) async {
+  ParentSyncBarrier? parentSyncBarrier, {
+  int pendingCount = 0,
+}) async {
   if (parentSyncBarrier == null) return null;
   try {
     final parent = await parentSyncBarrier();
     if (parent.phase == RegisterSyncPhase.synced) return null;
     if (parent.phase == RegisterSyncPhase.waitingForAuthentication) {
-      return const RegisterSyncState(
+      return RegisterSyncState(
         phase: RegisterSyncPhase.waitingForAuthentication,
+        pendingCount: pendingCount,
         message: 'Inicia sesión para sincronizar el perfil del bebé.',
       );
     }
     return RegisterSyncState(
       phase: RegisterSyncPhase.failed,
+      pendingCount: pendingCount,
       failedCount: 1,
       message:
           'Primero debe sincronizarse el perfil del bebé. '
@@ -59,6 +62,7 @@ Future<RegisterSyncState?> waitForParentSync(
   } on Object catch (error) {
     return RegisterSyncState(
       phase: RegisterSyncPhase.failed,
+      pendingCount: pendingCount,
       failedCount: 1,
       message:
           'No se pudo confirmar el perfil del bebé. '
@@ -107,31 +111,36 @@ class RegisterEventSyncService {
   }
 
   Future<RegisterSyncState> _synchronizeOnce() async {
+    var pendingCount = await _local.countPending();
     if (!_remote.isConfigured) {
       return _emit(
-        const RegisterSyncState(
+        RegisterSyncState(
           phase: RegisterSyncPhase.disabled,
+          pendingCount: pendingCount,
           message: 'Supabase no está configurado; los datos siguen locales.',
         ),
       );
     }
     if (!await _remote.isAuthenticated()) {
       return _emit(
-        const RegisterSyncState(
+        RegisterSyncState(
           phase: RegisterSyncPhase.waitingForAuthentication,
+          pendingCount: pendingCount,
           message: 'Inicia sesión para sincronizar los registros.',
         ),
       );
     }
 
-    final blockedByParent = await waitForParentSync(_parentSyncBarrier);
+    final blockedByParent = await waitForParentSync(
+      _parentSyncBarrier,
+      pendingCount: pendingCount,
+    );
     if (blockedByParent != null) return _emit(blockedByParent);
 
-    final pending = await _local.listPending();
     _emit(
       RegisterSyncState(
         phase: RegisterSyncPhase.syncing,
-        pendingCount: pending.length,
+        pendingCount: pendingCount,
       ),
     );
 
@@ -139,21 +148,26 @@ class RegisterEventSyncService {
     Object? lastError;
     DateTime? newestRemoteTimestamp = await _local.readSyncCursor();
     var pullCompleted = false;
-    for (final event in pending) {
-      try {
-        await _local.markSyncing(event);
-        final remoteEvent = await _remote.push(event);
-        await _local.markSynced(event);
-        await _local.mergeRemote(remoteEvent);
-        newestRemoteTimestamp = _newest(
-          newestRemoteTimestamp,
-          remoteEvent.updatedAt,
-        );
-      } on Object catch (error) {
-        failedCount += 1;
-        lastError = error;
-        await _local.markFailed(event, error);
+    while (pendingCount > 0 && failedCount == 0) {
+      final pending = await _local.listPending();
+      if (pending.isEmpty) break;
+      for (final event in pending) {
+        try {
+          await _local.markSyncing(event);
+          final remoteEvent = await _remote.push(event);
+          await _local.markSynced(event);
+          await _local.mergeRemote(remoteEvent);
+          newestRemoteTimestamp = _newest(
+            newestRemoteTimestamp,
+            remoteEvent.updatedAt,
+          );
+        } on Object catch (error) {
+          failedCount += 1;
+          lastError = error;
+          await _local.markFailed(event, error);
+        }
       }
+      pendingCount = await _local.countPending();
     }
 
     try {
@@ -175,12 +189,22 @@ class RegisterEventSyncService {
     if (pullCompleted && newestRemoteTimestamp != null) {
       await _local.writeSyncCursor(newestRemoteTimestamp);
     }
+    pendingCount = await _local.countPending();
+    if (failedCount == 0 && pendingCount > 0) {
+      _rerunRequested = true;
+      return _emit(
+        RegisterSyncState(
+          phase: RegisterSyncPhase.syncing,
+          pendingCount: pendingCount,
+        ),
+      );
+    }
     final now = _clock().toUtc();
     if (failedCount > 0) {
       return _emit(
         RegisterSyncState(
           phase: RegisterSyncPhase.failed,
-          pendingCount: pending.length,
+          pendingCount: pendingCount,
           failedCount: failedCount,
           lastSyncedAt: newestRemoteTimestamp == null ? null : now,
           message: lastError?.toString(),

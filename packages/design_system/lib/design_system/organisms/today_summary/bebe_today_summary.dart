@@ -132,23 +132,16 @@ class _TodayMetricsInlineRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final spacing = context.theme.spacing;
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      physics: const BouncingScrollPhysics(),
+    return Padding(
       padding: contentPadding,
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (var index = 0; index < items.length; index++) ...[
-              SizedBox(
-                width: BebeTodaySummary._horizontalCardWidth,
-                child: _TodayMetricItem(data: items[index]),
-              ),
-              if (index < items.length - 1) SizedBox(width: spacing.spacingL),
-            ],
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (var index = 0; index < items.length; index++) ...[
+            Expanded(child: _TodayMetricItem(data: items[index])),
+            if (index < items.length - 1) SizedBox(width: spacing.spacingL),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -171,19 +164,17 @@ class _TodayMetricsHorizontalList extends StatelessWidget {
       scrollDirection: Axis.horizontal,
       physics: const BouncingScrollPhysics(),
       padding: contentPadding,
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (var index = 0; index < items.length; index++) ...[
-              SizedBox(
-                width: BebeTodaySummary._horizontalCardWidth,
-                child: _TodayMetricItem(data: items[index]),
-              ),
-              if (index < items.length - 1) SizedBox(width: spacing.spacingL),
-            ],
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (var index = 0; index < items.length; index++) ...[
+            SizedBox(
+              width: BebeTodaySummary._horizontalCardWidth,
+              child: _TodayMetricItem(data: items[index]),
+            ),
+            if (index < items.length - 1) SizedBox(width: spacing.spacingL),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -196,17 +187,20 @@ class _TodayMetricItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BebeMetricCard(
+    return BebeCompactMetricCard(
       variant: data.variant,
       label: data.label,
       icon: data.icon,
       value: data.value,
       unit: data.unit,
-      supporting: _TodayMetricSupporting(
-        variant: data.variant,
-        label: data.lastLabel,
-        value: data.lastValue,
-      ),
+      supportingText: '${data.lastLabel}: ${data.lastValue}',
+      trend: data.actionLabel == null
+          ? null
+          : _TodayMetricAction(
+              label: data.actionLabel!,
+              isLoading: data.isActionLoading,
+              onPressed: data.onActionPressed,
+            ),
       onPressed: data.onPressed,
       semanticLabel:
           data.semanticLabel ??
@@ -219,64 +213,36 @@ class _TodayMetricItem extends StatelessWidget {
   }
 }
 
-class _TodayMetricSupporting extends StatelessWidget {
-  const _TodayMetricSupporting({
-    required this.variant,
+class _TodayMetricAction extends StatelessWidget {
+  const _TodayMetricAction({
     required this.label,
-    required this.value,
+    required this.isLoading,
+    required this.onPressed,
   });
 
-  final BebeMetricCardVariant variant;
   final String label;
-  final String value;
+  final bool isLoading;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
-    final theme = context.theme;
-    final spacing = theme.spacing;
-    final typography = theme.typography;
-    final colors = theme.colors;
-
-    final contentColor = _resolveContentColor(colors);
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: typography.styles.body.sm.regular.copyWith(
-            color: colors.text.neutralBody,
-          ),
+    return SizedBox(
+      width: double.infinity,
+      child: TextButton.icon(
+        onPressed: isLoading ? null : onPressed,
+        icon: isLoading
+            ? const SizedBox.square(
+                dimension: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Icon(Icons.stop_rounded, size: 18),
+        label: Text(isLoading ? 'Deteniendo…' : label),
+        style: TextButton.styleFrom(
+          minimumSize: const Size(44, 44),
+          padding: const EdgeInsets.symmetric(horizontal: 4),
         ),
-        SizedBox(height: spacing.spacingXs),
-        Text(
-          value,
-          style: typography.styles.label.lg.semibold.copyWith(
-            color: contentColor,
-          ),
-        ),
-      ],
+      ),
     );
-  }
-
-  Color _resolveContentColor(BebeColor colors) {
-    return switch (variant) {
-      BebeMetricCardVariant.feeding ||
-      BebeMetricCardVariant.brand => colors.text.brandDefault,
-
-      BebeMetricCardVariant.sleep ||
-      BebeMetricCardVariant.accent => colors.text.accentDefault,
-
-      BebeMetricCardVariant.diaper ||
-      BebeMetricCardVariant.warning => colors.text.warningDefault,
-
-      BebeMetricCardVariant.neutral => colors.text.neutralTitle,
-
-      BebeMetricCardVariant.information => colors.text.infoDefault,
-
-      BebeMetricCardVariant.success => colors.text.successDefault,
-    };
   }
 }
 
@@ -294,8 +260,14 @@ class BebeTodayMetricData {
     required this.icon,
     this.unit,
     this.onPressed,
+    this.actionLabel,
+    this.onActionPressed,
+    this.isActionLoading = false,
     this.semanticLabel,
-  });
+  }) : assert(
+         onPressed == null || onActionPressed == null,
+         'A metric cannot open details and expose an inline action.',
+       );
 
   final BebeMetricCardVariant variant;
   final String label;
@@ -305,6 +277,9 @@ class BebeTodayMetricData {
   final String lastValue;
   final Widget icon;
   final VoidCallback? onPressed;
+  final String? actionLabel;
+  final VoidCallback? onActionPressed;
+  final bool isActionLoading;
   final String? semanticLabel;
 }
 

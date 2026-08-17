@@ -11,6 +11,8 @@ typedef AgendaReminderChanged =
     Future<void> Function(BuildContext context, AgendaEventEntity event);
 typedef AgendaReminderDeleted =
     Future<void> Function(BuildContext context, String eventId);
+typedef AgendaMedicationSeriesDeleted =
+    Future<void> Function(BuildContext context, String sourceEventId);
 
 extension AgendaSubpageKindPresentation on AgendaSubpageKind {
   String get relativePath => switch (this) {
@@ -35,6 +37,7 @@ class AgendaSubpage extends GoRoute {
     GetFamilyOverview? getFamilyOverview,
     AgendaReminderChanged? onReminderChanged,
     AgendaReminderDeleted? onReminderDeleted,
+    AgendaMedicationSeriesDeleted? onMedicationSeriesDeleted,
     this.babyId,
     super.routes,
   }) : super(
@@ -54,6 +57,7 @@ class AgendaSubpage extends GoRoute {
              appSettingsRepository: appSettingsRepository,
              onReminderChanged: onReminderChanged,
              onReminderDeleted: onReminderDeleted,
+             onMedicationSeriesDeleted: onMedicationSeriesDeleted,
              onCompleted: () => context.pop(),
            ),
          ),
@@ -79,6 +83,7 @@ class _AgendaSubpageView extends StatefulWidget {
     required this.onCompleted,
     required this.onReminderChanged,
     required this.onReminderDeleted,
+    required this.onMedicationSeriesDeleted,
     this.eventId,
   });
 
@@ -92,6 +97,7 @@ class _AgendaSubpageView extends StatefulWidget {
   final VoidCallback onCompleted;
   final AgendaReminderChanged? onReminderChanged;
   final AgendaReminderDeleted? onReminderDeleted;
+  final AgendaMedicationSeriesDeleted? onMedicationSeriesDeleted;
 
   @override
   State<_AgendaSubpageView> createState() => _AgendaSubpageViewState();
@@ -154,7 +160,7 @@ class _AgendaSubpageViewState extends State<_AgendaSubpageView> {
     ),
     const SizedBox(height: 16),
     if (_settingsLoading)
-      const Center(child: CircularProgressIndicator())
+      const BebeSkeleton(height: 196)
     else
       Card(
         child: Column(
@@ -307,7 +313,7 @@ class _AgendaSubpageViewState extends State<_AgendaSubpageView> {
           : widget.agendaRepository.findById(widget.eventId!),
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(child: CircularProgressIndicator());
+          return const BebeSkeleton(height: 260);
         }
         final event = snapshot.data;
         if (event == null) {
@@ -343,6 +349,32 @@ class _AgendaSubpageViewState extends State<_AgendaSubpageView> {
                     'La pauta se actualiza desde el registro original.',
                   ),
                 ),
+                if (widget.onMedicationSeriesDeleted != null) ...[
+                  const Divider(height: 1),
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: TextButton.icon(
+                        key: const ValueKey('delete-medication-series'),
+                        onPressed: _saving
+                            ? null
+                            : () => _deleteMedicationSeries(event),
+                        icon: _saving
+                            ? const SizedBox.square(
+                                dimension: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.delete_sweep_outlined),
+                        label: Text(
+                          _saving ? 'Eliminando serie…' : 'Eliminar serie',
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ] else ...[
                 const Divider(height: 1),
                 Padding(
@@ -661,6 +693,51 @@ class _AgendaSubpageViewState extends State<_AgendaSubpageView> {
           _error = 'No pudimos eliminar el recordatorio.';
         });
       }
+    }
+  }
+
+  Future<void> _deleteMedicationSeries(AgendaEventEntity event) async {
+    final sourceEventId = event.sourceRegisterEventId?.trim();
+    final deleteSeries = widget.onMedicationSeriesDeleted;
+    if (sourceEventId == null ||
+        sourceEventId.isEmpty ||
+        deleteSeries == null) {
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('¿Eliminar toda la serie?'),
+        content: Text(
+          'Se eliminará la pauta “${event.title}” y todas sus dosis futuras '
+          'de la agenda del círculo de cuidado.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Volver'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Eliminar serie'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _saving = true);
+    try {
+      await deleteSeries(context, sourceEventId);
+      if (mounted) widget.onCompleted();
+    } on Object {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      BebeInAppSnackbar.show(
+        context,
+        title: 'No se pudo eliminar la serie',
+        message: 'La pauta sigue disponible. Intenta nuevamente.',
+        variant: BebeInAppSnackbarVariant.error,
+      );
     }
   }
 

@@ -4,13 +4,15 @@ import 'dart:io';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late BebeTheme bebeTheme;
 
-  setUpAll(() {
+  setUpAll(() async {
+    await initializeDateFormatting('es_CL');
     final candidates = [
       File('assets/json/bebe_theme.json'),
       File('packages/design_system/assets/json/bebe_theme.json'),
@@ -84,9 +86,61 @@ void main() {
       ),
     );
 
-    expect(find.byType(ListView), findsNothing);
+    final horizontalScroll = find.descendant(
+      of: find.byType(BebeTodaySummary),
+      matching: find.byWidgetPredicate(
+        (widget) =>
+            widget is SingleChildScrollView &&
+            widget.scrollDirection == Axis.horizontal,
+      ),
+    );
+    expect(horizontalScroll, findsNothing);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'week calendar fits seven days at target widths and 1.3 text scale',
+    (tester) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      for (final width in <double>[320, 360, 390, 430]) {
+        tester.view.physicalSize = Size(width, 640);
+        tester.view.devicePixelRatio = 1;
+        await tester.pumpWidget(
+          _TestApp(
+            theme: bebeTheme.lightTheme(),
+            textScaler: const TextScaler.linear(1.3),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: BebeAgendaWeekPicker(
+                firstDay: DateTime(2026),
+                lastDay: DateTime(2027),
+                focusedDay: DateTime(2026, 8, 17),
+                selectedDay: DateTime(2026, 8, 17),
+                onDaySelected: (_, _) {},
+                onPreviousWeekPressed: () {},
+                onNextWeekPressed: () {},
+                markersForDay: (_) => const [
+                  BebeCalendarMarkerData(id: 'a', color: Colors.red),
+                  BebeCalendarMarkerData(id: 'b', color: Colors.blue),
+                  BebeCalendarMarkerData(id: 'c', color: Colors.green),
+                ],
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byType(BebeWeekCalendarDay), findsNWidgets(7));
+        for (final day in tester.widgetList<BebeWeekCalendarDay>(
+          find.byType(BebeWeekCalendarDay),
+        )) {
+          expect(day.markers, hasLength(3));
+        }
+        expect(tester.takeException(), isNull, reason: 'width=$width');
+      }
+    },
+  );
 
   testWidgets(
     'today summary becomes scrollable when width or text requires it',
@@ -215,7 +269,7 @@ void main() {
       matching: horizontalScroll,
     );
     final firstMetric = find
-        .descendant(of: today, matching: find.byType(BebeMetricCard))
+        .descendant(of: today, matching: find.byType(BebeCompactMetricCard))
         .first;
     final firstAction = find
         .descendant(

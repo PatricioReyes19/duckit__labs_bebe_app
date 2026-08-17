@@ -252,6 +252,16 @@ class SqliteAgendaRepository implements AgendaRepository {
         .toList(growable: false);
   }
 
+  Future<int> countPending() async {
+    final database = await _database.database;
+    final rows = await database.rawQuery(
+      'SELECT COUNT(*) FROM ${BebeDatabaseSchema.agendaEvents} '
+      'WHERE sync_status != ?',
+      [AgendaSyncStatus.synced.name],
+    );
+    return sqlite.Sqflite.firstIntValue(rows) ?? 0;
+  }
+
   Future<void> markSyncing(AgendaEventEntity event) =>
       _setSyncStatus(event, AgendaSyncStatus.syncing);
 

@@ -31,9 +31,7 @@ class HomeOverviewVm extends Equatable {
         .toList(growable: false);
     final upcoming = entity.upcomingHealthEvent;
     final recent = entity.mostRecentEvent;
-    final recentIsOngoingSleep =
-        recent?.type == domain.RegisterEventType.sleep &&
-            recent?.isActive == true;
+    final activeSleep = _activeSleep(entity.activeRegisterEvents);
     return HomeOverviewVm(
       activeBaby: HomeActiveBabyVm(
         id: entity.activeBaby.id,
@@ -53,7 +51,13 @@ class HomeOverviewVm extends Equatable {
             .toList(growable: false),
       ),
       todayMetrics: entity.metrics
-          .map((metric) => _metric(metric, referenceDate))
+          .map(
+            (metric) => _metric(
+              metric,
+              referenceDate,
+              activeSleep: activeSleep,
+            ),
+          )
           .toList(growable: false),
       quickActions: const [
         HomeQuickActionVm(
@@ -83,12 +87,13 @@ class HomeOverviewVm extends Equatable {
         ),
       ],
       upcomingHealth: HomeUpcomingHealthVm(
-        title: upcoming?.title ?? 'Sin próximos controles',
+        hasUpcomingHealth: upcoming != null,
+        title: upcoming?.title ?? 'No tienes controles próximos',
         dateLabel:
             upcoming == null ? 'Agenda al día' : _dateLabel(upcoming.startsAt),
-        timeLabel: upcoming == null ? '--:--' : _timeLabel(upcoming.startsAt),
+        timeLabel: upcoming == null ? '' : _timeLabel(upcoming.startsAt),
         caregiverLabel: upcoming?.caregiver == null
-            ? 'Sin cuidador asignado'
+            ? ''
             : 'Acompaña: ${upcoming!.caregiver!.role}',
         type: switch (upcoming?.type) {
           domain.HealthEventType.vaccine => HomeUpcomingHealthKind.vaccine,
@@ -107,15 +112,9 @@ class HomeOverviewVm extends Equatable {
             : _relativeTime(recent.occurredAt, referenceDate),
         description: recent == null
             ? 'Los nuevos registros aparecerán en esta sección.'
-            : recentIsOngoingSleep
-                ? 'El sueño sigue en curso y puedes finalizarlo arriba.'
-                : 'Último registro disponible en el historial.',
+            : 'Último registro finalizado disponible en el historial.',
         status: HomeRecentStatus.information,
-        statusLabel: recent == null
-            ? 'Sin registros'
-            : recentIsOngoingSleep
-                ? 'En curso'
-                : 'Registrado',
+        statusLabel: recent == null ? 'Sin registros' : 'Registrado',
       ),
       activeActivities: entity.activeRegisterEvents
           .map(HomeActiveActivityVm.fromEntity)
@@ -133,13 +132,16 @@ class HomeOverviewVm extends Equatable {
 
   static HomeTodayMetricVm _metric(
     domain.HomeMetricEntity metric,
-    DateTime referenceDate,
-  ) {
+    DateTime referenceDate, {
+    required domain.RegisteredEvent? activeSleep,
+  }) {
     final type = switch (metric.type) {
       domain.HomeMetricType.feeding => HomeMetricType.feeding,
       domain.HomeMetricType.sleep => HomeMetricType.sleep,
       domain.HomeMetricType.diaper => HomeMetricType.diaper,
     };
+    final ongoingSleep = type == HomeMetricType.sleep ? activeSleep : null;
+    final isEmpty = metric.count == 0 && ongoingSleep == null;
     return HomeTodayMetricVm(
       type: type,
       label: switch (type) {
@@ -147,22 +149,48 @@ class HomeOverviewVm extends Equatable {
         HomeMetricType.sleep => 'Sueño',
         HomeMetricType.diaper => 'Pañales',
       },
-      value: type == HomeMetricType.sleep && metric.ongoingCount > 0
+      value: ongoingSleep != null
           ? 'En curso'
-          : type == HomeMetricType.sleep
-              ? _duration(metric.totalMinutes)
-              : '${metric.count}',
+          : isEmpty
+              ? 'Sin registros'
+              : type == HomeMetricType.sleep
+                  ? _duration(metric.totalMinutes)
+                  : '${metric.count}',
       unit: switch (type) {
-        HomeMetricType.feeding => 'tomas',
-        HomeMetricType.sleep => metric.ongoingCount > 0 ? 'ahora' : 'total',
-        HomeMetricType.diaper => 'cambios',
+        HomeMetricType.feeding when metric.count == 0 => null,
+        HomeMetricType.feeding => metric.count == 1 ? 'toma' : 'tomas',
+        HomeMetricType.sleep when ongoingSleep != null || isEmpty => null,
+        HomeMetricType.sleep => 'total',
+        HomeMetricType.diaper when metric.count == 0 => null,
+        HomeMetricType.diaper => metric.count == 1 ? 'cambio' : 'cambios',
       },
-      lastLabel: 'Última vez',
-      lastValue: metric.lastOccurredAt == null
-          ? 'Sin registros'
-          : _relativeTime(metric.lastOccurredAt!, referenceDate),
+      lastLabel: ongoingSleep == null ? 'Última vez' : 'Iniciado',
+      lastValue: ongoingSleep != null
+          ? _timeLabel(ongoingSleep.startedAt)
+          : metric.lastOccurredAt == null
+              ? _emptyMetricHint(type)
+              : _relativeTime(metric.lastOccurredAt!, referenceDate),
+      activeEventId: ongoingSleep?.id,
+      activeStartedAt: ongoingSleep?.startedAt,
     );
   }
+
+  static domain.RegisteredEvent? _activeSleep(
+    Iterable<domain.RegisteredEvent> events,
+  ) {
+    for (final event in events) {
+      if (event.type == domain.RegisterEventType.sleep && event.isActive) {
+        return event;
+      }
+    }
+    return null;
+  }
+
+  static String _emptyMetricHint(HomeMetricType type) => switch (type) {
+        HomeMetricType.feeding => 'Registra una toma',
+        HomeMetricType.sleep => 'Registra un sueño',
+        HomeMetricType.diaper => 'Registra un cambio',
+      };
 
   static String _duration(int minutes) {
     final hours = minutes ~/ 60;
@@ -443,17 +471,23 @@ class HomeTodayMetricVm extends Equatable {
     required this.type,
     required this.label,
     required this.value,
-    required this.unit,
     required this.lastLabel,
     required this.lastValue,
+    this.unit,
+    this.activeEventId,
+    this.activeStartedAt,
   });
 
   final HomeMetricType type;
   final String label;
   final String value;
-  final String unit;
+  final String? unit;
   final String lastLabel;
   final String lastValue;
+  final String? activeEventId;
+  final DateTime? activeStartedAt;
+
+  bool get isActive => activeEventId != null;
 
   @override
   List<Object?> get props => [
@@ -463,6 +497,8 @@ class HomeTodayMetricVm extends Equatable {
         unit,
         lastLabel,
         lastValue,
+        activeEventId,
+        activeStartedAt,
       ];
 }
 
@@ -488,8 +524,10 @@ class HomeUpcomingHealthVm extends Equatable {
     required this.timeLabel,
     required this.caregiverLabel,
     required this.type,
+    this.hasUpcomingHealth = true,
   });
 
+  final bool hasUpcomingHealth;
   final String title;
   final String dateLabel;
   final String timeLabel;
@@ -498,6 +536,7 @@ class HomeUpcomingHealthVm extends Equatable {
 
   @override
   List<Object?> get props => [
+        hasUpcomingHealth,
         title,
         dateLabel,
         timeLabel,

@@ -40,8 +40,10 @@ GoRouter createAppRouter({
     getHealthOverview: getIt<GetHealthOverview>(),
     getRegisterEvents: getIt<GetRegisterEvents>(),
     saveRegisterEvent: getIt<SaveRegisterEvent>(),
+    deleteRegisterEvent: getIt<DeleteRegisterEvent>(),
     healthRepository: getIt<HealthRepository>(),
     registerSyncService: getIt<RegisterEventSyncService>(),
+    initialDataSyncCoordinator: getIt<InitialDataSyncCoordinator>(),
   );
   final notificationReminders = NotificationReminderCoordinator(
     notificationService: getIt<NotificationService>(),
@@ -106,8 +108,8 @@ GoRouter createAppRouter({
                     ),
                     openAgenda: (context) => context.go(AgendaPage.fullPath),
                     openHealth: (context) => context.go(HealthPage.fullPath),
-                    openTodayHistory: (context) =>
-                        context.push(HomeDailyHistoryPage.fullPath),
+                    openTodayHistory: (context, type) =>
+                        context.push(HomeDailyHistoryPage.locationFor(type)),
                     switchBaby: (babyId) async {
                       await getIt<SetActiveFamilyBaby>()(babyId);
                     },
@@ -190,6 +192,16 @@ GoRouter createAppRouter({
                         ),
                         onReminderDeleted: (_, eventId) =>
                             notificationReminders.cancelAgenda(eventId),
+                        onMedicationSeriesDeleted: (_, sourceEventId) async {
+                          final derivedEvents =
+                              await getIt<SqliteAgendaRepository>()
+                                  .listDerivedBySource(sourceEventId);
+                          await getIt<DeleteRegisterEvent>()(sourceEventId);
+                          await getIt<RegisterAgendaCoordinator>().reconcile();
+                          for (final event in derivedEvents) {
+                            await notificationReminders.cancelAgenda(event.id);
+                          }
+                        },
                       ),
                     ],
                   ),
@@ -244,6 +256,13 @@ GoRouter createAppRouter({
                             context,
                             kind: RegisterEventKind.measurement,
                           ),
+                          openRegisterEventEditor: (context, event) async {
+                            await RegisterPage.openForEditAndWait(
+                              context,
+                              event,
+                            );
+                            await healthFlowController.load(force: true);
+                          },
                         ),
                     ],
                   ),

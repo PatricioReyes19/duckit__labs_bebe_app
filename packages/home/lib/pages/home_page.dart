@@ -1,3 +1,4 @@
+import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +6,10 @@ import 'package:home/home.dart';
 
 typedef HomeBlocFactory = HomeBloc Function(BuildContext context);
 typedef HomeBabySwitcher = Future<void> Function(String babyId);
+typedef HomeHistoryOpener = void Function(
+  BuildContext context,
+  RegisterEventType? type,
+);
 
 class HomePage extends GoRoute {
   HomePage({
@@ -12,7 +17,7 @@ class HomePage extends GoRoute {
     required void Function(BuildContext context, String actionId) openRegister,
     required void Function(BuildContext context) openAgenda,
     required void Function(BuildContext context) openHealth,
-    required void Function(BuildContext context) openTodayHistory,
+    required HomeHistoryOpener openTodayHistory,
     required HomeBabySwitcher switchBaby,
     super.name,
     super.routes,

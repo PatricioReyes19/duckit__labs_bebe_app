@@ -200,6 +200,15 @@ class SqliteRegisterEventRepository implements RegisterEventRepository {
         .toList(growable: false);
   }
 
+  Future<int> countPending() async {
+    final database = await _database.database;
+    final rows = await database.rawQuery(
+      'SELECT COUNT(*) FROM $tableName WHERE sync_status != ?',
+      [RegisterSyncStatus.synced.name],
+    );
+    return sqlite.Sqflite.firstIntValue(rows) ?? 0;
+  }
+
   Future<List<RegisteredEvent>> listByTypeIncludingDeleted(
     RegisterEventType type,
   ) async {

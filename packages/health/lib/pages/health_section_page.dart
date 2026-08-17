@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:health/models/health_flow_controller.dart';
@@ -63,13 +66,18 @@ abstract final class HealthFlowAction {
   static const exported = 'exported';
   static const observation = 'observation';
   static const compare = 'compare';
+  static const edit = 'edit';
 }
+
+typedef OpenHealthRegisterEditor =
+    Future<void> Function(BuildContext context, RegisteredEvent event);
 
 class HealthSectionPage extends GoRoute {
   HealthSectionPage({
     required HealthSectionKind kind,
     required HealthFlowController controller,
     required void Function(BuildContext context) openMeasurementRegister,
+    required OpenHealthRegisterEditor openRegisterEventEditor,
   }) : super(
          path: kind.relativePath,
          pageBuilder: (context, state) => MaterialPage<void>(
@@ -82,7 +90,9 @@ class HealthSectionPage extends GoRoute {
                context,
                kind,
                action,
+               controller: controller,
                openMeasurementRegister: openMeasurementRegister,
+               openRegisterEventEditor: openRegisterEventEditor,
              ),
            ),
          ),
@@ -103,7 +113,9 @@ class HealthSectionPage extends GoRoute {
                      context,
                      kind,
                      nextAction,
+                     controller: controller,
                      openMeasurementRegister: openMeasurementRegister,
+                     openRegisterEventEditor: openRegisterEventEditor,
                    ),
                  ),
                );
@@ -139,8 +151,17 @@ class HealthSectionPage extends GoRoute {
     BuildContext context,
     HealthSectionKind currentKind,
     String action, {
+    required HealthFlowController controller,
     required void Function(BuildContext context) openMeasurementRegister,
+    required OpenHealthRegisterEditor openRegisterEventEditor,
   }) {
+    if (action == HealthFlowAction.edit) {
+      final record = controller.selectedRecord;
+      if (record != null) {
+        unawaited(openRegisterEventEditor(context, record));
+      }
+      return;
+    }
     if (action == HealthFlowAction.registerWeight ||
         action == HealthFlowAction.registerHeight ||
         (currentKind == HealthSectionKind.growth &&

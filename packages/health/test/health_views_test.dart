@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -18,6 +19,8 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late SqliteRegisterEventRepository syncLocalRepository;
+  late _HealthRepository healthRepository;
+  late _RegisterRepository registerRepository;
   late HealthFlowController controller;
   late BebeTheme bebeTheme;
 
@@ -48,7 +51,7 @@ void main() {
         members: const [],
       ),
     );
-    final healthRepository = _HealthRepository(
+    healthRepository = _HealthRepository(
       HealthOverviewEntity(
         events: [
           HealthEventEntity(
@@ -92,7 +95,7 @@ void main() {
         ],
       ),
     );
-    final registerRepository = _RegisterRepository([
+    registerRepository = _RegisterRepository([
       RegisteredEvent(
         id: 'feeding-1',
         babyId: baby.id,
@@ -171,6 +174,7 @@ void main() {
       getHealthOverview: GetHealthOverview(healthRepository),
       getRegisterEvents: GetRegisterEvents(registerRepository),
       saveRegisterEvent: SaveRegisterEvent(registerRepository),
+      deleteRegisterEvent: DeleteRegisterEvent(registerRepository),
       healthRepository: healthRepository,
       registerSyncService: syncService,
     );
@@ -222,6 +226,36 @@ void main() {
         reason: 'Falló ${view.runtimeType} en 430 px de ancho.',
       );
     }
+  });
+
+  testWidgets('WT-HEALTH-SKELETON-001 refresh hides stale health data', (
+    tester,
+  ) async {
+    final pending = Completer<HealthOverviewEntity>();
+    healthRepository.nextOverview = pending.future;
+    final loading = controller.load(force: true);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: bebeTheme.lightTheme(),
+        home: Scaffold(
+          body: GrowthSectionView(
+            controller: controller,
+            openFlow: _ignoreAction,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const ValueKey('health-flow-skeleton')), findsOneWidget);
+    expect(find.text('8.10 kg'), findsNothing);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+
+    pending.complete(healthRepository.overview);
+    await loading;
+    await tester.pump();
+    expect(find.byKey(const ValueKey('health-flow-skeleton')), findsNothing);
   });
 
   testWidgets('crecimiento muestra la medición real más reciente', (
@@ -299,6 +333,44 @@ void main() {
     expect(find.text('Mateo'), findsNothing);
     expect(find.text('Percentil P41'), findsNothing);
     expect(find.text('16 may 2025 · 10:30'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('un registro de Salud se puede editar y eliminar', (
+    tester,
+  ) async {
+    final measurement = controller.measurements.firstWhere(
+      (item) => item.id == 'measurement-1',
+    );
+    controller.selectMeasurement(measurement);
+    String? action;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: bebeTheme.lightTheme(),
+        home: Scaffold(
+          body: HealthFlowDetailView(
+            kind: HealthSectionKind.growth,
+            action: HealthFlowAction.detail,
+            controller: controller,
+            openFlow: (value) => action = value,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.text('Editar registro'));
+    expect(action, HealthFlowAction.edit);
+
+    await tester.tap(find.byKey(const ValueKey('health-delete-record')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Eliminar'));
+    await tester.pumpAndSettle();
+
+    expect(
+      registerRepository.events.map((event) => event.id),
+      isNot(contains('measurement-1')),
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -384,6 +456,63 @@ void main() {
     expect(find.text('Día'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('reportes distingue un período vacío de un valor cero', (
+    tester,
+  ) async {
+    registerRepository.events.clear();
+    await controller.load(force: true);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: bebeTheme.lightTheme(),
+        home: Scaffold(
+          body: ReportsSectionView(
+            controller: controller,
+            openFlow: _ignoreAction,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Sin actividad en este período'), findsOneWidget);
+    expect(find.text('—'), findsNWidgets(3));
+    expect(find.text('0'), findsNothing);
+    expect(find.text('Tendencias del período'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'reportes funciona en dark mode, pantalla pequeña y texto grande',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 640));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: bebeTheme.darkTheme(),
+          home: Builder(
+            builder: (context) => MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(textScaler: const TextScaler.linear(1.8)),
+              child: Scaffold(
+                body: ReportsSectionView(
+                  controller: controller,
+                  openFlow: _ignoreAction,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('1 día'), findsOneWidget);
+      expect(find.text('7 días'), findsOneWidget);
+      expect(find.text('30 días'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   test(
     'genera los reportes PDF y CSV completamente en el dispositivo',
@@ -481,9 +610,14 @@ class _HealthRepository extends Fake implements HealthRepository {
   _HealthRepository(this.overview);
 
   final HealthOverviewEntity overview;
+  Future<HealthOverviewEntity>? nextOverview;
 
   @override
-  Future<HealthOverviewEntity> getOverview(String babyId) async => overview;
+  Future<HealthOverviewEntity> getOverview(String babyId) async {
+    final pending = nextOverview;
+    nextOverview = null;
+    return pending == null ? overview : pending;
+  }
 }
 
 class _RegisterRepository extends Fake implements RegisterEventRepository {
@@ -521,6 +655,11 @@ class _RegisterRepository extends Fake implements RegisterEventRepository {
     );
     events.insert(0, saved);
     return saved;
+  }
+
+  @override
+  Future<void> delete(String id) async {
+    events.removeWhere((event) => event.id == id);
   }
 }
 

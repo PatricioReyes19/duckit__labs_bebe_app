@@ -23,6 +23,82 @@ void main() {
     bebeTheme = BebeTheme.fromJson(json);
   });
 
+  test('UT-HOME-HISTORY-001 keeps the route type as initial filter', () async {
+    final now = DateTime(2026, 8, 17, 12);
+    final cubit = HomeDailyHistoryCubit(
+      getRegisterEvents: GetRegisterEvents(
+        _FakeRegisterEventRepository([
+          RegisteredEvent(
+            id: 'feeding',
+            babyId: 'baby-1',
+            type: RegisterEventType.feeding,
+            occurredAt: now,
+            createdAt: now,
+            details: const {},
+          ),
+          RegisteredEvent(
+            id: 'sleep',
+            babyId: 'baby-1',
+            type: RegisterEventType.sleep,
+            occurredAt: now,
+            createdAt: now,
+            details: const {'duration_minutes': 40},
+          ),
+        ]),
+      ),
+      babyId: 'baby-1',
+      initialType: RegisterEventType.sleep,
+      clock: () => now,
+    );
+    addTearDown(cubit.close);
+
+    await cubit.load();
+    await Future<void>.delayed(Duration.zero);
+
+    expect(cubit.state.selectedType, RegisterEventType.sleep);
+    expect(cubit.state.filteredEvents.map((event) => event.id), ['sleep']);
+    expect(
+      HomeDailyHistoryPage.locationFor(RegisterEventType.diaper),
+      '/home/history?type=diaper',
+    );
+  });
+
+  testWidgets('WT-HISTORY-SKELETON-001 hides counters while loading', (
+    tester,
+  ) async {
+    final cubit = HomeDailyHistoryCubit(
+      getRegisterEvents: GetRegisterEvents(
+        _FakeRegisterEventRepository(const []),
+      ),
+      babyId: 'baby-1',
+    );
+    addTearDown(cubit.close);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: bebeTheme.lightTheme(),
+        home: Scaffold(
+          body: BlocProvider.value(
+            value: cubit,
+            child: HomeDailyHistoryView(
+              babyName: 'Dato todavía no hidratado',
+              onRegisterPressed: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(
+      find.byKey(const ValueKey('home-daily-history-skeleton')),
+      findsOneWidget,
+    );
+    expect(find.text('Dato todavía no hidratado'), findsNothing);
+    expect(find.text('0 registros'), findsNothing);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+  });
+
   testWidgets('shows today events, filters and opens the complete detail', (
     tester,
   ) async {
