@@ -152,7 +152,7 @@ class HomeOverviewVm extends Equatable {
       value: ongoingSleep != null
           ? 'En curso'
           : isEmpty
-              ? 'Sin registros'
+              ? '—'
               : type == HomeMetricType.sleep
                   ? _duration(metric.totalMinutes)
                   : '${metric.count}',
@@ -164,11 +164,15 @@ class HomeOverviewVm extends Equatable {
         HomeMetricType.diaper when metric.count == 0 => null,
         HomeMetricType.diaper => metric.count == 1 ? 'cambio' : 'cambios',
       },
-      lastLabel: ongoingSleep == null ? 'Última vez' : 'Iniciado',
+      lastLabel: ongoingSleep != null
+          ? 'Iniciado'
+          : metric.lastOccurredAt == null
+              ? 'Estado'
+              : 'Última vez',
       lastValue: ongoingSleep != null
           ? _timeLabel(ongoingSleep.startedAt)
           : metric.lastOccurredAt == null
-              ? _emptyMetricHint(type)
+              ? 'Sin registros hoy'
               : _relativeTime(metric.lastOccurredAt!, referenceDate),
       activeEventId: ongoingSleep?.id,
       activeStartedAt: ongoingSleep?.startedAt,
@@ -185,12 +189,6 @@ class HomeOverviewVm extends Equatable {
     }
     return null;
   }
-
-  static String _emptyMetricHint(HomeMetricType type) => switch (type) {
-        HomeMetricType.feeding => 'Registra una toma',
-        HomeMetricType.sleep => 'Registra un sueño',
-        HomeMetricType.diaper => 'Registra un cambio',
-      };
 
   static String _duration(int minutes) {
     final hours = minutes ~/ 60;

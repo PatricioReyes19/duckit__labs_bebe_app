@@ -44,12 +44,15 @@ class HomeDailyHistoryCubit extends Cubit<HomeDailyHistoryState> {
   Future<void> load() async {
     await _eventsSubscription?.cancel();
     await _syncSubscription?.cancel();
-    emit(
-      state.copyWith(
-        status: DailyHistoryStatus.loading,
-        errorMessage: null,
-      ),
-    );
+    final hasHydratedEvents = state.status == DailyHistoryStatus.loaded;
+    if (!hasHydratedEvents) {
+      emit(
+        state.copyWith(
+          status: DailyHistoryStatus.loading,
+          errorMessage: null,
+        ),
+      );
+    }
     final referenceDate = _clock();
     try {
       _eventsSubscription = _getRegisterEvents.watch(babyId).listen(
@@ -73,7 +76,9 @@ class HomeDailyHistoryCubit extends Cubit<HomeDailyHistoryState> {
         },
         onError: (Object _) => emit(
           state.copyWith(
-            status: DailyHistoryStatus.failure,
+            status: hasHydratedEvents
+                ? DailyHistoryStatus.loaded
+                : DailyHistoryStatus.failure,
             errorMessage: 'No pudimos cargar los registros del día.',
           ),
         ),
@@ -89,7 +94,9 @@ class HomeDailyHistoryCubit extends Cubit<HomeDailyHistoryState> {
     } on Object {
       emit(
         state.copyWith(
-          status: DailyHistoryStatus.failure,
+          status: hasHydratedEvents
+              ? DailyHistoryStatus.loaded
+              : DailyHistoryStatus.failure,
           errorMessage: 'No pudimos cargar los registros del día.',
         ),
       );

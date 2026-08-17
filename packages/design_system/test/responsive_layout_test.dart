@@ -99,6 +99,49 @@ void main() {
   });
 
   testWidgets(
+    'today metric cards keep equal height after an empty metric is populated',
+    (tester) async {
+      Future<List<double>> render(List<BebeTodayMetricData> metrics) async {
+        await tester.pumpWidget(
+          _TestApp(
+            theme: bebeTheme.lightTheme(),
+            child: SizedBox(
+              width: 342,
+              child: BebeTodaySummary(title: 'Resumen de hoy', items: metrics),
+            ),
+          ),
+        );
+        await tester.pump();
+        return tester
+            .widgetList<BebeCompactMetricCard>(
+              find.byType(BebeCompactMetricCard),
+            )
+            .map((card) => tester.getSize(find.byWidget(card)).height)
+            .toList(growable: false);
+      }
+
+      final emptyHeights = await render([
+        _metrics[0],
+        _metrics[1],
+        const BebeTodayMetricData(
+          variant: BebeMetricCardVariant.diaper,
+          label: 'Pañales',
+          value: '—',
+          lastLabel: 'Estado',
+          lastValue: 'Sin registros hoy',
+          icon: Icon(Icons.child_friendly_outlined),
+        ),
+      ]);
+      final populatedHeights = await render(_metrics);
+
+      expect(emptyHeights.toSet(), hasLength(1));
+      expect(populatedHeights.toSet(), hasLength(1));
+      expect(populatedHeights, emptyHeights);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'week calendar fits seven days at target widths and 1.3 text scale',
     (tester) async {
       addTearDown(tester.view.resetPhysicalSize);

@@ -253,8 +253,14 @@ class HealthFlowController extends ChangeNotifier {
       onError: (_) {},
     );
     _activeBabySubscription = _getFamilyOverview.activeBabyChanges.listen((_) {
+      // A baby switch is a scope change, not a background refresh. Mark the
+      // current projection as unsafe so data from the previous baby is never
+      // rendered while the new projection is loading.
+      _loadedOnce = false;
+      _error = null;
       if (_isLoading) {
         _reloadAfterCurrentLoad = true;
+        notifyListeners();
       } else {
         unawaited(load(force: true));
       }
@@ -315,10 +321,16 @@ class HealthFlowController extends ChangeNotifier {
     range: _reportRange,
     now: _clock(),
   );
+
+  /// Full-page loading is reserved for the first safe projection.
+  /// Subsequent local mutations and refreshes keep hydrated content visible.
   bool get isLoading =>
-      _isLoading ||
-      (_initialDataSyncCoordinator != null &&
-          !_initialDataSyncCoordinator.hasHydratedDomains);
+      !_loadedOnce &&
+      (_isLoading ||
+          (_initialDataSyncCoordinator != null &&
+              !_initialDataSyncCoordinator.hasHydratedDomains));
+
+  bool get isRefreshing => _loadedOnce && _isLoading;
   bool get offlineMode => _manualOfflineMode || !_hasConnectivity;
   bool get networkUnavailable => !_hasConnectivity;
   Object? get error => _error;

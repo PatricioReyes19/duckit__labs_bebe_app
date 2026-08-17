@@ -78,6 +78,12 @@ class BebeTodaySummary extends StatelessWidget {
           LayoutBuilder(
             builder: (context, constraints) {
               final textScale = MediaQuery.textScalerOf(context).scale(1);
+              final scaleAdjustment =
+                  (textScale - 1).clamp(0, 1).toDouble() * 64;
+              final minimumItemHeight =
+                  164 +
+                  scaleAdjustment +
+                  (items.any((item) => item.actionLabel != null) ? 64 : 0);
               final resolvedPadding = contentPadding.resolve(
                 Directionality.of(context),
               );
@@ -104,12 +110,14 @@ class BebeTodaySummary extends StatelessWidget {
                 return _TodayMetricsHorizontalList(
                   items: items,
                   contentPadding: contentPadding,
+                  minimumItemHeight: minimumItemHeight,
                 );
               }
 
               return _TodayMetricsInlineRow(
                 items: items,
                 contentPadding: contentPadding,
+                minimumItemHeight: minimumItemHeight,
               );
             },
           ),
@@ -123,10 +131,12 @@ class _TodayMetricsInlineRow extends StatelessWidget {
   const _TodayMetricsInlineRow({
     required this.items,
     required this.contentPadding,
+    required this.minimumItemHeight,
   });
 
   final List<BebeTodayMetricData> items;
   final EdgeInsetsGeometry contentPadding;
+  final double minimumItemHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -138,7 +148,12 @@ class _TodayMetricsInlineRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           for (var index = 0; index < items.length; index++) ...[
-            Expanded(child: _TodayMetricItem(data: items[index])),
+            Expanded(
+              child: _TodayMetricItem(
+                data: items[index],
+                minimumHeight: minimumItemHeight,
+              ),
+            ),
             if (index < items.length - 1) SizedBox(width: spacing.spacingL),
           ],
         ],
@@ -151,10 +166,12 @@ class _TodayMetricsHorizontalList extends StatelessWidget {
   const _TodayMetricsHorizontalList({
     required this.items,
     required this.contentPadding,
+    required this.minimumItemHeight,
   });
 
   final List<BebeTodayMetricData> items;
   final EdgeInsetsGeometry contentPadding;
+  final double minimumItemHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -170,7 +187,10 @@ class _TodayMetricsHorizontalList extends StatelessWidget {
           for (var index = 0; index < items.length; index++) ...[
             SizedBox(
               width: BebeTodaySummary._horizontalCardWidth,
-              child: _TodayMetricItem(data: items[index]),
+              child: _TodayMetricItem(
+                data: items[index],
+                minimumHeight: minimumItemHeight,
+              ),
             ),
             if (index < items.length - 1) SizedBox(width: spacing.spacingL),
           ],
@@ -181,14 +201,16 @@ class _TodayMetricsHorizontalList extends StatelessWidget {
 }
 
 class _TodayMetricItem extends StatelessWidget {
-  const _TodayMetricItem({required this.data});
+  const _TodayMetricItem({required this.data, required this.minimumHeight});
 
   final BebeTodayMetricData data;
+  final double minimumHeight;
 
   @override
   Widget build(BuildContext context) {
     return BebeCompactMetricCard(
       variant: data.variant,
+      minimumHeight: minimumHeight,
       label: data.label,
       icon: data.icon,
       value: data.value,

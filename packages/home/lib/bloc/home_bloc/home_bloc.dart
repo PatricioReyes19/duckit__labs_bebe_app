@@ -25,9 +25,13 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         _initialDataSyncCoordinator = initialDataSyncCoordinator,
         super(const HomeState.initial()) {
     on<_Started>((event, emit) => _load(emit, showLoading: true));
-    on<_Refreshed>((event, emit) => _load(emit, showLoading: true));
+    on<_Refreshed>((event, emit) => _load(emit, showLoading: false));
     on<_Retried>(
-      (event, emit) => _load(emit, showLoading: true, requestSync: true),
+      (event, emit) => _load(
+        emit,
+        showLoading: state is! HomeLoaded,
+        requestSync: true,
+      ),
     );
     _registerEventsSubscription = _getHomeOverview.changes.listen((_) {
       if (!isClosed && !_isSynchronizing) add(const HomeEvent.refreshed());
@@ -71,11 +75,15 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         ),
       );
     } on Object catch (error) {
-      emit(
-        HomeState.failure(
-          message: 'No pudimos cargar el inicio: $error',
-        ),
-      );
+      if (current is HomeLoaded) {
+        emit(current.copyWith(isRefreshing: false));
+      } else {
+        emit(
+          HomeState.failure(
+            message: 'No pudimos cargar el inicio: $error',
+          ),
+        );
+      }
     }
   }
 

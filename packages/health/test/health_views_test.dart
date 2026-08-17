@@ -25,6 +25,7 @@ void main() {
   late BebeTheme bebeTheme;
 
   setUpAll(() {
+    sqfliteFfiInit();
     final candidates = [
       File('packages/design_system/assets/json/bebe_theme.json'),
       File('../design_system/assets/json/bebe_theme.json'),
@@ -162,7 +163,7 @@ void main() {
       ),
     ]);
     syncLocalRepository = SqliteRegisterEventRepository(
-      databaseFactory: databaseFactoryFfiNoIsolate,
+      databaseFactory: databaseFactoryFfi,
       databasePath: inMemoryDatabasePath,
     );
     final syncService = RegisterEventSyncService(
@@ -228,7 +229,7 @@ void main() {
     }
   });
 
-  testWidgets('WT-HEALTH-SKELETON-001 refresh hides stale health data', (
+  testWidgets('WT-HEALTH-REFRESH-001 refresh keeps hydrated health data', (
     tester,
   ) async {
     final pending = Completer<HealthOverviewEntity>();
@@ -248,14 +249,16 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.byKey(const ValueKey('health-flow-skeleton')), findsOneWidget);
-    expect(find.text('8.10 kg'), findsNothing);
+    expect(find.byKey(const ValueKey('health-flow-skeleton')), findsNothing);
+    expect(find.text('8.10 kg'), findsWidgets);
+    expect(controller.isRefreshing, isTrue);
     expect(find.byType(CircularProgressIndicator), findsNothing);
 
     pending.complete(healthRepository.overview);
     await loading;
     await tester.pump();
     expect(find.byKey(const ValueKey('health-flow-skeleton')), findsNothing);
+    expect(controller.isRefreshing, isFalse);
   });
 
   testWidgets('crecimiento muestra la medición real más reciente', (

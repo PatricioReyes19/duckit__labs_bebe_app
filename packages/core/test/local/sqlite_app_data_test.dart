@@ -477,6 +477,42 @@ void main() {
     },
   );
 
+  test(
+    'home resets daily totals but preserves last-event continuity',
+    () async {
+      final now = DateTime(2026, 8, 18, 0, 5);
+      final previousNight = DateTime(2026, 8, 17, 23, 30);
+      final registerRepository = SqliteRegisterEventRepository(
+        database: database,
+        idGenerator: () => 'late-feeding',
+        clock: () => now,
+      );
+      addTearDown(registerRepository.close);
+      await registerRepository.save(
+        RegisterEventDraft(
+          babyId: BebeSeedData.activeBabyId,
+          type: RegisterEventType.feeding,
+          occurredAt: previousNight,
+          details: const {'subtype': 'bottle', 'amount_ml': 90},
+        ),
+      );
+
+      final overview = await GetHomeOverview(
+        families,
+        registerRepository,
+        health,
+        agendaRepository: agenda,
+        clock: () => now,
+      )();
+      final feeding = overview.metrics.firstWhere(
+        (metric) => metric.type == HomeMetricType.feeding,
+      );
+
+      expect(feeding.count, 0);
+      expect(feeding.lastOccurredAt?.toLocal(), previousNight);
+    },
+  );
+
   test('supports POST and PATCH semantics for health events', () async {
     final created = await health.createEvent(
       HealthEventDraft(

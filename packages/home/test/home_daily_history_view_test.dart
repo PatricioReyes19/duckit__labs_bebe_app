@@ -102,7 +102,7 @@ void main() {
   testWidgets('shows today events, filters and opens the complete detail', (
     tester,
   ) async {
-    final now = DateTime.now();
+    final now = DateTime(2026, 8, 17, 12);
     String? editedEventId;
     final events = [
       RegisteredEvent(
@@ -198,7 +198,7 @@ void main() {
   testWidgets('deletes a mistaken record after explicit confirmation', (
     tester,
   ) async {
-    final now = DateTime.now();
+    final now = DateTime(2026, 8, 17, 12);
     final repository = _FakeRegisterEventRepository([
       RegisteredEvent(
         id: 'incorrect-sleep',

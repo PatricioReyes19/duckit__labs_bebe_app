@@ -28,17 +28,12 @@ class AgendaBloc extends Bloc<AgendaEvent, AgendaState> {
        // ignore: prefer_initializing_formals
        _getFamilyOverview = getFamilyOverview,
        super(const AgendaState.initial()) {
-    on<_Started>(
-      (event, emit) => _load(
-        emit,
-        showLoading: true,
-        requestSync: _initialDataSyncCoordinator == null,
-      ),
-    );
+    on<_Started>(_onStarted);
     on<_Retried>(
-      (event, emit) => _load(emit, showLoading: true, requestSync: true),
+      (event, emit) =>
+          _load(emit, showLoading: _currentOverview == null, requestSync: true),
     );
-    on<_Refreshed>((event, emit) => _load(emit, showLoading: true));
+    on<_Refreshed>((event, emit) => _load(emit, showLoading: false));
     on<_DaySelected>(_onDaySelected);
     on<_WeekChanged>(_onWeekChanged);
     on<_MonthDaySelected>(_onMonthDaySelected);
@@ -56,11 +51,11 @@ class AgendaBloc extends Bloc<AgendaEvent, AgendaState> {
     _familyChangesSubscription = _getFamilyOverview?.activeBabyChanges.listen((
       _,
     ) {
-      if (!isClosed) add(const AgendaEvent.started());
+      _invalidateProjection();
     });
     _hydrationSubscription = _initialDataSyncCoordinator?.domainHydrationStates
         .listen((ready) {
-          if (!ready && !isClosed) add(const AgendaEvent.started());
+          if (!ready) _invalidateProjection();
         });
   }
 
@@ -75,15 +70,30 @@ class AgendaBloc extends Bloc<AgendaEvent, AgendaState> {
   StreamSubscription<String>? _familyChangesSubscription;
   StreamSubscription<bool>? _hydrationSubscription;
   Timer? _reloadDebounce;
+  AgendaOverviewVm? _lastOverview;
+  bool _projectionInvalidated = false;
   bool _remoteUnavailable = false;
   bool _isSynchronizing = false;
+
+  Future<void> _onStarted(_Started event, Emitter<AgendaState> emit) {
+    final scopeChanged = _projectionInvalidated;
+    _projectionInvalidated = false;
+    if (scopeChanged) _lastOverview = null;
+    return _load(
+      emit,
+      showLoading: scopeChanged || _currentOverview == null,
+      requestSync: _initialDataSyncCoordinator == null,
+      preserveCurrent: !scopeChanged,
+    );
+  }
 
   Future<void> _load(
     Emitter<AgendaState> emit, {
     required bool showLoading,
     bool requestSync = false,
+    bool preserveCurrent = true,
   }) async {
-    final previous = _currentOverview;
+    final previous = preserveCurrent ? _currentOverview : null;
     if (showLoading) emit(const AgendaState.loading());
     final syncService = _syncService;
     try {
@@ -115,13 +125,20 @@ class AgendaBloc extends Bloc<AgendaEvent, AgendaState> {
           selectedCategory: previous.selectedCategory,
         );
       }
-      if (overview.events.isEmpty && overview.registerEvents.isEmpty) {
-        emit(AgendaState.empty(overview: overview));
-      } else {
-        emit(AgendaState.loaded(overview: overview));
-      }
+      _emitOverview(emit, overview);
     } on Object catch (error) {
-      emit(AgendaState.failure(message: 'No pudimos cargar la agenda: $error'));
+      if (previous != null) {
+        final preserved = _remoteUnavailable
+            ? previous.copyWith(
+                connectionStatus: AgendaConnectionStatus.offline,
+              )
+            : previous;
+        _emitOverview(emit, preserved);
+      } else {
+        emit(
+          AgendaState.failure(message: 'No pudimos cargar la agenda: $error'),
+        );
+      }
     }
   }
 
@@ -158,6 +175,12 @@ class AgendaBloc extends Bloc<AgendaEvent, AgendaState> {
     _reloadDebounce = Timer(const Duration(milliseconds: 32), () {
       if (!isClosed) add(const AgendaEvent.refreshed());
     });
+  }
+
+  void _invalidateProjection() {
+    if (isClosed) return;
+    _projectionInvalidated = true;
+    add(const AgendaEvent.started());
   }
 
   void _onDaySelected(_DaySelected event, Emitter<AgendaState> emit) => _update(
@@ -201,15 +224,28 @@ class AgendaBloc extends Bloc<AgendaEvent, AgendaState> {
   AgendaOverviewVm? get _currentOverview => switch (state) {
     AgendaLoaded(:final overview) => overview,
     AgendaEmpty(:final overview) => overview,
-    _ => null,
+    _ => _lastOverview,
   };
+
+  void _emitOverview(Emitter<AgendaState> emit, AgendaOverviewVm overview) {
+    _lastOverview = overview;
+    if (overview.events.isEmpty && overview.registerEvents.isEmpty) {
+      emit(AgendaState.empty(overview: overview));
+    } else {
+      emit(AgendaState.loaded(overview: overview));
+    }
+  }
 
   void _update(
     Emitter<AgendaState> emit,
     AgendaOverviewVm Function(AgendaOverviewVm overview) update,
   ) {
     final current = _currentOverview;
-    if (current != null) emit(AgendaState.loaded(overview: update(current)));
+    if (current != null) {
+      final updated = update(current);
+      _lastOverview = updated;
+      emit(AgendaState.loaded(overview: updated));
+    }
   }
 
   @override

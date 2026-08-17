@@ -12,6 +12,7 @@ class BebeCompactMetricCard extends StatelessWidget {
     this.status,
     this.trend,
     this.variant = BebeMetricCardVariant.neutral,
+    this.minimumHeight = _minimumHeight,
     this.onPressed,
     this.semanticLabel,
     super.key,
@@ -25,6 +26,7 @@ class BebeCompactMetricCard extends StatelessWidget {
   final Widget? status;
   final Widget? trend;
   final BebeMetricCardVariant variant;
+  final double minimumHeight;
   final VoidCallback? onPressed;
   final String? semanticLabel;
 
@@ -49,7 +51,7 @@ class BebeCompactMetricCard extends StatelessWidget {
         final iconContainerSize = compact ? 32.0 : _iconContainerSize;
         final iconSize = compact ? 18.0 : _iconSize;
         return ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: _minimumHeight),
+          constraints: BoxConstraints(minHeight: minimumHeight),
           child: Padding(
             padding: EdgeInsets.all(
               compact ? spacing.spacingM : spacing.spacingL,

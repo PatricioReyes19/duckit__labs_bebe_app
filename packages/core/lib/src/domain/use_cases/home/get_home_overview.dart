@@ -83,6 +83,9 @@ class GetHomeOverview {
           final matching =
               today.where((event) => _matches(type, event)).toList()
                 ..sort((a, b) => b.occurredAt.compareTo(a.occurredAt));
+          final historicalMatching =
+              events.where((event) => _matches(type, event)).toList()
+                ..sort((a, b) => b.occurredAt.compareTo(a.occurredAt));
           return HomeMetricEntity(
             type: type,
             count: matching.length,
@@ -97,7 +100,9 @@ class GetHomeOverview {
             ongoingCount: type == HomeMetricType.sleep
                 ? matching.where((event) => event.isActive).length
                 : 0,
-            lastOccurredAt: matching.isEmpty ? null : matching.first.occurredAt,
+            lastOccurredAt: historicalMatching.isEmpty
+                ? null
+                : historicalMatching.first.occurredAt,
           );
         })
         .toList(growable: false);

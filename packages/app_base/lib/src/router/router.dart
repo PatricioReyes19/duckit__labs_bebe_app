@@ -196,7 +196,17 @@ GoRouter createAppRouter({
                           final derivedEvents =
                               await getIt<SqliteAgendaRepository>()
                                   .listDerivedBySource(sourceEventId);
-                          await getIt<DeleteRegisterEvent>()(sourceEventId);
+                          final source = await getIt<UpdateRegisterEvent>()(
+                            sourceEventId,
+                            RegisterEventPatch(
+                              details: const {'schedule_next_doses': false},
+                            ),
+                          );
+                          if (source == null) {
+                            throw StateError(
+                              'Medication source is no longer available.',
+                            );
+                          }
                           await getIt<RegisterAgendaCoordinator>().reconcile();
                           for (final event in derivedEvents) {
                             await notificationReminders.cancelAgenda(event.id);

@@ -181,11 +181,11 @@ HomeOverviewVm _overview({
         type: HomeUpcomingHealthKind.control,
       ),
       recentInformation: const HomeRecentInformationVm(
-        title: 'Sueño registrado',
-        dateLabel: '14 de agosto',
-        description: 'El sueño sigue en curso.',
+        title: 'Sin actividad reciente',
+        dateLabel: 'Hoy',
+        description: 'Los nuevos registros aparecerán en esta sección.',
         status: HomeRecentStatus.information,
-        statusLabel: 'En curso',
+        statusLabel: 'Sin registros',
       ),
       visualReminders: const [],
       activeActivities: includeActive

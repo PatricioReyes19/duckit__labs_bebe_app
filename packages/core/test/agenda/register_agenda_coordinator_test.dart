@@ -117,7 +117,7 @@ void main() {
     );
   });
 
-  test('removes future doses when the source register is deleted', () async {
+  test('removes the series while preserving the original medication', () async {
     final medication = await registerRepository.save(
       RegisterEventDraft(
         babyId: BebeSeedData.activeBabyId,
@@ -134,7 +134,10 @@ void main() {
     );
     await coordinator.reconcile();
 
-    await registerRepository.delete(medication.id);
+    await registerRepository.update(
+      medication.id,
+      RegisterEventPatch(details: const {'schedule_next_doses': false}),
+    );
     await coordinator.reconcile();
 
     final derived = await agendaRepository.listDerivedBySource(medication.id);
@@ -159,6 +162,11 @@ void main() {
       ),
       isEmpty,
     );
+    final preservedMedication = await registerRepository.findById(
+      medication.id,
+    );
+    expect(preservedMedication, isNotNull);
+    expect(preservedMedication!.details['schedule_next_doses'], isFalse);
   });
 
   test('skips an out-of-order register until its baby is hydrated', () async {

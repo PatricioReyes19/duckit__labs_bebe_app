@@ -26,6 +26,11 @@ workspace:
 dev_dependencies:
   melos: ^8.2.0
 
+# flutter_launcher_icons 0.14.4 todavía declara cli_util ^0.4.1, mientras
+# Melos 8 utiliza ^0.5.0. El CLI conserva la API requerida por el generador.
+dependency_overrides:
+  cli_util: ^0.5.1
+
 melos:
   scripts:
 

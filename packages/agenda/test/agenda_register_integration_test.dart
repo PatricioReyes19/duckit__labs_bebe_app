@@ -266,15 +266,16 @@ void main() {
   testWidgets('keeps the agenda visible when there are no events', (
     tester,
   ) async {
+    final repository = _FakeAgendaRepository(
+      const AgendaOverviewEntity(
+        events: [],
+        remindersEnabled: true,
+        isOffline: false,
+      ),
+    );
     final bloc = AgendaBloc(
       getAgendaOverview: GetAgendaOverview(
-        _FakeAgendaRepository(
-          const AgendaOverviewEntity(
-            events: [],
-            remindersEnabled: true,
-            isOffline: false,
-          ),
-        ),
+        repository,
         _FakeRegisterRepository(const []),
       ),
       babyId: 'baby-1',
@@ -299,6 +300,46 @@ void main() {
     expect(find.text('Registros del día'), findsOneWidget);
     expect(find.text('Próximos días'), findsOneWidget);
     expect(find.text('Tu agenda está vacía'), findsNothing);
+
+    final transitionStates = <AgendaState>[];
+    final transitionSubscription = bloc.stream.listen(transitionStates.add);
+    addTearDown(transitionSubscription.cancel);
+    repository.replace(
+      AgendaOverviewEntity(
+        events: [
+          AgendaEventEntity(
+            id: 'updated-control',
+            babyId: 'baby-1',
+            category: AgendaCategory.controls,
+            title: 'Control actualizado',
+            description: 'Cambio local',
+            startsAt: DateTime(2026, 8, 10, 14),
+            syncStatus: AgendaSyncStatus.pending,
+          ),
+        ],
+        remindersEnabled: true,
+        isOffline: false,
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 40));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Control actualizado'), findsWidgets);
+    expect(
+      find.byKey(const ValueKey('agenda-loading-week-picker')),
+      findsNothing,
+    );
+
+    // Lifecycle/navigation can repeat started on the same mounted scope. It
+    // must refresh hydrated data without replacing the agenda with skeletons.
+    bloc.add(const AgendaEvent.started());
+    await tester.pump();
+    expect(
+      find.byKey(const ValueKey('agenda-loading-week-picker')),
+      findsNothing,
+    );
+    await tester.pumpAndSettle();
+    expect(transitionStates.whereType<AgendaLoading>(), isEmpty);
     expect(tester.takeException(), isNull);
   });
 
@@ -393,11 +434,15 @@ void main() {
       expect(syncService.synchronizeCalls, 1);
       expect(bloc.state, isA<AgendaEmpty>());
 
+      final refreshStates = <AgendaState>[];
+      final refreshSubscription = bloc.stream.listen(refreshStates.add);
+      addTearDown(refreshSubscription.cancel);
       await bloc.refreshFromRemote().timeout(const Duration(seconds: 1));
       await Future<void>.delayed(const Duration(milliseconds: 80));
 
       expect(syncService.synchronizeCalls, 2);
       expect(bloc.state, isA<AgendaEmpty>());
+      expect(refreshStates.whereType<AgendaLoading>(), isEmpty);
     },
   );
 }
@@ -439,10 +484,16 @@ class _FakeAgendaSyncService implements AgendaEventSyncService {
 class _FakeAgendaRepository implements AgendaRepository {
   _FakeAgendaRepository(this.overview);
 
-  final AgendaOverviewEntity overview;
+  AgendaOverviewEntity overview;
+  final _changes = StreamController<void>.broadcast();
 
   @override
-  Stream<void> get changes => const Stream.empty();
+  Stream<void> get changes => _changes.stream;
+
+  void replace(AgendaOverviewEntity value) {
+    overview = value;
+    _changes.add(null);
+  }
 
   @override
   Future<AgendaEventEntity> create(AgendaEventDraft draft) =>
