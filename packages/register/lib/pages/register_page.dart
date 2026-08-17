@@ -11,6 +11,9 @@ import 'package:register/register.dart';
 typedef SaveRegisterEventFactory = SaveRegisterEvent Function(
   BuildContext context,
 );
+typedef UpdateRegisterEventFactory = UpdateRegisterEvent Function(
+  BuildContext context,
+);
 typedef RegisterRouteSaved = void Function(
   BuildContext context,
   RegisteredEvent event,
@@ -25,6 +28,8 @@ class RegisterPage extends GoRoute {
     required SaveRegisterEventFactory saveRegisterEvent,
     required RegisterRouteSaved onSaved,
     required RegisterRouteAction onCancel,
+    this.updateRegisterEvent,
+    this.onUpdated,
     this.getFamilyOverview,
     this.onNotificationsPressed,
     this.onHomePressed,
@@ -55,7 +60,12 @@ class RegisterPage extends GoRoute {
             kind: RegisterEventKind.feeding,
             pageName: name ?? nameRoute,
             saveRegisterEvent: saveRegisterEvent,
+            updateRegisterEvent: updateRegisterEvent,
             onSaved: onSaved,
+            onUpdated: onUpdated,
+            editingEvent: state.extra is RegisteredEvent
+                ? state.extra! as RegisteredEvent
+                : null,
             onCancel: onCancel,
             onNotificationsPressed: onNotificationsPressed,
             onHomePressed: onHomePressed,
@@ -91,7 +101,12 @@ class RegisterPage extends GoRoute {
                 ),
                 pageName: kindNameRoute,
                 saveRegisterEvent: saveRegisterEvent,
+                updateRegisterEvent: updateRegisterEvent,
                 onSaved: onSaved,
+                onUpdated: onUpdated,
+                editingEvent: state.extra is RegisteredEvent
+                    ? state.extra! as RegisteredEvent
+                    : null,
                 onCancel: onCancel,
                 onNotificationsPressed: onNotificationsPressed,
                 onHomePressed: onHomePressed,
@@ -115,6 +130,8 @@ class RegisterPage extends GoRoute {
   final String babyAge;
   final String familyContextLabel;
   final GetFamilyOverviewFactory? getFamilyOverview;
+  final UpdateRegisterEventFactory? updateRegisterEvent;
+  final RegisterRouteSaved? onUpdated;
   final RegisterRouteAction? onNotificationsPressed;
   final RegisterRouteAction? onHomePressed;
   final RegisterRouteAction? onAgendaPressed;
@@ -137,6 +154,10 @@ class RegisterPage extends GoRoute {
   static void open(BuildContext context, {RegisterEventKind? kind}) {
     context.push(locationFor(kind ?? RegisterEventKind.feeding));
   }
+
+  static void openForEdit(BuildContext context, RegisteredEvent event) {
+    context.push(locationFor(_kindForType(event.type)), extra: event);
+  }
 }
 
 Page<void> _buildPage({
@@ -144,7 +165,10 @@ Page<void> _buildPage({
   required RegisterEventKind kind,
   required String pageName,
   required SaveRegisterEventFactory saveRegisterEvent,
+  required UpdateRegisterEventFactory? updateRegisterEvent,
   required RegisterRouteSaved onSaved,
+  required RegisterRouteSaved? onUpdated,
+  required RegisteredEvent? editingEvent,
   required RegisterRouteAction onCancel,
   required RegisterRouteAction? onNotificationsPressed,
   required RegisterRouteAction? onHomePressed,
@@ -159,14 +183,46 @@ Page<void> _buildPage({
   required GetFamilyOverviewFactory? getFamilyOverview,
 }) {
   final save = saveRegisterEvent(context);
+  final update = updateRegisterEvent?.call(context);
+  final persist = editingEvent == null || update == null
+      ? null
+      : (RegisterEventDraft draft) async {
+          if (draft.type != editingEvent.type) {
+            throw StateError('The register event type cannot be changed.');
+          }
+          final notes = draft.notes?.trim();
+          final caregiverId = draft.caregiverId?.trim();
+          final updated = await update(
+            editingEvent.id,
+            RegisterEventPatch(
+              occurredAt: draft.occurredAt,
+              details: draft.details,
+              notes: notes?.isEmpty == false ? notes : null,
+              clearNotes: notes == null || notes.isEmpty,
+              caregiverId: caregiverId?.isEmpty == false ? caregiverId : null,
+              clearCaregiverId: caregiverId == null || caregiverId.isEmpty,
+              schemaVersion: draft.schemaVersion,
+            ),
+          );
+          if (updated == null) {
+            throw StateError('The register event no longer exists.');
+          }
+          return updated;
+        };
   return MaterialPage<void>(
-    key: ValueKey('register-${kind.routeValue}'),
+    key: ValueKey(
+      editingEvent == null
+          ? 'register-${kind.routeValue}'
+          : 'edit-register-${editingEvent.id}',
+    ),
     name: pageName,
     child: getFamilyOverview == null
         ? _RegisterContent(
             kind: kind,
             save: save,
-            onSaved: onSaved,
+            persist: persist,
+            initialEvent: editingEvent,
+            onSaved: editingEvent == null ? onSaved : onUpdated ?? onSaved,
             onCancel: onCancel,
             onNotificationsPressed: onNotificationsPressed,
             onHomePressed: onHomePressed,
@@ -174,7 +230,7 @@ Page<void> _buildPage({
             onHealthPressed: onHealthPressed,
             onFamilyPressed: onFamilyPressed,
             onBabyPressed: onBabyPressed,
-            babyId: babyId,
+            babyId: editingEvent?.babyId ?? babyId,
             babyName: babyName,
             babyAge: babyAge,
             familyContextLabel: familyContextLabel,
@@ -186,7 +242,9 @@ Page<void> _buildPage({
               return _RegisterContent(
                 kind: kind,
                 save: save,
-                onSaved: onSaved,
+                persist: persist,
+                initialEvent: editingEvent,
+                onSaved: editingEvent == null ? onSaved : onUpdated ?? onSaved,
                 onCancel: onCancel,
                 onNotificationsPressed: onNotificationsPressed,
                 onHomePressed: onHomePressed,
@@ -194,7 +252,7 @@ Page<void> _buildPage({
                 onHealthPressed: onHealthPressed,
                 onFamilyPressed: onFamilyPressed,
                 onBabyPressed: onBabyPressed,
-                babyId: activeBaby.id,
+                babyId: editingEvent?.babyId ?? activeBaby.id,
                 babyName: activeBaby.name,
                 babyAge: _babyAge(activeBaby.birthDate, DateTime.now()),
                 familyContextLabel: family.babies.length == 1
@@ -300,6 +358,8 @@ class _RegisterContent extends StatelessWidget {
   const _RegisterContent({
     required this.kind,
     required this.save,
+    required this.persist,
+    required this.initialEvent,
     required this.onSaved,
     required this.onCancel,
     required this.onNotificationsPressed,
@@ -317,6 +377,8 @@ class _RegisterContent extends StatelessWidget {
 
   final RegisterEventKind kind;
   final SaveRegisterEvent save;
+  final PersistRegisterEvent? persist;
+  final RegisteredEvent? initialEvent;
   final RegisterRouteSaved onSaved;
   final RegisterRouteAction onCancel;
   final RegisterRouteAction? onNotificationsPressed;
@@ -337,36 +399,48 @@ class _RegisterContent extends StatelessWidget {
           BlocProvider(
             create: (_) => FeedingRegisterCubit(
               saveRegisterEvent: save,
+              persistRegisterEvent: persist,
+              initialEvent: initialEvent,
               babyId: babyId,
             ),
           ),
           BlocProvider(
             create: (_) => SleepRegisterCubit(
               saveRegisterEvent: save,
+              persistRegisterEvent: persist,
+              initialEvent: initialEvent,
               babyId: babyId,
             ),
           ),
           BlocProvider(
             create: (_) => DiaperRegisterCubit(
               saveRegisterEvent: save,
+              persistRegisterEvent: persist,
+              initialEvent: initialEvent,
               babyId: babyId,
             ),
           ),
           BlocProvider(
             create: (_) => ClinicalObservationRegisterCubit(
               saveRegisterEvent: save,
+              persistRegisterEvent: persist,
+              initialEvent: initialEvent,
               babyId: babyId,
             ),
           ),
           BlocProvider(
             create: (_) => MedicationRegisterCubit(
               saveRegisterEvent: save,
+              persistRegisterEvent: persist,
+              initialEvent: initialEvent,
               babyId: babyId,
             ),
           ),
           BlocProvider(
             create: (_) => MeasurementRegisterCubit(
               saveRegisterEvent: save,
+              persistRegisterEvent: persist,
+              initialEvent: initialEvent,
               babyId: babyId,
             ),
           ),
@@ -374,6 +448,8 @@ class _RegisterContent extends StatelessWidget {
         child: Builder(
           builder: (pageContext) => RegisterPageView(
             initialKind: kind,
+            initialEvent: initialEvent,
+            isEditing: initialEvent != null,
             babyName: babyName,
             babyAge: babyAge,
             familyContextLabel: familyContextLabel,
@@ -454,3 +530,12 @@ String _babyAge(DateTime birthDate, DateTime referenceDate) {
   if (months <= 0) return 'Menos de un mes';
   return months == 1 ? '1 mes' : '$months meses';
 }
+
+RegisterEventKind _kindForType(RegisterEventType type) => switch (type) {
+      RegisterEventType.feeding => RegisterEventKind.feeding,
+      RegisterEventType.sleep => RegisterEventKind.sleep,
+      RegisterEventType.diaper => RegisterEventKind.diaper,
+      RegisterEventType.clinicalObservation => RegisterEventKind.observation,
+      RegisterEventType.medication => RegisterEventKind.medication,
+      RegisterEventType.measurement => RegisterEventKind.measurement,
+    };

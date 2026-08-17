@@ -17,6 +17,8 @@ class RegisterPageView extends StatefulWidget {
     required this.onKindChanged,
     required this.onSaved,
     required this.onCancel,
+    this.initialEvent,
+    this.isEditing = false,
     this.babyAvatar,
     this.onNotificationsPressed,
     this.onHomePressed,
@@ -35,6 +37,8 @@ class RegisterPageView extends StatefulWidget {
   final ValueChanged<RegisterEventKind> onKindChanged;
   final ValueChanged<RegisteredEvent> onSaved;
   final VoidCallback onCancel;
+  final RegisteredEvent? initialEvent;
+  final bool isEditing;
   final VoidCallback? onNotificationsPressed;
   final VoidCallback? onHomePressed;
   final VoidCallback? onAgendaPressed;
@@ -69,6 +73,7 @@ class _RegisterPageViewState extends State<RegisterPageView> {
   void initState() {
     super.initState();
     _kind = widget.initialKind;
+    _hydrateControllers(widget.initialEvent);
   }
 
   @override
@@ -76,6 +81,9 @@ class _RegisterPageViewState extends State<RegisterPageView> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.initialKind != widget.initialKind) {
       _kind = widget.initialKind;
+    }
+    if (oldWidget.initialEvent?.id != widget.initialEvent?.id) {
+      _hydrateControllers(widget.initialEvent);
     }
   }
 
@@ -136,6 +144,24 @@ class _RegisterPageViewState extends State<RegisterPageView> {
         state.savedEvent != null) {
       widget.onSaved(state.savedEvent!);
     }
+  }
+
+  void _hydrateControllers(RegisteredEvent? event) {
+    if (event == null) return;
+    final details = event.details;
+    _feedingAmount.text = details['amount_ml']?.toString() ?? '';
+    _feedingNotes.text = event.notes ?? '';
+    _feedingSymptoms.text = details['symptoms']?.toString() ?? '';
+    _sleepNotes.text = event.notes ?? '';
+    _sleepSymptoms.text = details['symptoms']?.toString() ?? '';
+    _diaperNotes.text = event.notes ?? '';
+    _diaperSymptoms.text = details['symptoms']?.toString() ?? '';
+    _clinicalDescription.text = details['description']?.toString() ?? '';
+    _medicationName.text = details['name']?.toString() ?? '';
+    _medicationDose.text = details['dose']?.toString() ?? '';
+    _medicationNotes.text = event.notes ?? '';
+    _measurementValue.text = details['value']?.toString() ?? '';
+    _measurementNotes.text = event.notes ?? '';
   }
 
   Widget _feeding() {
@@ -472,9 +498,9 @@ class _RegisterPageViewState extends State<RegisterPageView> {
     VoidCallback? onBackPressed,
   }) {
     return RegisterEventView(
-      title: title,
+      title: widget.isEditing ? 'Editar registro' : title,
       selectedKind: kind,
-      onKindChanged: _onKindChanged,
+      onKindChanged: widget.isEditing ? null : _onKindChanged,
       babyName: widget.babyName,
       babyAge: widget.babyAge,
       familyContextLabel: widget.familyContextLabel,
@@ -495,7 +521,7 @@ class _RegisterPageViewState extends State<RegisterPageView> {
       onSavePressed: state.isSaving ? null : onSave,
       onCancelPressed: state.isSaving ? null : widget.onCancel,
       isSaving: state.isSaving,
-      saveLabel: saveLabel,
+      saveLabel: widget.isEditing ? 'Guardar cambios' : saveLabel,
       errorMessage: state.message,
     );
   }

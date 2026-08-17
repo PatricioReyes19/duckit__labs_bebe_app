@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:family/family.dart';
@@ -5,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 
 class FamilyFlowView extends StatelessWidget {
   const FamilyFlowView({
@@ -48,6 +52,7 @@ class FamilyFlowView extends StatelessWidget {
         FamilySubpageKind.babyDetail => _BabyDetailView(
           family: family,
           babyId: babyId ?? family.activeBabyId,
+          repository: familyRepository,
         ),
         FamilySubpageKind.careCircle => _CareCircleView(
           family: family,
@@ -312,18 +317,32 @@ class _AddBabyViewState extends State<_AddBabyView> {
   }
 }
 
-class _BabyDetailView extends StatelessWidget {
-  const _BabyDetailView({required this.family, required this.babyId});
+class _BabyDetailView extends StatefulWidget {
+  const _BabyDetailView({
+    required this.family,
+    required this.babyId,
+    required this.repository,
+  });
 
   final FamilyOverviewEntity family;
   final String babyId;
+  final FamilyRepository repository;
+
+  @override
+  State<_BabyDetailView> createState() => _BabyDetailViewState();
+}
+
+class _BabyDetailViewState extends State<_BabyDetailView> {
+  late BabyEntity _baby = widget.family.babies.firstWhere(
+    (item) => item.id == widget.babyId,
+    orElse: () => widget.family.activeBaby,
+  );
+  bool _saving = false;
 
   @override
   Widget build(BuildContext context) {
-    final baby = family.babies.firstWhere(
-      (item) => item.id == babyId,
-      orElse: () => family.activeBaby,
-    );
+    final family = widget.family;
+    final baby = _baby;
     final name = baby.name;
     final age = _familyBabyAge(baby.birthDate);
     final initials = _initials(baby.name);
@@ -343,7 +362,11 @@ class _BabyDetailView extends StatelessWidget {
             padding: EdgeInsets.all(theme.spacing.spacingXl),
             child: Row(
               children: [
-                _InitialAvatar(initials: initials, size: 92),
+                _InitialAvatar(
+                  initials: initials,
+                  size: 92,
+                  imagePath: baby.avatarAssetPath,
+                ),
                 SizedBox(width: theme.spacing.spacingXl),
                 Expanded(
                   child: Column(
@@ -373,11 +396,13 @@ class _BabyDetailView extends StatelessWidget {
                 ),
                 IconButton(
                   tooltip: 'Editar datos',
-                  onPressed: () => _showMessage(
-                    context,
-                    'La edición del perfil se guardará en este bebé.',
-                  ),
-                  icon: const Icon(Icons.edit_outlined),
+                  onPressed: _saving ? null : _editProfile,
+                  icon: _saving
+                      ? const SizedBox.square(
+                          dimension: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.edit_outlined),
                 ),
               ],
             ),
@@ -390,12 +415,12 @@ class _BabyDetailView extends StatelessWidget {
             BebeSettingsValueTile(
               title: 'Fecha de nacimiento',
               value: _familyBirthDate(baby.birthDate),
-              onPressed: () => _showMessage(context, 'Editar fecha'),
+              onPressed: _saving ? null : _editProfile,
             ),
             BebeSettingsValueTile(
               title: 'Fotografía',
               value: baby.avatarAssetPath == null ? 'Sin foto' : 'Agregada',
-              onPressed: () => _showMessage(context, 'Cambiar fotografía'),
+              onPressed: _saving ? null : _editProfile,
             ),
             BebeSettingsValueTile(
               title: 'Referencia para crecimiento',
@@ -450,6 +475,209 @@ class _BabyDetailView extends StatelessWidget {
           ],
         ),
       ],
+    );
+  }
+
+  Future<void> _editProfile() async {
+    final result = await showModalBottomSheet<_BabyProfileEditResult>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (context) => _BabyProfileEditSheet(baby: _baby),
+    );
+    if (result == null || !mounted) return;
+
+    setState(() => _saving = true);
+    try {
+      final avatarPath = result.photoSourcePath == null
+          ? null
+          : await _persistBabyPhoto(result.photoSourcePath!, _baby.id);
+      final updated = await UpdateFamilyBaby(widget.repository)(
+        _baby.id,
+        BabyPatch(
+          name: result.name,
+          birthDate: result.birthDate,
+          avatarAssetPath: avatarPath,
+        ),
+      );
+      if (!mounted) return;
+      if (updated == null) {
+        _showMessage(
+          context,
+          'No encontramos el perfil que intentabas editar.',
+          variant: BebeInAppSnackbarVariant.warning,
+        );
+        return;
+      }
+      setState(() => _baby = updated);
+      _showMessage(context, 'Perfil actualizado.');
+    } on Object catch (_) {
+      if (!mounted) return;
+      _showMessage(
+        context,
+        'No pudimos actualizar el perfil. Intenta nuevamente.',
+        variant: BebeInAppSnackbarVariant.error,
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+}
+
+class _BabyProfileEditResult {
+  const _BabyProfileEditResult({
+    required this.name,
+    required this.birthDate,
+    this.photoSourcePath,
+  });
+
+  final String name;
+  final DateTime birthDate;
+  final String? photoSourcePath;
+}
+
+class _BabyProfileEditSheet extends StatefulWidget {
+  const _BabyProfileEditSheet({required this.baby});
+
+  final BabyEntity baby;
+
+  @override
+  State<_BabyProfileEditSheet> createState() => _BabyProfileEditSheetState();
+}
+
+class _BabyProfileEditSheetState extends State<_BabyProfileEditSheet> {
+  late final TextEditingController _nameController = TextEditingController(
+    text: widget.baby.name,
+  );
+  late DateTime _birthDate = widget.baby.birthDate.toLocal();
+  String? _photoSourcePath;
+  String? _nameError;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    return SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(
+        theme.spacing.spacingL,
+        theme.spacing.spacingL,
+        theme.spacing.spacingL,
+        theme.spacing.spacingXl + bottomInset,
+      ),
+      child: BebeResponsiveContent(
+        maxWidth: BebeLayout.formContentMaxWidth,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Editar perfil del bebé',
+              style: theme.typography.styles.title.lg.bold,
+            ),
+            SizedBox(height: theme.spacing.spacingXl),
+            Align(
+              child: Stack(
+                alignment: Alignment.bottomRight,
+                children: [
+                  _InitialAvatar(
+                    initials: _initials(_nameController.text),
+                    size: 96,
+                    imagePath:
+                        _photoSourcePath ?? widget.baby.avatarAssetPath,
+                  ),
+                  Material(
+                    color: theme.colors.background.brandDefault,
+                    shape: const CircleBorder(),
+                    child: IconButton(
+                      tooltip: 'Cambiar fotografía',
+                      onPressed: _pickPhoto,
+                      color: theme.colors.onPrimary.neutralDefault,
+                      icon: const Icon(Icons.camera_alt_outlined),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: theme.spacing.spacingXl),
+            TextField(
+              controller: _nameController,
+              textCapitalization: TextCapitalization.words,
+              decoration: InputDecoration(
+                labelText: 'Nombre del bebé',
+                errorText: _nameError,
+                border: const OutlineInputBorder(),
+              ),
+              onChanged: (_) => setState(() => _nameError = null),
+            ),
+            SizedBox(height: theme.spacing.spacingL),
+            InkWell(
+              onTap: _pickBirthDate,
+              child: InputDecorator(
+                decoration: const InputDecoration(
+                  labelText: 'Fecha de nacimiento',
+                  suffixIcon: Icon(Icons.calendar_month_outlined),
+                  border: OutlineInputBorder(),
+                ),
+                child: Text(
+                  MaterialLocalizations.of(context).formatMediumDate(
+                    _birthDate,
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(height: theme.spacing.spacingXl),
+            BebeButton(
+              label: 'Guardar cambios',
+              leading: const Icon(Icons.check_rounded),
+              onPressed: _save,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickPhoto() async {
+    final photo = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 88,
+      maxWidth: 1600,
+    );
+    if (photo != null && mounted) {
+      setState(() => _photoSourcePath = photo.path);
+    }
+  }
+
+  Future<void> _pickBirthDate() async {
+    final now = DateTime.now();
+    final date = await showDatePicker(
+      context: context,
+      firstDate: DateTime(now.year - 18),
+      lastDate: now,
+      initialDate: _birthDate.isAfter(now) ? now : _birthDate,
+      helpText: 'Fecha de nacimiento',
+    );
+    if (date != null && mounted) setState(() => _birthDate = date);
+  }
+
+  void _save() {
+    final name = _nameController.text.trim();
+    if (name.length < 2) {
+      setState(() => _nameError = 'Escribe al menos 2 caracteres.');
+      return;
+    }
+    Navigator.of(context).pop(
+      _BabyProfileEditResult(
+        name: name,
+        birthDate: _birthDate,
+        photoSourcePath: _photoSourcePath,
+      ),
     );
   }
 }
@@ -1271,11 +1499,13 @@ class _InitialAvatar extends StatelessWidget {
     required this.initials,
     required this.size,
     this.accent = false,
+    this.imagePath,
   });
 
   final String initials;
   final double size;
   final bool accent;
+  final String? imagePath;
 
   @override
   Widget build(BuildContext context) {
@@ -1294,19 +1524,60 @@ class _InitialAvatar extends StatelessWidget {
                 : theme.colors.border.brandAlternative,
           ),
         ),
-        child: Center(
-          child: Text(
-            initials,
-            style: theme.typography.styles.title.md.bold.copyWith(
-              color: accent
-                  ? theme.colors.text.accentDefault
-                  : theme.colors.text.brandDefault,
-            ),
-          ),
-        ),
+        child: imagePath != null && File(imagePath!).existsSync()
+            ? ClipOval(
+                child: Image.file(
+                  File(imagePath!),
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                ),
+              )
+            : Center(
+                child: Text(
+                  initials,
+                  style: theme.typography.styles.title.md.bold.copyWith(
+                    color: accent
+                        ? theme.colors.text.accentDefault
+                        : theme.colors.text.brandDefault,
+                  ),
+                ),
+              ),
       ),
     );
   }
+}
+
+Future<String> _persistBabyPhoto(String sourcePath, String babyId) async {
+  final source = File(sourcePath);
+  if (!await source.exists()) {
+    throw StateError('La fotografía seleccionada ya no está disponible.');
+  }
+  final root = await getApplicationSupportDirectory();
+  final safeBabyId = babyId.replaceAll(RegExp('[^a-zA-Z0-9_-]'), '_');
+  final directory = Directory(
+    '${root.path}${Platform.pathSeparator}baby_profiles'
+    '${Platform.pathSeparator}$safeBabyId',
+  );
+  await directory.create(recursive: true);
+  final separator = sourcePath.lastIndexOf('.');
+  final rawExtension = separator < 0
+      ? '.jpg'
+      : sourcePath.substring(separator).toLowerCase();
+  final extension = const {
+    '.jpg',
+    '.jpeg',
+    '.png',
+    '.webp',
+    '.heic',
+  }.contains(rawExtension)
+      ? rawExtension
+      : '.jpg';
+  final destination = File(
+    '${directory.path}${Platform.pathSeparator}'
+    'avatar_${DateTime.now().microsecondsSinceEpoch}$extension',
+  );
+  await source.copy(destination.path);
+  return destination.path;
 }
 
 String _initials(String value) => value

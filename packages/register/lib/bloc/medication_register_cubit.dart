@@ -6,20 +6,11 @@ class MedicationRegisterCubit extends RegisterFormCubit {
   MedicationRegisterCubit({
     required super.saveRegisterEvent,
     required super.babyId,
+    super.persistRegisterEvent,
+    RegisteredEvent? initialEvent,
     DateTime? initialDateTime,
   }) : super(
-          initialValues: {
-            'subtype': 'medication',
-            'name': '',
-            'dose': '',
-            'unit': 'mL',
-            'occurredAt': initialDateTime ?? DateTime.now(),
-            'frequency': RegisterCatalog.medicationFrequencies[3],
-            'endDate': null,
-            'scheduleNextDoses': true,
-            'notes': '',
-            'caregiver': 'mother',
-          },
+          initialValues: _initialValues(initialEvent, initialDateTime),
         );
 
   String get subtype => state.value<String>('subtype');
@@ -80,3 +71,30 @@ class MedicationRegisterCubit extends RegisterFormCubit {
     );
   }
 }
+
+Map<String, Object?> _initialValues(
+  RegisteredEvent? event,
+  DateTime? initialDateTime,
+) {
+  final details = event?.details ?? const <String, Object?>{};
+  return {
+    'subtype': details['subtype'] as String? ?? 'medication',
+    'name': details['name'] as String? ?? '',
+    'dose': details['dose']?.toString() ?? '',
+    'unit': details['unit'] as String? ?? 'mL',
+    'occurredAt':
+        event?.occurredAt.toLocal() ?? initialDateTime ?? DateTime.now(),
+    'frequency': details['frequency'] as String? ??
+        RegisterCatalog.medicationFrequencies[3],
+    'endDate': _dateValue(details['end_date']),
+    'scheduleNextDoses': details['schedule_next_doses'] as bool? ?? true,
+    'notes': event?.notes ?? '',
+    'caregiver': event?.caregiverId ?? 'mother',
+  };
+}
+
+DateTime? _dateValue(Object? value) => switch (value) {
+      final DateTime date => date.toLocal(),
+      final String text => DateTime.tryParse(text)?.toLocal(),
+      _ => null,
+    };

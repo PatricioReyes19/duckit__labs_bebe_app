@@ -13,23 +13,17 @@ class SleepRegisterCubit extends RegisterFormCubit {
   SleepRegisterCubit({
     required super.saveRegisterEvent,
     required super.babyId,
+    super.persistRegisterEvent,
+    RegisteredEvent? initialEvent,
     DateTime? initialDateTime,
     SleepRegisterClock? clock,
   })  : _clock = clock ?? DateTime.now,
         super(
-          initialValues: {
-            'mode': SleepRegisterMode.ongoing.name,
-            'subtype': 'nap',
-            'startedAt': _atMinutePrecision(
-              initialDateTime ?? (clock ?? DateTime.now)(),
-            ),
-            'durationMinutes': 60,
-            'endAt': null,
-            'place': 'crib',
-            'mood': 'calm',
-            'notes': '',
-            'symptoms': '',
-          },
+          initialValues: _initialValues(
+            initialEvent,
+            initialDateTime,
+            clock ?? DateTime.now,
+          ),
         );
 
   final SleepRegisterClock _clock;
@@ -125,4 +119,35 @@ class SleepRegisterCubit extends RegisterFormCubit {
       },
     );
   }
+}
+
+Map<String, Object?> _initialValues(
+  RegisteredEvent? event,
+  DateTime? initialDateTime,
+  SleepRegisterClock clock,
+) {
+  final details = event?.details ?? const <String, Object?>{};
+  final startedAt = _atMinutePrecision(
+    event?.occurredAt.toLocal() ?? initialDateTime ?? clock(),
+  );
+  final endedAt = event?.endedAt?.toLocal();
+  final duration = switch (details['duration_minutes']) {
+    final int value => value,
+    final num value => value.toInt(),
+    _ when endedAt != null => endedAt.difference(startedAt).inMinutes,
+    _ => 60,
+  };
+  return {
+    'mode': event == null || event.isActive
+        ? SleepRegisterMode.ongoing.name
+        : SleepRegisterMode.completed.name,
+    'subtype': details['subtype'] as String? ?? 'nap',
+    'startedAt': startedAt,
+    'durationMinutes': duration < 1 ? 1 : duration,
+    'endAt': endedAt,
+    'place': details['place'] as String? ?? 'crib',
+    'mood': details['mood'] as String? ?? 'calm',
+    'notes': event?.notes ?? '',
+    'symptoms': details['symptoms'] as String? ?? '',
+  };
 }

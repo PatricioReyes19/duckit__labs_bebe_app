@@ -122,6 +122,7 @@ GoRouter createAppRouter({
                         onEventDeleted: notificationReminders.cancelRegister,
                         syncService: (_) => getIt<RegisterEventSyncService>(),
                         onRegisterPressed: RegisterPage.open,
+                        onEditEvent: RegisterPage.openForEdit,
                       ),
                     ],
                   ),
@@ -527,6 +528,7 @@ GoRouter createAppRouter({
       RegisterPage(
         parentNavigatorKey: rootNavigatorKey,
         saveRegisterEvent: (_) => getIt<SaveRegisterEvent>(),
+        updateRegisterEvent: (_) => getIt<UpdateRegisterEvent>(),
         getFamilyOverview: (_) => getIt<GetFamilyOverview>(),
         onNotificationsPressed: (context) => context.push('/notifications'),
         onHomePressed: (context) => context.go(StartupPaths.home),
@@ -546,6 +548,25 @@ GoRouter createAppRouter({
             context,
             title: 'Registro guardado',
             message: 'Ya está disponible en el historial.',
+            variant: BebeInAppSnackbarVariant.success,
+          );
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.go(StartupPaths.home);
+          }
+        },
+        onUpdated: (context, event) {
+          unawaited(
+            _scheduleRegisterReminderWithPermission(
+              notificationReminders,
+              event,
+            ),
+          );
+          BebeInAppSnackbar.show(
+            context,
+            title: 'Registro actualizado',
+            message: 'Los cambios ya están disponibles en el historial.',
             variant: BebeInAppSnackbarVariant.success,
           );
           if (context.canPop()) {

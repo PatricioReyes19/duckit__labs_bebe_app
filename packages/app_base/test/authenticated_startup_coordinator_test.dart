@@ -9,6 +9,7 @@ void main() {
     final harness = _StartupHarness(authoritative: [_family()]);
 
     final result = await harness.coordinator.resolve(user: _userA);
+    await harness.backgroundDomainCompleted.future;
 
     expect(result.destination, EntryDestination.home);
     expect(harness.activatedBabyIds, ['baby-1']);
@@ -221,6 +222,7 @@ void main() {
     );
 
     await harness.coordinator.resolve(user: _userA);
+    await harness.backgroundDomainCompleted.future;
 
     expect(
       harness.trace,
@@ -229,9 +231,9 @@ void main() {
         'family_hydrated',
         'babies_hydrated',
         'active_context_resolved',
-        'domain_sync_started',
-        'domain_sync_completed',
         'entry_resolution_completed',
+        'background_domain_sync_started',
+        'background_domain_sync_completed',
       ]),
     );
     expect(contexts.value?.babyId, 'baby-1');
@@ -256,8 +258,28 @@ void main() {
     gate.complete();
     expect((await first).destination, EntryDestination.home);
     expect((await second).destination, EntryDestination.home);
-    expect(harness.syncCount, 1);
+    await harness.backgroundDomainCompleted.future;
+    expect(harness.syncCount, 2);
     expect(harness.domainSyncCount, 1);
+  });
+
+  test('IT-RESUME-001: domain hydration does not retain splash', () async {
+    final domainGate = Completer<void>();
+    final harness = _StartupHarness(
+      authoritative: [_family()],
+      domainSyncGate: domainGate,
+    );
+
+    final result = await harness.coordinator.resolve(user: _userA);
+    await harness.backgroundDomainStarted.future;
+
+    expect(result.destination, EntryDestination.home);
+    expect(harness.domainSyncCount, 1);
+    expect(harness.realtimeCount, 0);
+
+    domainGate.complete();
+    await harness.backgroundDomainCompleted.future;
+    expect(harness.realtimeCount, 1);
   });
 }
 
@@ -305,6 +327,7 @@ class _StartupHarness {
     this.syncPhase = InitialDataSyncPhase.ready,
     _MemoryActiveContextRepository? contexts,
     this.syncGate,
+    this.domainSyncGate,
   }) : contexts = contexts ?? _MemoryActiveContextRepository() {
     coordinator = AuthenticatedStartupCoordinator(
       getCurrentSession: () async => AuthSession(user: user),
@@ -335,12 +358,15 @@ class _StartupHarness {
   final InitialDataSyncPhase syncPhase;
   final _MemoryActiveContextRepository contexts;
   final Completer<void>? syncGate;
+  final Completer<void>? domainSyncGate;
   late final AuthenticatedStartupCoordinator coordinator;
   final activatedBabyIds = <String>[];
   final trace = <String>[];
   var syncCount = 0;
   var domainSyncCount = 0;
   var realtimeCount = 0;
+  final backgroundDomainStarted = Completer<void>();
+  final backgroundDomainCompleted = Completer<void>();
 
   Future<InitialDataSyncState> _synchronize({
     Future<void> Function()? startRealtime,
@@ -360,9 +386,16 @@ class _StartupHarness {
     final continueSync = await beforeDomainSync?.call() ?? true;
     if (continueSync) {
       domainSyncCount += 1;
+      if (!backgroundDomainStarted.isCompleted) {
+        backgroundDomainStarted.complete();
+      }
       onMilestone?.call(InitialDataSyncMilestone.domainSyncStarted);
+      await domainSyncGate?.future;
       await startRealtime?.call();
       onMilestone?.call(InitialDataSyncMilestone.domainSyncCompleted);
+      if (!backgroundDomainCompleted.isCompleted) {
+        backgroundDomainCompleted.complete();
+      }
     }
     return InitialDataSyncState(
       phase: syncPhase,

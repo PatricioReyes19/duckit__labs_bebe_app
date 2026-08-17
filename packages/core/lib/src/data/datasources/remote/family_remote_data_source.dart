@@ -47,10 +47,16 @@ class SupabaseFamilyRemoteDataSource implements FamilyRemoteDataSource {
 
   @override
   Future<List<FamilySyncSnapshot>> pull() async {
-    final families = await _client.select('families', order: 'updated_at.asc');
-    final babies = await _client.select('babies', order: 'updated_at.asc');
-    final memberships = await _client.select('baby_caregivers');
-    final profiles = await _client.select('profiles');
+    final results = await Future.wait([
+      _client.select('families', order: 'updated_at.asc'),
+      _client.select('babies', order: 'updated_at.asc'),
+      _client.select('baby_caregivers'),
+      _client.select('profiles'),
+    ]);
+    final families = results[0];
+    final babies = results[1];
+    final memberships = results[2];
+    final profiles = results[3];
     final profileById = {
       for (final profile in profiles)
         _requiredText(profile, 'id', entity: 'perfil'): profile,

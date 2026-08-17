@@ -8,6 +8,10 @@ typedef GetRegisterEventsFactory = GetRegisterEvents Function(
   BuildContext context,
 );
 typedef HomeDailyHistoryAction = void Function(BuildContext context);
+typedef HomeDailyHistoryEditAction = void Function(
+  BuildContext context,
+  RegisteredEvent event,
+);
 typedef DeleteRegisterEventFactory = DeleteRegisterEvent Function(
   BuildContext context,
 );
@@ -26,6 +30,7 @@ class HomeDailyHistoryPage extends GoRoute {
   HomeDailyHistoryPage({
     required GetRegisterEventsFactory getRegisterEvents,
     required HomeDailyHistoryAction onRegisterPressed,
+    this.onEditEvent,
     this.deleteRegisterEvent,
     this.finishActiveRegisterEvent,
     this.onEventDeleted,
@@ -52,6 +57,7 @@ class HomeDailyHistoryPage extends GoRoute {
                       babyId: babyId,
                       babyName: babyName,
                       onRegisterPressed: onRegisterPressed,
+                      onEditEvent: onEditEvent,
                     )
                   : FutureBuilder<FamilyOverviewEntity>(
                       future: getFamilyOverview(context)(),
@@ -71,6 +77,7 @@ class HomeDailyHistoryPage extends GoRoute {
                           babyId: baby.id,
                           babyName: baby.name,
                           onRegisterPressed: onRegisterPressed,
+                          onEditEvent: onEditEvent,
                         );
                       },
                     ),
@@ -85,6 +92,7 @@ class HomeDailyHistoryPage extends GoRoute {
   final RegisterReminderDeleted? onEventDeleted;
   final RegisterEventSyncServiceFactory? syncService;
   final HomeFamilyOverviewFactory? getFamilyOverview;
+  final HomeDailyHistoryEditAction? onEditEvent;
 
   static const nameRoute = 'HomeDailyHistory';
   static const relativePath = 'history';
@@ -101,6 +109,7 @@ class _HomeDailyHistoryContent extends StatelessWidget {
     required this.babyId,
     required this.babyName,
     required this.onRegisterPressed,
+    required this.onEditEvent,
   });
 
   final GetRegisterEventsFactory getRegisterEvents;
@@ -111,6 +120,7 @@ class _HomeDailyHistoryContent extends StatelessWidget {
   final String babyId;
   final String babyName;
   final HomeDailyHistoryAction onRegisterPressed;
+  final HomeDailyHistoryEditAction? onEditEvent;
 
   @override
   Widget build(BuildContext context) => BlocProvider(
@@ -125,6 +135,9 @@ class _HomeDailyHistoryContent extends StatelessWidget {
         child: HomeDailyHistoryView(
           babyName: babyName,
           onRegisterPressed: () => onRegisterPressed(context),
+          onEditEvent: onEditEvent == null
+              ? null
+              : (event) => onEditEvent!(context, event),
         ),
       );
 }

@@ -131,16 +131,82 @@ void main() {
       const Offset(0, -900),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Próxima dosis: Vitamina D'), findsOneWidget);
-    expect(find.text('Todos los días'), findsOneWidget);
     expect(
-      find.bySemanticsLabel(RegExp(r'4 próximas ocurrencias agrupadas')),
+      find.descendant(
+        of: find.byKey(const ValueKey('agenda-upcoming-scroll-list')),
+        matching: find.text('Próxima dosis: Vitamina D'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Diario · 4x'), findsOneWidget);
+    expect(
+      find.bySemanticsLabel(RegExp(r'4 ocurrencias agrupadas')),
       findsOneWidget,
     );
 
     await tester.ensureVisible(find.text('Registrar evento ahora'));
     await tester.tap(find.text('Registrar evento ahora'));
     expect(registerPressed, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('groups recurring events for the selected day into one card', (
+    tester,
+  ) async {
+    final now = DateTime(2026, 8, 10, 8);
+    final agendaRepository = _FakeAgendaRepository(
+      AgendaOverviewEntity(
+        events: [
+          for (var index = 0; index < 2; index++)
+            AgendaEventEntity(
+              id: 'today-recurring-dose-$index',
+              babyId: 'baby-1',
+              category: AgendaCategory.medication,
+              title: 'Dosis: Hierro',
+              description: '2 gotas · Una vez al día',
+              startsAt: now.add(Duration(hours: index + 1)),
+              sourceRegisterEventId: 'medication-iron',
+              syncStatus: AgendaSyncStatus.synced,
+            ),
+        ],
+        remindersEnabled: true,
+        isOffline: false,
+      ),
+    );
+    final bloc = AgendaBloc(
+      getAgendaOverview: GetAgendaOverview(
+        agendaRepository,
+        _FakeRegisterRepository(const []),
+      ),
+      babyId: 'baby-1',
+      clock: () => now,
+    )..add(const AgendaEvent.started());
+    addTearDown(bloc.close);
+
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: bebeTheme.lightTheme(),
+        home: Scaffold(
+          body: BlocProvider.value(
+            value: bloc,
+            child: AgendaView(
+              onRegisterPressed: () {},
+              onRegisterHistoryPressed: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Dosis: Hierro'), findsOneWidget);
+    expect(find.text('Diario · 2x'), findsOneWidget);
+    expect(
+      find.bySemanticsLabel(RegExp(r'2 ocurrencias agrupadas')),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
   });
 

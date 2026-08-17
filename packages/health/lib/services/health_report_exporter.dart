@@ -44,10 +44,18 @@ class HealthReportExporter {
       author: 'BebéApp',
       creator: 'BebéApp',
     );
-    final records = _recordsInRange(controller);
-    final events = controller.overview?.events ?? const <HealthEventEntity>[];
-    final measurements =
-        controller.overview?.measurements ?? const <HealthMeasurementEntity>[];
+    final report = controller.reportSnapshot;
+    final records = report.records;
+    final events = (controller.overview?.events ?? const <HealthEventEntity>[])
+        .where(
+          (event) =>
+              event.babyId == controller.activeBaby?.id &&
+              _inRange(event.startsAt, report),
+        )
+        .toList(growable: false);
+    final measurements = controller.measurements
+        .where((item) => _inRange(item.recordedAt, report))
+        .toList(growable: false);
     final babyName = controller.activeBaby?.name ?? 'Bebé';
     final rangeLabel = _rangeLabel(controller.reportRange);
 
@@ -93,11 +101,11 @@ class HealthReportExporter {
             style: pw.TextStyle(fontSize: 28, fontWeight: pw.FontWeight.bold),
           ),
           pw.Text(
-            '$rangeLabel · Generado el ${_date(DateTime.now())}',
+            '$rangeLabel · Generado el ${_date(report.generatedAt.toLocal())}',
             style: const pw.TextStyle(color: PdfColors.grey700),
           ),
           pw.SizedBox(height: 22),
-          _summary(records),
+          _summary(report),
           pw.SizedBox(height: 24),
           _sectionTitle('Vacunas y controles'),
           _eventsTable(events),
@@ -127,7 +135,7 @@ class HealthReportExporter {
   Uint8List buildCsv(HealthFlowController controller) {
     final rows = <List<String>>[
       ['fecha', 'hora', 'tipo', 'detalle', 'notas', 'sincronizacion'],
-      for (final event in _recordsInRange(controller))
+      for (final event in controller.reportSnapshot.records)
         [
           _date(event.occurredAt),
           _time(event.occurredAt),
@@ -141,32 +149,44 @@ class HealthReportExporter {
     return Uint8List.fromList(utf8.encode('\uFEFF$csv'));
   }
 
-  static pw.Widget _summary(List<RegisteredEvent> records) {
-    int count(RegisterEventType type) =>
-        records.where((event) => event.type == type).length;
-    final totalMl = records
-        .where((event) => event.type == RegisterEventType.feeding)
-        .map((event) => (event.details['amount_ml'] as num?)?.toDouble() ?? 0)
-        .fold<double>(0, (total, value) => total + value);
+  static pw.Widget _summary(HealthReportSnapshot report) {
+    final totalMl = report.feedingVolumeMl;
+    final sleepMinutes = report.sleepDurationMinutes;
+    final feedingValue = totalMl != null
+        ? '${totalMl.round()} mL'
+        : report.feedings.isEmpty
+        ? 'Sin datos'
+        : '${report.feedings.length} tomas';
+    final sleepValue = sleepMinutes != null
+        ? _sleepDuration(sleepMinutes)
+        : report.activeSleeps.isNotEmpty
+        ? 'En curso'
+        : report.completedSleeps.isNotEmpty
+        ? '${report.completedSleeps.length} sesiones'
+        : 'Sin datos';
+    final diaperValue = report.diapers.isEmpty
+        ? 'Sin datos'
+        : '${report.diapers.length} cambios';
+    final observationCount = report.records
+        .where((event) => event.type == RegisterEventType.clinicalObservation)
+        .length;
     return pw.Column(
       children: [
         pw.Row(
           children: [
-            _summaryItem('Alimentación', count(RegisterEventType.feeding)),
+            _summaryItem('Alimentación', feedingValue),
             pw.SizedBox(width: 10),
-            _summaryItem('Sueño', count(RegisterEventType.sleep)),
+            _summaryItem('Sueño', sleepValue),
             pw.SizedBox(width: 10),
-            _summaryItem('Pañales', count(RegisterEventType.diaper)),
+            _summaryItem('Pañales', diaperValue),
           ],
         ),
         pw.SizedBox(height: 10),
         pw.Row(
           children: [
-            _summaryItem('Mamadera / fórmula', totalMl.round(), unit: 'mL'),
-            pw.SizedBox(width: 10),
             _summaryItem(
               'Observaciones',
-              count(RegisterEventType.clinicalObservation),
+              observationCount == 0 ? 'Sin datos' : '$observationCount',
             ),
           ],
         ),
@@ -174,7 +194,7 @@ class HealthReportExporter {
     );
   }
 
-  static pw.Widget _summaryItem(String label, int value, {String? unit}) =>
+  static pw.Widget _summaryItem(String label, String value) =>
       pw.Expanded(
         child: pw.Container(
           padding: const pw.EdgeInsets.all(12),
@@ -187,9 +207,9 @@ class HealthReportExporter {
             children: [
               pw.Text(label, style: const pw.TextStyle(fontSize: 9)),
               pw.Text(
-                unit == null ? '$value' : '$value $unit',
+                value,
                 style: pw.TextStyle(
-                  fontSize: 21,
+                  fontSize: 16,
                   color: PdfColors.teal700,
                   fontWeight: pw.FontWeight.bold,
                 ),
@@ -227,7 +247,7 @@ class HealthReportExporter {
   }
 
   static pw.Widget _measurementsTable(
-    List<HealthMeasurementEntity> measurements,
+    List<HealthMeasurementRecord> measurements,
   ) {
     if (measurements.isEmpty) return pw.Text('Sin mediciones.');
     return pw.TableHelper.fromTextArray(
@@ -268,18 +288,18 @@ class HealthReportExporter {
     );
   }
 
-  static List<RegisteredEvent> _recordsInRange(
-    HealthFlowController controller,
-  ) {
-    final days = switch (controller.reportRange) {
-      HealthReportRange.day => 1,
-      HealthReportRange.week => 7,
-      HealthReportRange.month => 30,
-    };
-    final after = DateTime.now().subtract(Duration(days: days));
-    return controller.reportableRecords
-        .where((event) => event.occurredAt.isAfter(after))
-        .toList(growable: false);
+  static bool _inRange(DateTime value, HealthReportSnapshot report) {
+    final utc = value.toUtc();
+    return !utc.isBefore(report.startsAt) &&
+        !utc.isAfter(report.generatedAt);
+  }
+
+  static String _sleepDuration(int minutes) {
+    final hours = minutes ~/ 60;
+    final remainder = minutes % 60;
+    if (hours == 0) return '$remainder min';
+    if (remainder == 0) return '$hours h';
+    return '$hours h $remainder min';
   }
 
   static String _detail(RegisteredEvent event) {
@@ -330,7 +350,7 @@ class HealthReportExporter {
     final baby = (controller.activeBaby?.name ?? 'bebe')
         .toLowerCase()
         .replaceAll(RegExp('[^a-z0-9]+'), '_');
-    final now = DateTime.now();
+    final now = controller.reportSnapshot.generatedAt.toLocal();
     return 'reporte_salud_${baby}_${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}.$extension';
   }
 }

@@ -57,6 +57,7 @@ class AuthenticatedStartupCoordinator {
   final StartupTraceSink _trace;
   final Map<String, Future<EntryResolution>> _inFlight = {};
   Future<void> _tail = Future<void>.value();
+  final Map<String, Future<void>> _backgroundHydrations = {};
 
   Future<EntryResolution> resolve({required AuthUser user}) {
     final existing = _inFlight[user.id];
@@ -124,7 +125,9 @@ class AuthenticatedStartupCoordinator {
             source: source,
             stopwatch: stopwatch,
           );
-          return contextResolution!.destination == EntryDestination.home;
+          // Family/Baby is the only cold-start barrier. Baby-owned domains are
+          // hydrated immediately afterwards without keeping the splash open.
+          return false;
         },
       );
 
@@ -141,6 +144,9 @@ class AuthenticatedStartupCoordinator {
         );
       }
       await _requireCurrentUser(user.id);
+      if (resolution.destination == EntryDestination.home) {
+        _scheduleBackgroundHydration(user.id);
+      }
       _trace('entry_resolution_completed', {
         'durationMs': stopwatch.elapsedMilliseconds,
         'result': 'success',
@@ -155,6 +161,48 @@ class AuthenticatedStartupCoordinator {
       });
       rethrow;
     }
+  }
+
+  void _scheduleBackgroundHydration(String userId) {
+    if (_backgroundHydrations.containsKey(userId)) return;
+    late final Future<void> operation;
+    operation = Future<void>(() async {
+      try {
+        await _requireCurrentUser(userId);
+        final state = await _synchronizeInitialData(
+          startRealtime: _startRealtime,
+          onMilestone: (milestone) => _trace(
+            switch (milestone) {
+              InitialDataSyncMilestone.profileHydrated =>
+                'background_profile_hydrated',
+              InitialDataSyncMilestone.familyHydrated =>
+                'background_family_hydrated',
+              InitialDataSyncMilestone.domainSyncStarted =>
+                'background_domain_sync_started',
+              InitialDataSyncMilestone.domainSyncCompleted =>
+                'background_domain_sync_completed',
+            },
+            const {'result': 'success'},
+          ),
+        );
+        if (state.phase == InitialDataSyncPhase.failed) {
+          _trace('background_domain_sync_failed', {
+            'result': 'failure',
+            'message': state.message ?? 'unknown',
+          });
+        }
+      } on Object catch (error) {
+        _trace('background_domain_sync_failed', {
+          'result': 'failure',
+          'errorType': error.runtimeType.toString(),
+        });
+      }
+    }).whenComplete(() {
+      if (identical(_backgroundHydrations[userId], operation)) {
+        _backgroundHydrations.remove(userId);
+      }
+    });
+    _backgroundHydrations[userId] = operation;
   }
 
   Future<EntryResolution> _resolveContext({

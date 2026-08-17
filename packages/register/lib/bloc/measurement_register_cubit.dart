@@ -6,15 +6,11 @@ class MeasurementRegisterCubit extends RegisterFormCubit {
   MeasurementRegisterCubit({
     required super.saveRegisterEvent,
     required super.babyId,
+    super.persistRegisterEvent,
+    RegisteredEvent? initialEvent,
     DateTime? initialDateTime,
   }) : super(
-          initialValues: {
-            'measurementType': 'weight',
-            'value': '',
-            'occurredAt': initialDateTime ?? DateTime.now(),
-            'source': 'home',
-            'notes': '',
-          },
+          initialValues: _initialValues(initialEvent, initialDateTime),
         );
 
   String get measurementType => state.value<String>('measurementType');
@@ -55,4 +51,19 @@ class MeasurementRegisterCubit extends RegisterFormCubit {
       },
     );
   }
+}
+
+Map<String, Object?> _initialValues(
+  RegisteredEvent? event,
+  DateTime? initialDateTime,
+) {
+  final details = event?.details ?? const <String, Object?>{};
+  return {
+    'measurementType': details['measurement_type'] as String? ?? 'weight',
+    'value': details['value']?.toString() ?? '',
+    'occurredAt':
+        event?.occurredAt.toLocal() ?? initialDateTime ?? DateTime.now(),
+    'source': details['source'] as String? ?? 'home',
+    'notes': event?.notes ?? '',
+  };
 }

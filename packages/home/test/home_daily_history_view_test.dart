@@ -27,6 +27,7 @@ void main() {
     tester,
   ) async {
     final now = DateTime.now();
+    String? editedEventId;
     final events = [
       RegisteredEvent(
         id: 'today-feeding',
@@ -66,6 +67,7 @@ void main() {
             child: HomeDailyHistoryView(
               babyName: 'Mateo Reyes',
               onRegisterPressed: () {},
+              onEditEvent: (event) => editedEventId = event.id,
             ),
           ),
         ),
@@ -77,6 +79,7 @@ void main() {
     expect(find.text('1 registro'), findsOneWidget);
     expect(find.text('Alimentación'), findsWidgets);
     expect(find.text('Sueño'), findsOneWidget);
+    expect(find.text('Gestionar'), findsOneWidget);
 
     await tester.tap(find.text('Sueño'));
     await tester.pumpAndSettle();
@@ -100,6 +103,82 @@ void main() {
     expect(find.byType(BebeBottomSheet), findsOneWidget);
     expect(sheetHeight, lessThanOrEqualTo(screenHeight * .68 + 1));
     expect(sheetHeight, lessThan(screenHeight));
+    expect(
+      find.byKey(const ValueKey('edit-register-today-feeding')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('delete-register-today-feeding')),
+      findsOneWidget,
+    );
+    await tester.tap(
+      find.byKey(const ValueKey('edit-register-today-feeding')),
+    );
+    await tester.pumpAndSettle();
+    expect(editedEventId, 'today-feeding');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('deletes a mistaken record after explicit confirmation', (
+    tester,
+  ) async {
+    final now = DateTime.now();
+    final repository = _FakeRegisterEventRepository([
+      RegisteredEvent(
+        id: 'incorrect-sleep',
+        babyId: 'baby-1',
+        type: RegisterEventType.sleep,
+        occurredAt: now.subtract(const Duration(hours: 3)),
+        createdAt: now,
+        details: const {
+          'subtype': 'night',
+          'sleep_status': 'completed',
+          'duration_minutes': 6000,
+        },
+      ),
+    ]);
+    final cubit = HomeDailyHistoryCubit(
+      getRegisterEvents: GetRegisterEvents(repository),
+      deleteRegisterEvent: DeleteRegisterEvent(repository),
+      babyId: 'baby-1',
+      clock: () => now,
+    )..load();
+    addTearDown(cubit.close);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: bebeTheme.lightTheme(),
+        home: Scaffold(
+          body: BlocProvider.value(
+            value: cubit,
+            child: HomeDailyHistoryView(
+              babyName: 'Mateo Reyes',
+              onRegisterPressed: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.textContaining('100 h'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('delete-register-incorrect-sleep')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Eliminar registro'), findsWidgets);
+    final confirmButton = tester.widget<FilledButton>(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(FilledButton, 'Eliminar'),
+      ),
+    );
+    confirmButton.onPressed!();
+    await tester.pumpAndSettle();
+
+    expect(repository.deletedId, 'incorrect-sleep');
+    expect(find.text('Registro eliminado'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -230,6 +309,7 @@ class _FakeRegisterEventRepository implements RegisterEventRepository {
   _FakeRegisterEventRepository(this.events);
 
   final List<RegisteredEvent> events;
+  String? deletedId;
   String? updatedId;
   RegisterEventPatch? updatedPatch;
 
@@ -237,7 +317,10 @@ class _FakeRegisterEventRepository implements RegisterEventRepository {
   Stream<void> get changes => const Stream.empty();
 
   @override
-  Future<void> delete(String id) async {}
+  Future<void> delete(String id) async {
+    deletedId = id;
+    events.removeWhere((event) => event.id == id);
+  }
 
   @override
   Future<RegisteredEvent?> findById(String id) async =>

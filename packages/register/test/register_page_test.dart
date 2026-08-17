@@ -165,6 +165,66 @@ void main() {
     expect(savedEvent?.type, RegisterEventType.measurement);
   });
 
+  testWidgets('edit route hydrates and updates the original medication', (
+    tester,
+  ) async {
+    final occurredAt = DateTime.now().subtract(const Duration(hours: 1));
+    final existing = RegisteredEvent(
+      id: 'medication-to-edit',
+      babyId: 'baby-1',
+      type: RegisterEventType.medication,
+      occurredAt: occurredAt,
+      createdAt: occurredAt,
+      details: const {
+        'subtype': 'medication',
+        'name': 'Paracetamol',
+        'dose': 5,
+        'unit': 'mL',
+        'frequency': 'Cada 8 horas',
+        'schedule_next_doses': false,
+      },
+    );
+    final repository = _MemoryRepository(existing);
+    RegisteredEvent? updatedEvent;
+    final router = _router(
+      repository: repository,
+      initialLocation: RegisterPage.fullPath,
+      onUpdated: (event) => updatedEvent = event,
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp.router(
+        theme: bebeTheme.lightTheme(),
+        routerConfig: router,
+      ),
+    );
+    await tester.pumpAndSettle();
+    unawaited(router.push<void>('/register/medication', extra: existing));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Editar registro'), findsOneWidget);
+    expect(find.text('Guardar cambios'), findsOneWidget);
+    final medicationForm = tester.widget<MedicationRegisterForm>(
+      find.byType(MedicationRegisterForm),
+    );
+    expect(medicationForm.nameController?.text, 'Paracetamol');
+    expect(medicationForm.doseController?.text, '5');
+    final doseField = find.byWidgetPredicate(
+      (widget) => widget is BebeTextField && widget.semanticLabel == 'Dosis',
+    );
+    await tester.enterText(doseField, '2,5');
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -2400));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Guardar cambios').last);
+    await tester.pumpAndSettle();
+
+    expect(repository.updatedId, existing.id);
+    expect(repository.updatedPatch?.details?['dose'], 2.5);
+    expect(updatedEvent?.id, existing.id);
+    expect(repository.drafts, isEmpty);
+  });
+
   testWidgets('baby selector reloads forms with the selected baby id', (
     tester,
   ) async {
@@ -208,6 +268,7 @@ GoRouter _router({
   required _MemoryRepository repository,
   required String initialLocation,
   ValueChanged<RegisteredEvent>? onSaved,
+  ValueChanged<RegisteredEvent>? onUpdated,
   GetFamilyOverview? getFamilyOverview,
   VoidCallback? onBabyPressed,
 }) {
@@ -216,9 +277,11 @@ GoRouter _router({
     routes: [
       RegisterPage(
         saveRegisterEvent: (_) => SaveRegisterEvent(repository),
+        updateRegisterEvent: (_) => UpdateRegisterEvent(repository),
         getFamilyOverview:
             getFamilyOverview == null ? null : (_) => getFamilyOverview,
         onSaved: (_, event) => onSaved?.call(event),
+        onUpdated: (_, event) => onUpdated?.call(event),
         onCancel: (context) {
           if (context.canPop()) {
             context.pop();
@@ -283,7 +346,12 @@ class _FamilyRepository extends Fake implements FamilyRepository {
 }
 
 class _MemoryRepository implements RegisterEventRepository {
+  _MemoryRepository([this.event]);
+
   final drafts = <RegisterEventDraft>[];
+  RegisteredEvent? event;
+  String? updatedId;
+  RegisterEventPatch? updatedPatch;
 
   @override
   Stream<void> get changes => const Stream.empty();
@@ -308,14 +376,35 @@ class _MemoryRepository implements RegisterEventRepository {
   Future<void> delete(String id) async {}
 
   @override
-  Future<RegisteredEvent?> findById(String id) async => null;
+  Future<RegisteredEvent?> findById(String id) async =>
+      event?.id == id ? event : null;
 
   @override
   Future<RegisteredEvent?> update(
     String id,
     RegisterEventPatch patch,
-  ) async =>
-      null;
+  ) async {
+    updatedId = id;
+    updatedPatch = patch;
+    final current = await findById(id);
+    if (current == null) return null;
+    event = RegisteredEvent(
+      id: current.id,
+      babyId: current.babyId,
+      type: current.type,
+      occurredAt: patch.occurredAt ?? current.occurredAt,
+      createdAt: current.createdAt,
+      updatedAt: DateTime.now(),
+      details: patch.details ?? current.details,
+      notes: patch.clearNotes ? null : patch.notes ?? current.notes,
+      caregiverId: patch.clearCaregiverId
+          ? null
+          : patch.caregiverId ?? current.caregiverId,
+      syncStatus: RegisterSyncStatus.pending,
+      schemaVersion: patch.schemaVersion ?? current.schemaVersion,
+    );
+    return event;
+  }
 
   @override
   Future<List<RegisteredEvent>> listByBaby(

@@ -6,17 +6,11 @@ class ClinicalObservationRegisterCubit extends RegisterFormCubit {
   ClinicalObservationRegisterCubit({
     required super.saveRegisterEvent,
     required super.babyId,
+    super.persistRegisterEvent,
+    RegisteredEvent? initialEvent,
     DateTime? initialDateTime,
   }) : super(
-          initialValues: {
-            'observationType': 'stool',
-            'occurredAt': initialDateTime ?? DateTime.now(),
-            'description': '',
-            'photoPaths': <String>[],
-            'severity': 'mild',
-            'shareWithPediatrician': true,
-            'caregiver': 'father',
-          },
+          initialValues: _initialValues(initialEvent, initialDateTime),
         );
 
   String get observationType => state.value<String>('observationType');
@@ -65,4 +59,26 @@ class ClinicalObservationRegisterCubit extends RegisterFormCubit {
       },
     );
   }
+}
+
+Map<String, Object?> _initialValues(
+  RegisteredEvent? event,
+  DateTime? initialDateTime,
+) {
+  final details = event?.details ?? const <String, Object?>{};
+  final photoPaths = switch (details['photo_paths']) {
+    final List<Object?> values => values.whereType<String>().toList(),
+    _ => <String>[],
+  };
+  return {
+    'observationType': details['observation_type'] as String? ?? 'stool',
+    'occurredAt':
+        event?.occurredAt.toLocal() ?? initialDateTime ?? DateTime.now(),
+    'description': details['description'] as String? ?? '',
+    'photoPaths': photoPaths,
+    'severity': details['severity'] as String? ?? 'mild',
+    'shareWithPediatrician':
+        details['share_with_pediatrician'] as bool? ?? true,
+    'caregiver': event?.caregiverId ?? 'father',
+  };
 }

@@ -92,15 +92,16 @@ class HomeDailyHistoryCubit extends Cubit<HomeDailyHistoryState> {
 
   Future<void> reload() => load();
 
-  Future<void> deleteEvent(String id) async {
+  Future<bool> deleteEvent(String id) async {
     final delete = _deleteRegisterEvent;
-    if (delete == null) return;
+    if (delete == null) return false;
     await delete(id);
     try {
       await _onEventDeleted?.call(id);
     } on Object {
       // El registro ya fue eliminado; una cancelación local no debe revertirlo.
     }
+    return true;
   }
 
   Future<bool> finishSleep(RegisteredEvent event, DateTime endedAt) async {

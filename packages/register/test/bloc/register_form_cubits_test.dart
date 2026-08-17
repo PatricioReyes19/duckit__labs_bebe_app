@@ -88,6 +88,55 @@ void main() {
     expect(repository.drafts, isEmpty);
   });
 
+  test('editing medication hydrates and replaces the recorded dose', () async {
+    final occurredAt = DateTime(2026, 8, 11, 9);
+    final existing = RegisteredEvent(
+      id: 'medication-1',
+      babyId: 'baby-1',
+      type: RegisterEventType.medication,
+      occurredAt: occurredAt,
+      createdAt: occurredAt,
+      details: const {
+        'subtype': 'medication',
+        'name': 'Paracetamol',
+        'dose': 5,
+        'unit': 'mL',
+        'frequency': 'Cada 8 horas',
+        'schedule_next_doses': false,
+      },
+    );
+    RegisterEventDraft? updatedDraft;
+    final cubit = MedicationRegisterCubit(
+      saveRegisterEvent: saveRegisterEvent,
+      persistRegisterEvent: (draft) async {
+        updatedDraft = draft;
+        return RegisteredEvent(
+          id: existing.id,
+          babyId: draft.babyId,
+          type: draft.type,
+          occurredAt: draft.occurredAt,
+          createdAt: existing.createdAt,
+          details: draft.details,
+          notes: draft.notes,
+          caregiverId: draft.caregiverId,
+        );
+      },
+      initialEvent: existing,
+      babyId: existing.babyId,
+    );
+    addTearDown(cubit.close);
+
+    expect(cubit.name, 'Paracetamol');
+    expect(cubit.dose, '5');
+    cubit.doseChanged('2,5');
+    await cubit.submit();
+
+    expect(cubit.state.status, RegisterSubmissionStatus.success);
+    expect(cubit.state.savedEvent?.id, existing.id);
+    expect(updatedDraft?.details['dose'], 2.5);
+    expect(repository.drafts, isEmpty);
+  });
+
   test('bottle feeding requires and persists milliliters instead of side',
       () async {
     final cubit = FeedingRegisterCubit(
@@ -179,6 +228,57 @@ void main() {
       startedAt.add(const Duration(minutes: 45)).toUtc(),
     );
     expect(details['mood'], 'sleepy');
+  });
+
+  test('editing an excessively long sleep can correct its wake time', () async {
+    final startedAt = DateTime(2026, 8, 7, 8);
+    final incorrectEnd = startedAt.add(const Duration(hours: 100));
+    final existing = RegisteredEvent(
+      id: 'sleep-100-hours',
+      babyId: 'baby-1',
+      type: RegisterEventType.sleep,
+      occurredAt: startedAt,
+      createdAt: startedAt,
+      details: {
+        'subtype': 'night',
+        'sleep_status': 'completed',
+        'duration_minutes': 6000,
+        'end_at': incorrectEnd.toUtc().toIso8601String(),
+      },
+    );
+    RegisterEventDraft? updatedDraft;
+    final cubit = SleepRegisterCubit(
+      saveRegisterEvent: saveRegisterEvent,
+      persistRegisterEvent: (draft) async {
+        updatedDraft = draft;
+        return RegisteredEvent(
+          id: existing.id,
+          babyId: draft.babyId,
+          type: draft.type,
+          occurredAt: draft.occurredAt,
+          createdAt: existing.createdAt,
+          details: draft.details,
+          notes: draft.notes,
+        );
+      },
+      initialEvent: existing,
+      babyId: existing.babyId,
+      clock: () => incorrectEnd.add(const Duration(hours: 1)),
+    );
+    addTearDown(cubit.close);
+
+    expect(cubit.durationMinutes, 6000);
+    cubit.endTimeChanged(10, 0);
+    await cubit.submit();
+
+    expect(cubit.state.status, RegisterSubmissionStatus.success);
+    expect(cubit.state.savedEvent?.id, existing.id);
+    expect(updatedDraft?.details['duration_minutes'], 120);
+    expect(
+      DateTime.parse(updatedDraft?.details['end_at']! as String),
+      startedAt.add(const Duration(hours: 2)).toUtc(),
+    );
+    expect(repository.drafts, isEmpty);
   });
 
   test('wet diaper persists urine data without stool characteristics',

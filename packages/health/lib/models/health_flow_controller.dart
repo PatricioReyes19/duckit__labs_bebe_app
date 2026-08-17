@@ -6,6 +6,131 @@ import 'package:flutter/foundation.dart';
 
 enum HealthReportRange { day, week, month }
 
+extension HealthReportRangeWindow on HealthReportRange {
+  int get days => switch (this) {
+    HealthReportRange.day => 1,
+    HealthReportRange.week => 7,
+    HealthReportRange.month => 30,
+  };
+}
+
+class HealthReportSnapshot {
+  HealthReportSnapshot._({
+    required this.range,
+    required this.generatedAt,
+    required this.startsAt,
+    required this.records,
+  });
+
+  factory HealthReportSnapshot.project({
+    required Iterable<RegisteredEvent> records,
+    required String babyId,
+    required HealthReportRange range,
+    required DateTime now,
+  }) {
+    final end = now.toUtc();
+    final start = end.subtract(Duration(days: range.days));
+    final visible = records
+        .where(
+          (event) =>
+              event.babyId == babyId &&
+              !event.isDeleted &&
+              event.details['observation_type'] != 'pediatrician_profile' &&
+              !event.occurredAt.toUtc().isBefore(start) &&
+              !event.occurredAt.toUtc().isAfter(end),
+        )
+        .toList(growable: false)
+      ..sort((a, b) => b.occurredAt.compareTo(a.occurredAt));
+    return HealthReportSnapshot._(
+      range: range,
+      generatedAt: end,
+      startsAt: start,
+      records: List.unmodifiable(visible),
+    );
+  }
+
+  final HealthReportRange range;
+  final DateTime generatedAt;
+  final DateTime startsAt;
+  final List<RegisteredEvent> records;
+
+  List<RegisteredEvent> ofType(RegisterEventType type) => records
+      .where((event) => event.type == type)
+      .toList(growable: false);
+
+  List<RegisteredEvent> get feedings => ofType(RegisterEventType.feeding);
+  List<RegisteredEvent> get diapers => ofType(RegisterEventType.diaper);
+  List<RegisteredEvent> get activeSleeps => ofType(
+    RegisterEventType.sleep,
+  ).where((event) => event.isActive).toList(growable: false);
+  List<RegisteredEvent> get completedSleeps => ofType(
+    RegisterEventType.sleep,
+  ).where((event) => event.isFinished).toList(growable: false);
+  List<RegisteredEvent> get clinicalNotes => records
+      .where(
+        (event) =>
+            event.type == RegisterEventType.clinicalObservation &&
+            (event.details['observation_type'] == null ||
+                event.details['observation_type'] == 'clinical_note'),
+      )
+      .toList(growable: false);
+
+  double? get feedingVolumeMl {
+    final amounts = feedings
+        .map((event) => event.details['amount_ml'])
+        .whereType<num>()
+        .map((value) => value.toDouble())
+        .where((value) => value.isFinite && value >= 0)
+        .toList(growable: false);
+    if (amounts.isEmpty) return null;
+    return amounts.fold<double>(0, (total, value) => total + value);
+  }
+
+  int? get sleepDurationMinutes {
+    final durations = <int>[];
+    for (final event in completedSleeps) {
+      final stored = event.details['duration_minutes'];
+      if (stored is num && stored.isFinite && stored >= 0) {
+        durations.add(stored.round());
+        continue;
+      }
+      final endedAt = event.endedAt;
+      if (endedAt != null && !endedAt.isBefore(event.startedAt)) {
+        durations.add(endedAt.difference(event.startedAt).inMinutes);
+      }
+    }
+    if (durations.isEmpty) return null;
+    return durations.fold<int>(0, (total, value) => total + value);
+  }
+
+  bool get hasActivityTrendData =>
+      feedings.isNotEmpty || completedSleeps.isNotEmpty || diapers.isNotEmpty;
+
+  List<double> dailyCounts(RegisterEventType type) {
+    final source = type == RegisterEventType.sleep
+        ? completedSleeps
+        : ofType(type);
+    final localEnd = generatedAt.toLocal();
+    final visibleDays = range.days.clamp(1, 30);
+    return List<double>.generate(visibleDays, (index) {
+      final date = DateTime(
+        localEnd.year,
+        localEnd.month,
+        localEnd.day,
+      ).subtract(Duration(days: visibleDays - index - 1));
+      return source
+          .where((event) {
+            final local = event.occurredAt.toLocal();
+            return local.year == date.year &&
+                local.month == date.month &&
+                local.day == date.day;
+          })
+          .length
+          .toDouble();
+    });
+  }
+}
+
 enum HealthFlowSaveKind {
   vaccine,
   measurement,
@@ -105,6 +230,7 @@ class HealthFlowController extends ChangeNotifier {
     required HealthRepository healthRepository,
     required RegisterEventSyncService registerSyncService,
     Connectivity? connectivity,
+    DateTime Function()? clock,
   }) : _getFamilyOverview = getFamilyOverview,
        _getHealthOverview = getHealthOverview,
        _getRegisterEvents = getRegisterEvents,
@@ -112,6 +238,7 @@ class HealthFlowController extends ChangeNotifier {
        _healthRepository = healthRepository,
        _registerSyncService = registerSyncService,
        _connectivity = connectivity ?? Connectivity(),
+       _clock = clock ?? DateTime.now,
        _syncState = registerSyncService.state {
     _syncSubscription = _registerSyncService.states.listen((state) {
       _syncState = state;
@@ -138,6 +265,7 @@ class HealthFlowController extends ChangeNotifier {
   final HealthRepository _healthRepository;
   final RegisterEventSyncService _registerSyncService;
   final Connectivity _connectivity;
+  final DateTime Function() _clock;
 
   late final StreamSubscription<RegisterSyncState> _syncSubscription;
   late final StreamSubscription<String> _activeBabySubscription;
@@ -163,6 +291,12 @@ class HealthFlowController extends ChangeNotifier {
   List<RegisteredEvent> get records => List.unmodifiable(_records);
   RegisterSyncState get syncState => _syncState;
   HealthReportRange get reportRange => _reportRange;
+  HealthReportSnapshot get reportSnapshot => HealthReportSnapshot.project(
+    records: _records,
+    babyId: activeBaby?.id ?? '',
+    range: _reportRange,
+    now: _clock(),
+  );
   bool get isLoading => _isLoading;
   bool get offlineMode => _manualOfflineMode || !_hasConnectivity;
   bool get networkUnavailable => !_hasConnectivity;

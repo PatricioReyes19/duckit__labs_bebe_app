@@ -8,11 +8,13 @@ class HomeDailyHistoryView extends StatelessWidget {
   const HomeDailyHistoryView({
     required this.babyName,
     required this.onRegisterPressed,
+    this.onEditEvent,
     super.key,
   });
 
   final String babyName;
   final VoidCallback onRegisterPressed;
+  final ValueChanged<RegisteredEvent>? onEditEvent;
 
   @override
   Widget build(BuildContext context) {
@@ -104,6 +106,13 @@ class HomeDailyHistoryView extends StatelessWidget {
       description: presentation.description,
       icon: Icon(presentation.icon),
       variant: presentation.variant,
+      status: onEditEvent == null
+          ? null
+          : const BebeStatusBadge(
+              label: 'Gestionar',
+              variant: BebeStatusBadgeVariant.information,
+              icon: Icon(Icons.edit_outlined),
+            ),
       metadata: event.caregiverId == null
           ? null
           : BebeMetadataItem(
@@ -119,6 +128,7 @@ class HomeDailyHistoryView extends StatelessWidget {
     RegisteredEvent event,
     _EventPresentation presentation,
   ) {
+    final historyCubit = context.read<HomeDailyHistoryCubit>();
     return showBebeBottomSheet<void>(
       context: context,
       variant: BebeBottomSheetVariant.dynamic,
@@ -166,14 +176,30 @@ class HomeDailyHistoryView extends StatelessWidget {
               BebeButton(
                 key: ValueKey('finish-sleep-${event.id}'),
                 label: 'Registrar despertar',
-                onPressed: () => _finishSleep(sheetContext, event),
+                onPressed: () =>
+                    _finishSleep(sheetContext, historyCubit, event),
                 leading: const Icon(Icons.wb_sunny_outlined),
               ),
               SizedBox(height: spacing.spacingM),
             ],
+            if (onEditEvent != null) ...[
+              BebeButton(
+                key: ValueKey('edit-register-${event.id}'),
+                label: 'Editar registro',
+                onPressed: () {
+                  Navigator.of(sheetContext).pop();
+                  onEditEvent!(event);
+                },
+                variant: BebeButtonVariant.secondary,
+                leading: const Icon(Icons.edit_outlined),
+              ),
+              SizedBox(height: spacing.spacingM),
+            ],
             BebeButton(
+              key: ValueKey('delete-register-${event.id}'),
               label: 'Eliminar registro',
-              onPressed: () => _confirmDelete(sheetContext, event),
+              onPressed: () =>
+                  _confirmDelete(sheetContext, historyCubit, event),
               variant: BebeButtonVariant.destructive,
               leading: const Icon(Icons.delete_outline_rounded),
             ),
@@ -191,6 +217,7 @@ class HomeDailyHistoryView extends StatelessWidget {
 
   Future<void> _finishSleep(
     BuildContext context,
+    HomeDailyHistoryCubit historyCubit,
     RegisteredEvent event,
   ) async {
     final now = DateTime.now();
@@ -220,9 +247,7 @@ class HomeDailyHistoryView extends StatelessWidget {
     }
     final messenger = ScaffoldMessenger.of(context);
     try {
-      final completed = await context
-          .read<HomeDailyHistoryCubit>()
-          .finishSleep(event, endedAt);
+      final completed = await historyCubit.finishSleep(event, endedAt);
       if (!context.mounted) return;
       if (!completed) {
         BebeInAppSnackbar.show(
@@ -253,6 +278,7 @@ class HomeDailyHistoryView extends StatelessWidget {
 
   Future<void> _confirmDelete(
     BuildContext context,
+    HomeDailyHistoryCubit historyCubit,
     RegisteredEvent event,
   ) async {
     final confirmed = await showDialog<bool>(
@@ -275,8 +301,35 @@ class HomeDailyHistoryView extends StatelessWidget {
       ),
     );
     if (confirmed != true || !context.mounted) return;
-    await context.read<HomeDailyHistoryCubit>().deleteEvent(event.id);
-    if (context.mounted) Navigator.of(context).pop();
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final deleted = await historyCubit.deleteEvent(event.id);
+      if (!context.mounted) return;
+      if (!deleted) {
+        BebeInAppSnackbar.show(
+          context,
+          title: 'No se pudo eliminar',
+          message: 'El registro ya no está disponible o no puede eliminarse.',
+          variant: BebeInAppSnackbarVariant.error,
+        );
+        return;
+      }
+      Navigator.of(context).pop();
+      BebeInAppSnackbar.showOn(
+        messenger,
+        title: 'Registro eliminado',
+        message: 'Se quitó del historial.',
+        variant: BebeInAppSnackbarVariant.success,
+      );
+    } on Object {
+      if (!context.mounted) return;
+      BebeInAppSnackbar.show(
+        context,
+        title: 'No se pudo eliminar',
+        message: 'Inténtalo nuevamente.',
+        variant: BebeInAppSnackbarVariant.error,
+      );
+    }
   }
 
   static String _detailLabel(String key) {

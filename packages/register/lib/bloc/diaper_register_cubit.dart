@@ -6,21 +6,11 @@ class DiaperRegisterCubit extends RegisterFormCubit {
   DiaperRegisterCubit({
     required super.saveRegisterEvent,
     required super.babyId,
+    super.persistRegisterEvent,
+    RegisteredEvent? initialEvent,
     DateTime? initialDateTime,
   }) : super(
-          initialValues: {
-            'subtype': 'dirty',
-            'occurredAt': initialDateTime ?? DateTime.now(),
-            'appearance': 'normal',
-            'color': 'yellow',
-            'amount': 'normal',
-            'urineColor': 'clear',
-            'urineAmount': 'normal',
-            'notes': '',
-            'symptoms': '',
-            'scheduleReminder': false,
-            'reminderHours': 3,
-          },
+          initialValues: _initialValues(initialEvent, initialDateTime),
         );
 
   String get subtype => state.value<String>('subtype');
@@ -74,3 +64,30 @@ class DiaperRegisterCubit extends RegisterFormCubit {
     );
   }
 }
+
+Map<String, Object?> _initialValues(
+  RegisteredEvent? event,
+  DateTime? initialDateTime,
+) {
+  final details = event?.details ?? const <String, Object?>{};
+  return {
+    'subtype': details['subtype'] as String? ?? 'dirty',
+    'occurredAt':
+        event?.occurredAt.toLocal() ?? initialDateTime ?? DateTime.now(),
+    'appearance': details['appearance'] as String? ?? 'normal',
+    'color': details['color'] as String? ?? 'yellow',
+    'amount': details['amount'] as String? ?? 'normal',
+    'urineColor': details['urine_color'] as String? ?? 'clear',
+    'urineAmount': details['urine_amount'] as String? ?? 'normal',
+    'notes': event?.notes ?? '',
+    'symptoms': details['symptoms'] as String? ?? '',
+    'scheduleReminder': details['schedule_reminder'] as bool? ?? false,
+    'reminderHours': _intValue(details['reminder_interval_hours'], 3),
+  };
+}
+
+int _intValue(Object? value, int fallback) => switch (value) {
+      final int number => number,
+      final num number => number.toInt(),
+      _ => int.tryParse('$value') ?? fallback,
+    };

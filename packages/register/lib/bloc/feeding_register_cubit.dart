@@ -6,21 +6,11 @@ class FeedingRegisterCubit extends RegisterFormCubit {
   FeedingRegisterCubit({
     required super.saveRegisterEvent,
     required super.babyId,
+    super.persistRegisterEvent,
+    RegisteredEvent? initialEvent,
     DateTime? initialDateTime,
   }) : super(
-          initialValues: {
-            'subtype': 'breast',
-            'side': 'both',
-            'amountMl': '',
-            'startedAt': initialDateTime ?? DateTime.now(),
-            'durationMinutes': 15,
-            'endAt': null,
-            'mood': 'calm',
-            'notes': '',
-            'symptoms': '',
-            'scheduleNextFeeding': false,
-            'reminderHours': 4,
-          },
+          initialValues: _initialValues(initialEvent, initialDateTime),
         );
 
   String get subtype => state.value<String>('subtype');
@@ -90,3 +80,30 @@ class FeedingRegisterCubit extends RegisterFormCubit {
     );
   }
 }
+
+Map<String, Object?> _initialValues(
+  RegisteredEvent? event,
+  DateTime? initialDateTime,
+) {
+  final details = event?.details ?? const <String, Object?>{};
+  return {
+    'subtype': details['subtype'] as String? ?? 'breast',
+    'side': details['side'] as String? ?? 'both',
+    'amountMl': details['amount_ml']?.toString() ?? '',
+    'startedAt':
+        event?.occurredAt.toLocal() ?? initialDateTime ?? DateTime.now(),
+    'durationMinutes': _intValue(details['duration_minutes'], 15),
+    'endAt': event?.endedAt?.toLocal(),
+    'mood': details['mood'] as String? ?? 'calm',
+    'notes': event?.notes ?? '',
+    'symptoms': details['symptoms'] as String? ?? '',
+    'scheduleNextFeeding': details['schedule_next_feeding'] as bool? ?? false,
+    'reminderHours': _intValue(details['reminder_interval_hours'], 4),
+  };
+}
+
+int _intValue(Object? value, int fallback) => switch (value) {
+      final int number => number,
+      final num number => number.toInt(),
+      _ => int.tryParse('$value') ?? fallback,
+    };

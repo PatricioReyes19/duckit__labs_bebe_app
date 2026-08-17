@@ -3,6 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 enum RegisterSubmissionStatus { idle, saving, success, failure }
 
+typedef PersistRegisterEvent = Future<RegisteredEvent> Function(
+  RegisterEventDraft draft,
+);
+
 class RegisterFormState {
   RegisterFormState({
     required Map<String, Object?> values,
@@ -50,10 +54,11 @@ abstract class RegisterFormCubit extends Cubit<RegisterFormState> {
     required SaveRegisterEvent saveRegisterEvent,
     required this.babyId,
     required Map<String, Object?> initialValues,
-  })  : _saveRegisterEvent = saveRegisterEvent,
+    PersistRegisterEvent? persistRegisterEvent,
+  })  : _persistRegisterEvent = persistRegisterEvent ?? saveRegisterEvent.call,
         super(RegisterFormState(values: initialValues));
 
-  final SaveRegisterEvent _saveRegisterEvent;
+  final PersistRegisterEvent _persistRegisterEvent;
   final String babyId;
 
   void setValue(String key, Object? value) {
@@ -93,7 +98,7 @@ abstract class RegisterFormCubit extends Cubit<RegisterFormState> {
       ),
     );
     try {
-      final saved = await _saveRegisterEvent(draft);
+      final saved = await _persistRegisterEvent(draft);
       emit(
         state.copyWith(
           status: RegisterSubmissionStatus.success,

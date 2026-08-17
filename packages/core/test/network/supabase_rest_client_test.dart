@@ -74,6 +74,36 @@ void main() {
     expect(restored.syncStatus, RegisterSyncStatus.synced);
   });
 
+  test('active sleep keeps its recoverable remote contract', () {
+    final startedAt = DateTime.utc(2026, 8, 16, 8);
+    final entity = RegisteredEvent(
+      id: 'sleep-active',
+      babyId: 'baby-1',
+      type: RegisterEventType.sleep,
+      occurredAt: startedAt,
+      createdAt: startedAt,
+      updatedAt: startedAt,
+      details: const {
+        'sleep_status': 'ongoing',
+        'duration_minutes': null,
+        'end_at': null,
+      },
+      syncStatus: RegisterSyncStatus.pending,
+    );
+
+    final json = RegisterEventModel.fromEntity(entity).toRemoteJson();
+    final details = Map<String, Object?>.from(json['details']! as Map);
+    final restored = RegisterEventModel.fromRemoteJson(
+      Map<String, dynamic>.from(json),
+    ).toEntity();
+
+    expect(details['sleep_status'], 'ongoing');
+    expect(details['duration_minutes'], isNull);
+    expect(details['end_at'], isNull);
+    expect(restored.isActive, isTrue);
+    expect(restored.id, 'sleep-active');
+  });
+
   test(
     'uses POST representation for inserts and PATCH filters for updates',
     () async {

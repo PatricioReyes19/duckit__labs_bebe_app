@@ -679,47 +679,17 @@ class ReportsSectionView extends StatelessWidget {
     return HealthFlowBody(
       controller: controller,
       builder: (context) {
-        final days = switch (controller.reportRange) {
-          HealthReportRange.day => 1,
-          HealthReportRange.week => 7,
-          HealthReportRange.month => 30,
-        };
-        final after = DateTime.now().subtract(Duration(days: days));
-        int count(RegisterEventType type) => controller.reportableRecords
-            .where(
-              (event) => event.type == type && event.occurredAt.isAfter(after),
-            )
-            .length;
-        final feedings = count(RegisterEventType.feeding);
-        final sleeps = count(RegisterEventType.sleep);
-        final diapers = count(RegisterEventType.diaper);
-        final recordsInRange = controller.reportableRecords
-            .where((event) => event.occurredAt.isAfter(after))
-            .toList(growable: false);
-        final clinicalNotesInRange = controller.clinicalNotes
-            .where((event) => event.occurredAt.isAfter(after))
-            .toList(growable: false);
-        final totalFeedingMl = recordsInRange
-            .where((event) => event.type == RegisterEventType.feeding)
-            .map(
-              (event) => (event.details['amount_ml'] as num?)?.toDouble() ?? 0,
-            )
-            .fold<double>(0, (total, value) => total + value);
-        final feedingTrend = _dailyTrend(
-          recordsInRange,
-          RegisterEventType.feeding,
-          days,
-        );
-        final sleepTrend = _dailyTrend(
-          recordsInRange,
-          RegisterEventType.sleep,
-          days,
-        );
-        final diaperTrend = _dailyTrend(
-          recordsInRange,
-          RegisterEventType.diaper,
-          days,
-        );
+        final report = controller.reportSnapshot;
+        final feedings = report.feedings.length;
+        final completedSleeps = report.completedSleeps.length;
+        final activeSleeps = report.activeSleeps.length;
+        final diapers = report.diapers.length;
+        final totalFeedingMl = report.feedingVolumeMl;
+        final totalSleepMinutes = report.sleepDurationMinutes;
+        final clinicalNotesInRange = report.clinicalNotes;
+        final feedingTrend = report.dailyCounts(RegisterEventType.feeding);
+        final sleepTrend = report.dailyCounts(RegisterEventType.sleep);
+        final diaperTrend = report.dailyCounts(RegisterEventType.diaper);
         return [
           if (controller.offlineMode) ...[
             HealthSurface(
@@ -757,7 +727,7 @@ class ReportsSectionView extends StatelessWidget {
                 controller.selectReportRange(value.first),
           ),
           const SizedBox(height: 18),
-          if (recordsInRange.isEmpty) ...[
+          if (report.records.isEmpty) ...[
             const HealthEmptyState(
               title: 'Sin actividad en este período',
               description:
@@ -773,61 +743,77 @@ class ReportsSectionView extends StatelessWidget {
             children: [
               BebeCompactMetricCard(
                 label: 'Alimentación',
-                value: totalFeedingMl == 0
+                value: totalFeedingMl == null
                     ? (feedings == 0 ? '—' : '$feedings')
                     : '${totalFeedingMl.round()}',
-                unit: totalFeedingMl == 0 ? null : 'mL',
-                supportingText: feedings == 0 ? 'Sin datos' : '$feedings tomas',
+                unit: totalFeedingMl == null ? null : 'mL',
+                supportingText: feedings == 0
+                    ? 'Sin registros en este período'
+                    : '$feedings tomas',
                 icon: const Icon(Icons.local_drink_outlined),
                 variant: BebeMetricCardVariant.feeding,
               ),
               BebeCompactMetricCard(
                 label: 'Sueño',
-                value: sleeps == 0 ? '—' : '$sleeps',
-                supportingText: sleeps == 0 ? 'Sin datos' : '$sleeps registros',
+                value: totalSleepMinutes == null
+                    ? '—'
+                    : _sleepDurationLabel(totalSleepMinutes),
+                supportingText: completedSleeps == 0
+                    ? activeSleeps == 0
+                          ? 'Sin registros en este período'
+                          : '$activeSleeps en curso · aún no sumado'
+                    : '$completedSleeps sesiones finalizadas'
+                          '${activeSleeps == 0 ? '' : ' · $activeSleeps en curso'}',
                 icon: const Icon(Icons.bedtime_outlined),
                 variant: BebeMetricCardVariant.sleep,
               ),
               BebeCompactMetricCard(
                 label: 'Pañales',
                 value: diapers == 0 ? '—' : '$diapers',
-                supportingText: diapers == 0 ? 'Sin datos' : '$diapers cambios',
+                supportingText: diapers == 0
+                    ? 'Sin registros en este período'
+                    : '$diapers cambios',
                 icon: const Icon(Icons.water_drop_outlined),
                 variant: BebeMetricCardVariant.diaper,
               ),
             ],
           ),
           const SizedBox(height: 18),
-          HealthSurface(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Tendencias del período',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(height: 14),
-                _ReportsTrendChart(
-                  primary: colors.primary,
-                  secondary: colors.secondary,
-                  tertiary: colors.tertiary,
-                  feeding: feedingTrend,
-                  sleep: sleepTrend,
-                  diaper: diaperTrend,
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 16,
-                  runSpacing: 8,
-                  children: [
-                    _ChartLegend(color: colors.primary, label: 'Alimentación'),
-                    _ChartLegend(color: colors.secondary, label: 'Sueño'),
-                    _ChartLegend(color: colors.tertiary, label: 'Pañales'),
-                  ],
-                ),
-              ],
+          if (report.hasActivityTrendData)
+            HealthSurface(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Tendencias del período',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 14),
+                  _ReportsTrendChart(
+                    primary: colors.primary,
+                    secondary: colors.secondary,
+                    tertiary: colors.tertiary,
+                    feeding: feedingTrend,
+                    sleep: sleepTrend,
+                    diaper: diaperTrend,
+                    generatedAt: report.generatedAt,
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 16,
+                    runSpacing: 8,
+                    children: [
+                      _ChartLegend(
+                        color: colors.primary,
+                        label: 'Alimentación',
+                      ),
+                      _ChartLegend(color: colors.secondary, label: 'Sueño'),
+                      _ChartLegend(color: colors.tertiary, label: 'Pañales'),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
           const SizedBox(height: 20),
           HealthSectionHeading(
             title: 'Observaciones clínicas',
@@ -1149,31 +1135,12 @@ IconData _historyIcon(RegisterEventType type) => switch (type) {
   RegisterEventType.measurement => Icons.monitor_weight_outlined,
 };
 
-List<double> _dailyTrend(
-  List<RegisteredEvent> records,
-  RegisterEventType type,
-  int days,
-) {
-  final today = DateTime.now();
-  final visibleDays = days.clamp(1, 30);
-  final counts = List<double>.generate(visibleDays, (index) {
-    final date = DateTime(
-      today.year,
-      today.month,
-      today.day,
-    ).subtract(Duration(days: visibleDays - index - 1));
-    return records
-        .where(
-          (event) =>
-              event.type == type &&
-              event.occurredAt.year == date.year &&
-              event.occurredAt.month == date.month &&
-              event.occurredAt.day == date.day,
-        )
-        .length
-        .toDouble();
-  });
-  return counts;
+String _sleepDurationLabel(int minutes) {
+  final hours = minutes ~/ 60;
+  final remainder = minutes % 60;
+  if (hours == 0) return '$remainder min';
+  if (remainder == 0) return '$hours h';
+  return '$hours h $remainder min';
 }
 
 class _ChartLegend extends StatelessWidget {
@@ -1351,6 +1318,7 @@ class _ReportsTrendChart extends StatelessWidget {
     required this.feeding,
     required this.sleep,
     required this.diaper,
+    required this.generatedAt,
   });
 
   final Color primary;
@@ -1359,6 +1327,7 @@ class _ReportsTrendChart extends StatelessWidget {
   final List<double> feeding;
   final List<double> sleep;
   final List<double> diaper;
+  final DateTime generatedAt;
 
   @override
   Widget build(BuildContext context) {
@@ -1395,7 +1364,7 @@ class _ReportsTrendChart extends StatelessWidget {
     String dayLabel(int index) {
       if (index < 0 || index >= seriesLength) return '';
       if (seriesLength == 1) return 'Hoy';
-      final date = DateTime.now().subtract(
+      final date = generatedAt.toLocal().subtract(
         Duration(days: seriesLength - index - 1),
       );
       return '${date.day}/${date.month}';

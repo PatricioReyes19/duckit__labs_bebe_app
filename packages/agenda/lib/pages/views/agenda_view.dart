@@ -231,6 +231,7 @@ class _AgendaContent extends StatelessWidget {
             emptyMessage:
                 'No hay eventos de esta categoría programados para este día.',
             events: todayEvents,
+            collapseRecurring: true,
             onEventPressed: onEventPressed,
           ),
           SizedBox(height: spacing.spacing2xl),
@@ -472,6 +473,12 @@ class _AgendaEventCard extends StatelessWidget {
     final recurrenceLabel = item.isRecurring
         ? _recurrenceLabel(event.description)
         : null;
+    final visibleRecurrenceLabel = recurrenceLabel == null
+        ? null
+        : item.occurrenceCount == 1
+        ? recurrenceLabel
+        : '${_compactRecurrenceLabel(recurrenceLabel)} · '
+              '${item.occurrenceCount}x';
     return BebeAgendaEventCard(
       time: BebeTimeBlock(
         dateLabel: _date(event.startsAt),
@@ -482,17 +489,17 @@ class _AgendaEventCard extends StatelessWidget {
       title: event.title,
       description: event.description,
       variant: _eventVariant(event.category),
-      status: recurrenceLabel == null
+      status: visibleRecurrenceLabel == null
           ? null
           : BebeStatusBadge(
-              label: recurrenceLabel,
+              label: visibleRecurrenceLabel,
               variant: BebeStatusBadgeVariant.information,
               icon: const Icon(Icons.repeat_rounded),
               semanticLabel: [
                 'Evento recurrente',
                 recurrenceLabel,
                 if (item.occurrenceCount > 1)
-                  '${item.occurrenceCount} próximas ocurrencias agrupadas',
+                  '${item.occurrenceCount} ocurrencias agrupadas',
               ].join('. '),
             ),
       caregiver: event.caregiver == null
@@ -513,7 +520,7 @@ class _AgendaEventCard extends StatelessWidget {
         event.description,
         if (recurrenceLabel != null) 'Evento recurrente: $recurrenceLabel',
         if (item.occurrenceCount > 1)
-          '${item.occurrenceCount} próximas ocurrencias agrupadas',
+          '${item.occurrenceCount} ocurrencias agrupadas',
       ].join('. '),
       onPressed: onPressed,
     );
@@ -562,6 +569,11 @@ String _recurrenceLabel(String description) {
     final String value => value,
     null => 'Recurrente',
   };
+}
+
+String _compactRecurrenceLabel(String label) {
+  if (label == 'Todos los días') return 'Diario';
+  return label.replaceFirst(RegExp(r' horas$'), ' h');
 }
 
 class _RegisteredActivityGroup extends StatelessWidget {

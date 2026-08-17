@@ -167,7 +167,9 @@ class InitialDataSyncCoordinator {
                 ? InitialDataSyncPhase.disabled
                 : InitialDataSyncPhase.ready,
             familyState: family,
-            message: 'El contexto autenticado requiere una selección.',
+            message:
+                'El contexto autenticado está listo; los datos restantes '
+                'continuarán sincronizándose en segundo plano.',
           ),
         );
       }
