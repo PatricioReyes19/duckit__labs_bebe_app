@@ -3,8 +3,10 @@ import 'dart:async';
 import 'package:core/core.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
+import 'package:notifications/notifications.dart';
 
 import '../dependencies/dependencies.dart';
+import '../notifications/notification_reminder_coordinator.dart';
 import 'app_listeners.dart';
 
 /// Aplica preferencias que deben alcanzar a toda la aplicación.
@@ -25,6 +27,8 @@ class _AppWrappersState extends State<AppWrappers> {
   bool _reduceMotion = false;
   bool _highContrast = false;
   double _textScaleFactor = 1;
+  DateTime? _lastReminderReconciliationAt;
+  bool _reconcilingReminders = false;
 
   @override
   void initState() {
@@ -38,6 +42,10 @@ class _AppWrappersState extends State<AppWrappers> {
   }
 
   void _syncChanged(SyncUxState state) {
+    if (state.status == SyncUxStatus.synced &&
+        state.lastSuccessfulSyncAt != _lastReminderReconciliationAt) {
+      unawaited(_reconcileReminders(state.lastSuccessfulSyncAt));
+    }
     if (!_syncAlertDeduplicator.shouldAlert(state)) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -55,6 +63,26 @@ class _AppWrappersState extends State<AppWrappers> {
             unawaited(getIt<InitialDataSyncCoordinator>().retry()),
       );
     });
+  }
+
+  Future<void> _reconcileReminders(DateTime? synchronizedAt) async {
+    if (_reconcilingReminders) return;
+    _reconcilingReminders = true;
+    try {
+      final reconciled = await NotificationReminderCoordinator(
+        notificationService: getIt<NotificationService>(),
+        getCurrentSession: getIt<GetCurrentSession>(),
+      ).reconcileDomainReminders(
+        activeContextRepository: getIt<ActiveContextRepository>(),
+        getAgendaOverview: getIt<GetAgendaOverview>(),
+      );
+      if (reconciled) _lastReminderReconciliationAt = synchronizedAt;
+    } on Object catch (error, stackTrace) {
+      debugPrint('Notification domain reconciliation failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    } finally {
+      _reconcilingReminders = false;
+    }
   }
 
   Future<void> _loadSettings() async {

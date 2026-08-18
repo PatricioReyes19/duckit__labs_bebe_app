@@ -28,6 +28,11 @@ class _ControlledResolver implements ResolveEntryDestination {
   Future<EntryResolution> call() => completer.future;
 }
 
+class _ThrowingResolver implements ResolveEntryDestination {
+  @override
+  Future<EntryResolution> call() => throw StateError('startup failed');
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -124,7 +129,7 @@ void main() {
         loadedKeys,
         contains('packages/splash/assets/branding/'
             '${goldenCase.brightness == Brightness.dark ? 'dark' : 'light'}'
-            '/splash_waves.png'),
+            '/splash_clouds_background.png'),
       );
       await expectLater(
         find.byType(SplashBrandContent),
@@ -218,6 +223,25 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 220));
     expect(destination, EntryDestination.authEntry);
+  });
+
+  testWidgets('el error conserva el fondo temático del splash', (
+    tester,
+  ) async {
+    await _pumpSplashView(
+      tester,
+      theme: bebeTheme,
+      assetBundle: testAssetBundle,
+      resolver: _ThrowingResolver(),
+      onDestinationResolved: (_) {},
+    );
+
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 220));
+
+    expect(find.text('No pudimos iniciar'), findsOneWidget);
+    expect(find.byKey(const Key('splash-clouds-background')), findsOneWidget);
   });
 }
 

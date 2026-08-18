@@ -19,6 +19,17 @@ enum NotificationPermissionState {
   restricted,
 }
 
+/// Semantic category used to select the notification channel and delivery
+/// policy. UI and domain layers must not choose Android/iOS priorities.
+enum NotificationReminderType {
+  medication,
+  healthControl,
+  vaccine,
+  feeding,
+  syncFailure,
+  custom,
+}
+
 extension NotificationPermissionStatePolicy on NotificationPermissionState {
   bool get canDeliver => this == NotificationPermissionState.granted;
 
@@ -34,6 +45,7 @@ class NotificationReminder {
     required this.body,
     required this.scheduledAt,
     required this.route,
+    this.type = NotificationReminderType.custom,
   });
 
   /// Stable occurrence identity within its owner (for example an Agenda
@@ -43,6 +55,45 @@ class NotificationReminder {
   final String body;
   final DateTime scheduledAt;
   final String route;
+  final NotificationReminderType type;
+}
+
+class NotificationDiagnosticReminder {
+  const NotificationDiagnosticReminder({
+    required this.id,
+    required this.platformId,
+    required this.title,
+    required this.scheduledAt,
+    required this.type,
+    required this.channelId,
+  });
+
+  final String id;
+  final int platformId;
+  final String title;
+  final DateTime scheduledAt;
+  final NotificationReminderType type;
+  final String channelId;
+}
+
+class NotificationDiagnostics {
+  const NotificationDiagnostics({
+    required this.permission,
+    required this.timeZone,
+    required this.pendingNativeCount,
+    required this.hasRegisteredFcmToken,
+    required this.reminders,
+    this.canScheduleExactAlarms,
+    this.lastError,
+  });
+
+  final NotificationPermissionState permission;
+  final String timeZone;
+  final int pendingNativeCount;
+  final bool hasRegisteredFcmToken;
+  final bool? canScheduleExactAlarms;
+  final String? lastError;
+  final List<NotificationDiagnosticReminder> reminders;
 }
 
 abstract interface class NotificationService {
@@ -72,6 +123,7 @@ abstract interface class NotificationService {
     required String body,
     required DateTime scheduledAt,
     String route = '/agenda',
+    NotificationReminderType type = NotificationReminderType.custom,
   });
 
   Future<void> replaceReminders({
@@ -84,6 +136,22 @@ abstract interface class NotificationService {
   Future<void> cancelReminders(String ownerId);
 
   Future<void> cancelRemindersForAccount(String accountId);
+
+  Future<void> retainReminderOwners({
+    required String accountId,
+    required String babyId,
+    required Set<String> ownerIds,
+  });
+
+  /// Restores future reminders that are persisted locally but missing from
+  /// the platform scheduler (for example after a reboot or process recovery).
+  Future<void> reconcileReminders();
+
+  Future<NotificationDiagnostics> diagnostics();
+
+  Future<void> scheduleTestReminder();
+
+  Future<void> cancelAllScheduledReminders();
 
   Future<void> unregisterCurrentDevice();
 

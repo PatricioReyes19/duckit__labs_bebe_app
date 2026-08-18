@@ -6,6 +6,8 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:notifications/notifications.dart';
 
+import '../notifications/notification_reminder_coordinator.dart';
+
 class AppLifecycleObserver extends StatefulWidget {
   const AppLifecycleObserver({
     required this.child,
@@ -81,7 +83,16 @@ Future<void> _refreshSynchronizedData() async {
     debugPrintStack(stackTrace: stackTrace);
   }
   try {
-    await getIt<NotificationService>().refreshInbox();
+    final notifications = getIt<NotificationService>();
+    await notifications.refreshInbox();
+    final reconciled = await NotificationReminderCoordinator(
+      notificationService: notifications,
+      getCurrentSession: getIt<GetCurrentSession>(),
+    ).reconcileDomainReminders(
+      activeContextRepository: getIt<ActiveContextRepository>(),
+      getAgendaOverview: getIt<GetAgendaOverview>(),
+    );
+    if (!reconciled) await notifications.reconcileReminders();
   } on Object catch (error, stackTrace) {
     debugPrint('Lifecycle notification refresh failed: $error');
     debugPrintStack(stackTrace: stackTrace);

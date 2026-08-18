@@ -18,8 +18,9 @@ import 'package:timezone/timezone.dart' as tz;
 
 void main() {
   late BebeTheme bebeTheme;
-  const permissionChannel =
-      MethodChannel('com.duckitlabs.bebeapp/notification_permission');
+  const permissionChannel = MethodChannel(
+    'com.duckitlabs.bebeapp/notification_permission',
+  );
 
   setUpAll(() {
     final candidates = [
@@ -33,6 +34,7 @@ void main() {
     registerFallbackValue(const InitializationSettings());
     registerFallbackValue(tz.TZDateTime.utc(2026));
     registerFallbackValue(const NotificationDetails());
+    registerFallbackValue(AndroidScheduleMode.exactAllowWhileIdle);
   });
 
   setUp(() {
@@ -40,9 +42,9 @@ void main() {
         InMemorySharedPreferencesAsync.empty();
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(permissionChannel, (call) async {
-      if (call.method == 'status') return 'granted';
-      return null;
-    });
+          if (call.method == 'status') return 'granted';
+          return null;
+        });
   });
 
   tearDown(() {
@@ -192,7 +194,7 @@ void main() {
     expect(pressed, isTrue);
   });
 
-  test('due reminders use an exact audible alarm', () async {
+  test('medication reminders use the exact high-priority channel', () async {
     final messaging = _MockFirebaseMessaging();
     final auth = _MockFirebaseAuth();
     final user = _MockUser();
@@ -225,6 +227,9 @@ void main() {
       localNotifications.getNotificationAppLaunchDetails,
     ).thenAnswer((_) async => null);
     when(
+      localNotifications.pendingNotificationRequests,
+    ).thenAnswer((_) async => const []);
+    when(
       () => localNotifications.zonedSchedule(
         id: any(named: 'id'),
         title: any(named: 'title'),
@@ -243,18 +248,19 @@ void main() {
     );
 
     await service.scheduleReminder(
-      id: 'diaper-due',
-      title: 'Cambio de pañal',
-      body: 'Se cumplió el plazo del recordatorio.',
+      id: 'medication-due',
+      title: 'Medicamento',
+      body: 'Paracetamol · 2,5 mL',
       scheduledAt: DateTime.now().add(const Duration(hours: 1)),
+      type: NotificationReminderType.medication,
     );
 
     final details =
         verify(
               () => localNotifications.zonedSchedule(
                 id: any(named: 'id'),
-                title: 'Cambio de pañal',
-                body: 'Se cumplió el plazo del recordatorio.',
+                title: 'Medicamento',
+                body: 'Paracetamol · 2,5 mL',
                 scheduledDate: any(named: 'scheduledDate'),
                 notificationDetails: captureAny(named: 'notificationDetails'),
                 androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
@@ -269,6 +275,90 @@ void main() {
     expect(details.iOS?.presentSound, isTrue);
     expect(details.iOS?.interruptionLevel, InterruptionLevel.timeSensitive);
   });
+
+  test('feeding reminders are opt-in and never use an alarm channel', () async {
+    final fixture = _scheduledServiceFixture();
+
+    await fixture.service.scheduleReminder(
+      id: 'feeding-due',
+      title: 'Próxima toma',
+      body: 'Revisa si corresponde una nueva alimentación.',
+      scheduledAt: DateTime.now().add(const Duration(hours: 1)),
+      type: NotificationReminderType.feeding,
+    );
+
+    final details =
+        verify(
+              () => fixture.local.zonedSchedule(
+                id: any(named: 'id'),
+                title: 'Próxima toma',
+                body: any(named: 'body'),
+                scheduledDate: any(named: 'scheduledDate'),
+                notificationDetails: captureAny(named: 'notificationDetails'),
+                androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+                payload: any(named: 'payload'),
+              ),
+            ).captured.single
+            as NotificationDetails;
+
+    expect(details.android?.channelId, 'feeding_reminders');
+    expect(details.android?.importance, isNot(Importance.max));
+    expect(details.android?.category, AndroidNotificationCategory.reminder);
+    expect(
+      details.android?.audioAttributesUsage,
+      isNot(AudioAttributesUsage.alarm),
+    );
+  });
+}
+
+({FirebaseNotificationService service, _MockLocalNotifications local})
+_scheduledServiceFixture() {
+  final messaging = _MockFirebaseMessaging();
+  final auth = _MockFirebaseAuth();
+  final user = _MockUser();
+  final local = _MockLocalNotifications();
+  when(() => auth.currentUser).thenReturn(user);
+  when(() => user.uid).thenReturn('user-1');
+  when(
+    () => messaging.setForegroundNotificationPresentationOptions(
+      alert: true,
+      badge: true,
+      sound: true,
+    ),
+  ).thenAnswer((_) async {});
+  when(() => messaging.onTokenRefresh).thenAnswer((_) => const Stream.empty());
+  when(messaging.getInitialMessage).thenAnswer((_) async => null);
+  when(() => auth.userChanges()).thenAnswer((_) => const Stream.empty());
+  when(
+    () => local.initialize(
+      settings: any(named: 'settings'),
+      onDidReceiveNotificationResponse: any(
+        named: 'onDidReceiveNotificationResponse',
+      ),
+    ),
+  ).thenAnswer((_) async => true);
+  when(local.getNotificationAppLaunchDetails).thenAnswer((_) async => null);
+  when(local.pendingNotificationRequests).thenAnswer((_) async => const []);
+  when(
+    () => local.zonedSchedule(
+      id: any(named: 'id'),
+      title: any(named: 'title'),
+      body: any(named: 'body'),
+      scheduledDate: any(named: 'scheduledDate'),
+      notificationDetails: any(named: 'notificationDetails'),
+      androidScheduleMode: any(named: 'androidScheduleMode'),
+      payload: any(named: 'payload'),
+    ),
+  ).thenAnswer((_) async {});
+  return (
+    service: FirebaseNotificationService(
+      messaging: messaging,
+      auth: auth,
+      localNotifications: local,
+      inboxStore: NotificationInboxStore(preferences: SharedPreferencesAsync()),
+    ),
+    local: local,
+  );
 }
 
 class _MockFirebaseMessaging extends Mock implements FirebaseMessaging {}

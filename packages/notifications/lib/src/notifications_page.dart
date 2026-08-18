@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:design_system/design_system.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'notification_message.dart';
@@ -26,7 +27,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
   StreamSubscription<List<AppNotification>>? _subscription;
   late List<AppNotification> _notifications;
   NotificationPermissionState? _permission;
+  NotificationDiagnostics? _diagnostics;
   bool _requestingPermission = false;
+  bool _updatingDiagnostics = false;
 
   @override
   void initState() {
@@ -55,6 +58,39 @@ class _NotificationsPageState extends State<NotificationsPage> {
         _permission = permission;
       });
     }
+    if (kDebugMode) await _refreshDiagnostics();
+  }
+
+  Future<void> _refreshDiagnostics() async {
+    if (_updatingDiagnostics) return;
+    if (mounted) setState(() => _updatingDiagnostics = true);
+    try {
+      final diagnostics = await widget.notificationService.diagnostics();
+      if (mounted) setState(() => _diagnostics = diagnostics);
+    } on Object {
+      // The inspector is diagnostic-only and must never affect the inbox.
+    } finally {
+      if (mounted) setState(() => _updatingDiagnostics = false);
+    }
+  }
+
+  Future<void> _runDiagnosticAction(Future<void> Function() action) async {
+    if (_updatingDiagnostics) return;
+    setState(() => _updatingDiagnostics = true);
+    try {
+      await action();
+    } on Object {
+      if (mounted) {
+        BebeInAppSnackbar.show(
+          context,
+          message: 'La acción de diagnóstico no se pudo completar.',
+          variant: BebeInAppSnackbarVariant.error,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _updatingDiagnostics = false);
+    }
+    await _refreshDiagnostics();
   }
 
   Future<void> _requestPermission() async {
@@ -130,6 +166,23 @@ class _NotificationsPageState extends State<NotificationsPage> {
                       : _requestPermission,
                 ),
               ),
+            if (kDebugMode)
+              SliverToBoxAdapter(
+                child: _NotificationInspector(
+                  diagnostics: _diagnostics,
+                  isLoading: _updatingDiagnostics,
+                  onRefresh: _refreshDiagnostics,
+                  onReconcile: () => _runDiagnosticAction(
+                    widget.notificationService.reconcileReminders,
+                  ),
+                  onTest: () => _runDiagnosticAction(
+                    widget.notificationService.scheduleTestReminder,
+                  ),
+                  onCancelAll: () => _runDiagnosticAction(
+                    widget.notificationService.cancelAllScheduledReminders,
+                  ),
+                ),
+              ),
             if (_notifications.isEmpty)
               const SliverFillRemaining(
                 hasScrollBody: false,
@@ -158,6 +211,124 @@ class _NotificationsPageState extends State<NotificationsPage> {
     await widget.notificationService.markOpened(notification);
     if (mounted) widget.onNotificationPressed?.call(notification);
   }
+}
+
+class _NotificationInspector extends StatelessWidget {
+  const _NotificationInspector({
+    required this.diagnostics,
+    required this.isLoading,
+    required this.onRefresh,
+    required this.onReconcile,
+    required this.onTest,
+    required this.onCancelAll,
+  });
+
+  final NotificationDiagnostics? diagnostics;
+  final bool isLoading;
+  final VoidCallback onRefresh;
+  final VoidCallback onReconcile;
+  final VoidCallback onTest;
+  final VoidCallback onCancelAll;
+
+  @override
+  Widget build(BuildContext context) {
+    final data = diagnostics;
+    return Card(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      child: ExpansionTile(
+        leading: const Icon(Icons.bug_report_outlined),
+        title: const Text('Notification Inspector · DEBUG'),
+        subtitle: Text(
+          data == null
+              ? (isLoading ? 'Leyendo estado…' : 'Estado no disponible')
+              : '${data.pendingNativeCount} nativas · ${data.reminders.length} persistidas',
+        ),
+        trailing: isLoading
+            ? const SizedBox.square(
+                dimension: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : IconButton(
+                tooltip: 'Actualizar diagnóstico',
+                onPressed: onRefresh,
+                icon: const Icon(Icons.refresh_rounded),
+              ),
+        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        children: [
+          if (data != null) ...[
+            _DiagnosticRow('Permiso', data.permission.name),
+            _DiagnosticRow('Zona horaria', data.timeZone),
+            _DiagnosticRow(
+              'Alarmas exactas',
+              switch (data.canScheduleExactAlarms) {
+                true => 'Disponibles',
+                false => 'Bloqueadas; se usará modo aproximado',
+                null => 'No aplica / no disponible',
+              },
+            ),
+            _DiagnosticRow(
+              'Token FCM',
+              data.hasRegisteredFcmToken ? 'Registrado' : 'No registrado',
+            ),
+            if (data.lastError != null)
+              _DiagnosticRow('Último error', data.lastError!),
+            for (final reminder in data.reminders.take(5))
+              _DiagnosticRow(
+                reminder.channelId,
+                '${reminder.title} · ${_diagnosticDate(reminder.scheduledAt)}',
+              ),
+          ],
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              OutlinedButton(
+                onPressed: isLoading ? null : onReconcile,
+                child: const Text('Reconciliar'),
+              ),
+              OutlinedButton(
+                onPressed: isLoading ? null : onTest,
+                child: const Text('Probar +10 s'),
+              ),
+              TextButton(
+                onPressed: isLoading ? null : onCancelAll,
+                child: const Text('Cancelar programadas'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  static String _diagnosticDate(DateTime value) {
+    final local = value.toLocal();
+    final day = local.day.toString().padLeft(2, '0');
+    final month = local.month.toString().padLeft(2, '0');
+    final hour = local.hour.toString().padLeft(2, '0');
+    final minute = local.minute.toString().padLeft(2, '0');
+    return '$day/$month $hour:$minute';
+  }
+}
+
+class _DiagnosticRow extends StatelessWidget {
+  const _DiagnosticRow(this.label, this.value);
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: 6),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(width: 120, child: Text(label)),
+        Expanded(child: Text(value)),
+      ],
+    ),
+  );
 }
 
 class _PermissionBanner extends StatelessWidget {

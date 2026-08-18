@@ -48,6 +48,7 @@ class FirebaseNotificationService implements NotificationService {
     LoadRemoteNotifications? loadRemoteNotifications,
     MarkRemoteNotificationRead? markRemoteNotificationRead,
     MarkAllRemoteNotificationsRead? markAllRemoteNotificationsRead,
+    Future<bool?> Function()? canScheduleExactNotifications,
   }) : _messaging = messaging ?? FirebaseMessaging.instance,
        _auth = auth ?? FirebaseAuth.instance,
        _localNotifications =
@@ -58,7 +59,8 @@ class FirebaseNotificationService implements NotificationService {
        _unregisterRemoteDevice = unregisterRemoteDevice,
        _loadRemoteNotifications = loadRemoteNotifications,
        _markRemoteNotificationRead = markRemoteNotificationRead,
-       _markAllRemoteNotificationsRead = markAllRemoteNotificationsRead;
+       _markAllRemoteNotificationsRead = markAllRemoteNotificationsRead,
+       _canScheduleExactNotificationsOverride = canScheduleExactNotifications;
 
   static const _channel = AndroidNotificationChannel(
     'bebeapp_high_importance',
@@ -67,13 +69,33 @@ class FirebaseNotificationService implements NotificationService {
     importance: Importance.high,
   );
 
-  static const _reminderChannel = AndroidNotificationChannel(
-    'bebeapp_reminders',
-    'Alarmas y recordatorios',
-    description: 'Alarmas de medicamentos, alimentación y cambios de pañal.',
+  static const _medicationChannel = AndroidNotificationChannel(
+    'medication_high',
+    'Medicamentos',
+    description: 'Recordatorios importantes de dosis de medicamentos.',
     importance: Importance.max,
     playSound: true,
     enableVibration: true,
+  );
+
+  static const _healthChannel = AndroidNotificationChannel(
+    'health_reminders',
+    'Salud y controles',
+    description: 'Recordatorios de controles, vacunas y atención de salud.',
+    importance: Importance.high,
+  );
+
+  static const _feedingChannel = AndroidNotificationChannel(
+    'feeding_reminders',
+    'Alimentación',
+    description: 'Recordatorios opcionales de alimentación.',
+  );
+
+  static const _systemChannel = AndroidNotificationChannel(
+    'system_alerts',
+    'Alertas del sistema',
+    description: 'Alertas persistentes que requieren atención.',
+    importance: Importance.high,
   );
 
   final FirebaseMessaging _messaging;
@@ -86,6 +108,7 @@ class FirebaseNotificationService implements NotificationService {
   final LoadRemoteNotifications? _loadRemoteNotifications;
   final MarkRemoteNotificationRead? _markRemoteNotificationRead;
   final MarkAllRemoteNotificationsRead? _markAllRemoteNotificationsRead;
+  final Future<bool?> Function()? _canScheduleExactNotificationsOverride;
   final StreamController<List<AppNotification>> _notificationsController =
       StreamController<List<AppNotification>>.broadcast();
   final StreamController<AppNotification> _openedController =
@@ -97,6 +120,7 @@ class FirebaseNotificationService implements NotificationService {
   AppNotification? _pendingOpenedNotification;
   String? _registeredUserId;
   String? _registeredToken;
+  String? _lastReminderError;
   bool _initialized = false;
 
   static const _permissionChannel = MethodChannel(
@@ -123,6 +147,7 @@ class FirebaseNotificationService implements NotificationService {
 
     await refreshInbox();
     await _initializeLocalNotifications();
+    await reconcileReminders();
     await _messaging.setForegroundNotificationPresentationOptions(
       alert: true,
       badge: true,
@@ -165,7 +190,7 @@ class FirebaseNotificationService implements NotificationService {
   }
 
   Future<void> _initializeLocalNotifications() async {
-    tz.initializeTimeZones();
+    await _configureLocalTimeZone();
     const settings = InitializationSettings(
       android: AndroidInitializationSettings('@mipmap/ic_launcher'),
       iOS: IOSInitializationSettings(
@@ -182,16 +207,34 @@ class FirebaseNotificationService implements NotificationService {
       },
     );
 
-    await _localNotifications
+    final android = _localNotifications
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
-        >()
-        ?.createNotificationChannel(_channel);
-    await _localNotifications
-        .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin
-        >()
-        ?.createNotificationChannel(_reminderChannel);
+        >();
+    for (final channel in const <AndroidNotificationChannel>[
+      _channel,
+      _medicationChannel,
+      _healthChannel,
+      _feedingChannel,
+      _systemChannel,
+    ]) {
+      await android?.createNotificationChannel(channel);
+    }
+  }
+
+  Future<void> _configureLocalTimeZone() async {
+    tz.initializeTimeZones();
+    if (kIsWeb) return;
+    try {
+      final timeZoneName = await _permissionChannel.invokeMethod<String>(
+        'timezone',
+      );
+      if (timeZoneName != null && timeZoneName.isNotEmpty) {
+        tz.setLocalLocation(tz.getLocation(timeZoneName));
+      }
+    } on Object catch (error) {
+      debugPrint('No se pudo resolver la zona horaria local: $error');
+    }
   }
 
   @override
@@ -201,6 +244,7 @@ class FirebaseNotificationService implements NotificationService {
     required String body,
     required DateTime scheduledAt,
     String route = '/agenda',
+    NotificationReminderType type = NotificationReminderType.custom,
   }) async {
     final accountId = _auth.currentUser?.uid;
     if (kIsWeb ||
@@ -210,49 +254,30 @@ class FirebaseNotificationService implements NotificationService {
       return;
     }
     await initialize();
+    final reminder = NotificationReminder(
+      id: id,
+      title: title,
+      body: body,
+      scheduledAt: scheduledAt,
+      route: route,
+      type: type,
+    );
     final replacement = await _scheduleStore.replace(
       ownerId: id,
       accountId: accountId,
       babyId: '',
       reminderIds: [id],
+      reminderData: {id: _scheduleData(reminder)},
     );
     for (final previousId in replacement.previousPlatformIds) {
       await _localNotifications.cancel(id: previousId);
     }
     final platformId = replacement.platformIdsByReminder[id]!;
-    final notification = AppNotification(
-      id: id,
-      title: title,
-      body: body,
-      receivedAt: scheduledAt,
-      data: {'route': route, 'account_id': accountId},
-    );
-    await _localNotifications.zonedSchedule(
-      id: platformId,
-      title: title,
-      body: body,
-      scheduledDate: tz.TZDateTime.from(scheduledAt.toUtc(), tz.UTC),
-      notificationDetails: const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'bebeapp_reminders',
-          'Alarmas y recordatorios',
-          channelDescription:
-              'Alarmas de medicamentos, alimentación y cambios de pañal.',
-          importance: Importance.max,
-          priority: Priority.max,
-          category: AndroidNotificationCategory.alarm,
-          audioAttributesUsage: AudioAttributesUsage.alarm,
-          ticker: 'Recordatorio de BebéApp',
-        ),
-        iOS: DarwinNotificationDetails(
-          presentAlert: true,
-          presentBadge: true,
-          presentSound: true,
-          interruptionLevel: InterruptionLevel.timeSensitive,
-        ),
-      ),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      payload: jsonEncode(notification.toJson()),
+    await _scheduleLocal(
+      platformId: platformId,
+      reminder: reminder,
+      accountId: accountId,
+      babyId: '',
     );
   }
 
@@ -281,6 +306,10 @@ class FirebaseNotificationService implements NotificationService {
       accountId: accountId,
       babyId: babyId,
       reminderIds: futureReminders.map((reminder) => reminder.id),
+      reminderData: {
+        for (final reminder in futureReminders)
+          reminder.id: _scheduleData(reminder),
+      },
     );
     for (final previousId in replacement.previousPlatformIds) {
       await _localNotifications.cancel(id: previousId);
@@ -288,45 +317,171 @@ class FirebaseNotificationService implements NotificationService {
     for (final reminder in futureReminders) {
       final platformId = replacement.platformIdsByReminder[reminder.id];
       if (platformId == null) continue;
-      final notification = AppNotification(
-        id: reminder.id,
+      await _scheduleLocal(
+        platformId: platformId,
+        reminder: reminder,
+        accountId: accountId,
+        babyId: babyId,
+      );
+    }
+  }
+
+  NotificationScheduleData _scheduleData(NotificationReminder reminder) =>
+      NotificationScheduleData(
         title: reminder.title,
         body: reminder.body,
-        receivedAt: reminder.scheduledAt,
-        data: {
-          'route': reminder.route,
-          'account_id': accountId,
-          if (babyId.isNotEmpty) 'baby_id': babyId,
-        },
+        scheduledAt: reminder.scheduledAt,
+        route: reminder.route,
+        type: reminder.type.name,
+        timeZone: tz.local.name,
       );
+
+  Future<void> _scheduleLocal({
+    required int platformId,
+    required NotificationReminder reminder,
+    required String accountId,
+    required String babyId,
+  }) async {
+    final notification = AppNotification(
+      id: reminder.id,
+      title: reminder.title,
+      body: reminder.body,
+      receivedAt: reminder.scheduledAt,
+      data: {
+        'route': reminder.route,
+        'account_id': accountId,
+        'reminder_type': reminder.type.name,
+        if (babyId.isNotEmpty) 'baby_id': babyId,
+      },
+    );
+    final exactAvailable = await _canScheduleExactNotifications();
+    final requiresExact = reminder.type.requiresExactDelivery;
+    try {
       await _localNotifications.zonedSchedule(
         id: platformId,
         title: reminder.title,
         body: reminder.body,
-        scheduledDate: tz.TZDateTime.from(reminder.scheduledAt.toUtc(), tz.UTC),
-        notificationDetails: const NotificationDetails(
-          android: AndroidNotificationDetails(
-            'bebeapp_reminders',
-            'Alarmas y recordatorios',
-            channelDescription:
-                'Alarmas y recordatorios configurados en BebéApp.',
-            importance: Importance.max,
-            priority: Priority.max,
-            category: AndroidNotificationCategory.alarm,
-            audioAttributesUsage: AudioAttributesUsage.alarm,
-            ticker: 'Recordatorio de BebéApp',
-          ),
-          iOS: DarwinNotificationDetails(
-            presentAlert: true,
-            presentBadge: true,
-            presentSound: true,
-            interruptionLevel: InterruptionLevel.timeSensitive,
-          ),
-        ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        scheduledDate: tz.TZDateTime.from(reminder.scheduledAt, tz.local),
+        notificationDetails: reminder.type.notificationDetails,
+        androidScheduleMode: requiresExact && exactAvailable != false
+            ? AndroidScheduleMode.exactAllowWhileIdle
+            : AndroidScheduleMode.inexactAllowWhileIdle,
         payload: jsonEncode(notification.toJson()),
       );
+      _lastReminderError = null;
+    } on Object catch (error) {
+      _lastReminderError = error.toString();
+      rethrow;
     }
+  }
+
+  Future<bool?> _canScheduleExactNotifications() async {
+    final override = _canScheduleExactNotificationsOverride;
+    if (override != null) return override();
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return null;
+    try {
+      return await _localNotifications
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >()
+          ?.canScheduleExactNotifications();
+    } on Object {
+      return null;
+    }
+  }
+
+  @override
+  Future<void> reconcileReminders() async {
+    if (kIsWeb) return;
+    final accountId = _auth.currentUser?.uid;
+    if (accountId == null || !(await permissionState()).canDeliver) return;
+    try {
+      await _scheduleStore.pruneExpired(
+        accountId: accountId,
+        now: DateTime.now().toUtc(),
+      );
+      final stored = await _scheduleStore.listForAccount(accountId);
+      final pending = await _localNotifications.pendingNotificationRequests();
+      final pendingIds = pending.map((request) => request.id).toSet();
+      for (final record in stored) {
+        if (pendingIds.contains(record.platformId) ||
+            !record.scheduledAt.isAfter(DateTime.now())) {
+          continue;
+        }
+        await _scheduleLocal(
+          platformId: record.platformId,
+          reminder: NotificationReminder(
+            id: record.reminderId,
+            title: record.title,
+            body: record.body,
+            scheduledAt: record.scheduledAt,
+            route: record.route,
+            type: NotificationReminderType.values.firstWhere(
+              (type) => type.name == record.type,
+              orElse: () => NotificationReminderType.custom,
+            ),
+          ),
+          accountId: accountId,
+          babyId: record.babyId,
+        );
+      }
+    } on Object catch (error, stackTrace) {
+      _lastReminderError = error.toString();
+      debugPrint('No se pudieron reconciliar los recordatorios: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
+  }
+
+  @override
+  Future<NotificationDiagnostics> diagnostics() async {
+    final accountId = _auth.currentUser?.uid;
+    final pending = kIsWeb
+        ? const <PendingNotificationRequest>[]
+        : await _localNotifications.pendingNotificationRequests();
+    final stored = accountId == null
+        ? const <StoredNotificationSchedule>[]
+        : await _scheduleStore.listForAccount(accountId);
+    return NotificationDiagnostics(
+      permission: await permissionState(),
+      timeZone: tz.local.name,
+      pendingNativeCount: pending.length,
+      hasRegisteredFcmToken: _registeredToken?.isNotEmpty == true,
+      canScheduleExactAlarms: await _canScheduleExactNotifications(),
+      lastError: _lastReminderError,
+      reminders: [
+        for (final record in stored)
+          NotificationDiagnosticReminder(
+            id: record.reminderId,
+            platformId: record.platformId,
+            title: record.title,
+            scheduledAt: record.scheduledAt,
+            type: NotificationReminderType.values.firstWhere(
+              (type) => type.name == record.type,
+              orElse: () => NotificationReminderType.custom,
+            ),
+            channelId: NotificationReminderType.values
+                .firstWhere(
+                  (type) => type.name == record.type,
+                  orElse: () => NotificationReminderType.custom,
+                )
+                .channelId,
+          ),
+      ],
+    );
+  }
+
+  @override
+  Future<void> scheduleTestReminder() => scheduleReminder(
+    id: 'debug:test:${DateTime.now().millisecondsSinceEpoch}',
+    title: 'Prueba de notificación',
+    body: 'Si ves este aviso, el programador local está funcionando.',
+    scheduledAt: DateTime.now().add(const Duration(seconds: 10)),
+  );
+
+  @override
+  Future<void> cancelAllScheduledReminders() async {
+    final accountId = _auth.currentUser?.uid;
+    if (accountId != null) await cancelRemindersForAccount(accountId);
   }
 
   @override
@@ -342,6 +497,23 @@ class FirebaseNotificationService implements NotificationService {
   Future<void> cancelRemindersForAccount(String accountId) async {
     if (accountId.isEmpty) return;
     final platformIds = await _scheduleStore.removeAccount(accountId);
+    for (final platformId in platformIds) {
+      await _localNotifications.cancel(id: platformId);
+    }
+  }
+
+  @override
+  Future<void> retainReminderOwners({
+    required String accountId,
+    required String babyId,
+    required Set<String> ownerIds,
+  }) async {
+    if (accountId.isEmpty || _auth.currentUser?.uid != accountId) return;
+    final platformIds = await _scheduleStore.removeOwnersExcept(
+      accountId: accountId,
+      babyId: babyId,
+      retainedOwnerIds: ownerIds,
+    );
     for (final platformId in platformIds) {
       await _localNotifications.cancel(id: platformId);
     }
@@ -723,3 +895,97 @@ NotificationPermissionState _permissionStateFromName(String? value) =>
       'restricted' => NotificationPermissionState.restricted,
       _ => NotificationPermissionState.unknown,
     };
+
+extension on NotificationReminderType {
+  String get channelId => switch (this) {
+    NotificationReminderType.medication => 'medication_high',
+    NotificationReminderType.healthControl ||
+    NotificationReminderType.vaccine ||
+    NotificationReminderType.custom => 'health_reminders',
+    NotificationReminderType.feeding => 'feeding_reminders',
+    NotificationReminderType.syncFailure => 'system_alerts',
+  };
+
+  bool get requiresExactDelivery => switch (this) {
+    NotificationReminderType.medication ||
+    NotificationReminderType.healthControl ||
+    NotificationReminderType.vaccine ||
+    NotificationReminderType.custom => true,
+    NotificationReminderType.feeding ||
+    NotificationReminderType.syncFailure => false,
+  };
+
+  NotificationDetails get notificationDetails => switch (this) {
+    NotificationReminderType.medication => const NotificationDetails(
+      android: AndroidNotificationDetails(
+        'medication_high',
+        'Medicamentos',
+        channelDescription:
+            'Recordatorios importantes de dosis de medicamentos.',
+        importance: Importance.max,
+        priority: Priority.max,
+        category: AndroidNotificationCategory.alarm,
+        audioAttributesUsage: AudioAttributesUsage.alarm,
+        ticker: 'Medicamento de BebéApp',
+      ),
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+        interruptionLevel: InterruptionLevel.timeSensitive,
+      ),
+    ),
+    NotificationReminderType.healthControl ||
+    NotificationReminderType.vaccine ||
+    NotificationReminderType.custom => const NotificationDetails(
+      android: AndroidNotificationDetails(
+        'health_reminders',
+        'Salud y controles',
+        channelDescription:
+            'Recordatorios de controles, vacunas y atención de salud.',
+        importance: Importance.high,
+        priority: Priority.high,
+        category: AndroidNotificationCategory.reminder,
+        ticker: 'Recordatorio de BebéApp',
+      ),
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+        interruptionLevel: InterruptionLevel.timeSensitive,
+      ),
+    ),
+    NotificationReminderType.feeding => const NotificationDetails(
+      android: AndroidNotificationDetails(
+        'feeding_reminders',
+        'Alimentación',
+        channelDescription: 'Recordatorios opcionales de alimentación.',
+        category: AndroidNotificationCategory.reminder,
+        ticker: 'Recordatorio de alimentación',
+      ),
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+        interruptionLevel: InterruptionLevel.active,
+      ),
+    ),
+    NotificationReminderType.syncFailure => const NotificationDetails(
+      android: AndroidNotificationDetails(
+        'system_alerts',
+        'Alertas del sistema',
+        channelDescription: 'Alertas persistentes que requieren atención.',
+        importance: Importance.high,
+        priority: Priority.high,
+        category: AndroidNotificationCategory.status,
+        ticker: 'Alerta de BebéApp',
+      ),
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+        interruptionLevel: InterruptionLevel.active,
+      ),
+    ),
+  };
+}

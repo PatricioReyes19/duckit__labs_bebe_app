@@ -10,6 +10,7 @@ import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import java.util.TimeZone
 
 class MainActivity : FlutterActivity() {
     private val channelName = "com.duckitlabs.bebeapp/notification_permission"
@@ -30,6 +31,7 @@ class MainActivity : FlutterActivity() {
                         result.success(null)
                     }
                     "openSettings" -> result.success(openNotificationSettings())
+                    "timezone" -> result.success(TimeZone.getDefault().id)
                     else -> result.notImplemented()
                 }
             }

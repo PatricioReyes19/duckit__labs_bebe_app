@@ -21,6 +21,7 @@ const _permissionChannel = MethodChannel(
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   late String permissionStatus;
+  late String timeZone;
 
   setUpAll(() {
     registerFallbackValue(const InitializationSettings());
@@ -33,9 +34,11 @@ void main() {
     SharedPreferencesAsyncPlatform.instance =
         InMemorySharedPreferencesAsync.empty();
     permissionStatus = 'granted';
+    timeZone = 'UTC';
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(_permissionChannel, (call) async {
           if (call.method == 'status') return permissionStatus;
+          if (call.method == 'timezone') return timeZone;
           if (call.method == 'openSettings') return true;
           return null;
         });
@@ -52,7 +55,7 @@ void main() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
           _permissionChannel,
-      (_) => throw PlatformException(code: 'unavailable'),
+          (_) => throw PlatformException(code: 'unavailable'),
         );
     final service = FirebaseNotificationService(
       messaging: messaging,
@@ -241,6 +244,94 @@ void main() {
     verify(() => fixture.local.cancel(id: scheduledId)).called(1);
   });
 
+  test('UT-NOTIF-008 reconciliation restores a missing native alarm', () async {
+    final fixture = _serviceFixture();
+    final scheduledAt = DateTime.now().add(const Duration(hours: 2));
+    await fixture.service.replaceReminders(
+      ownerId: 'account:user-1|agenda:reconcile',
+      accountId: 'user-1',
+      babyId: 'baby-1',
+      reminders: [
+        NotificationReminder(
+          id: 'agenda:reconcile',
+          title: 'Medicamento',
+          body: 'Vitamina D · 1 gota',
+          scheduledAt: scheduledAt,
+          route: '/agenda/events/reconcile',
+          type: NotificationReminderType.medication,
+        ),
+      ],
+    );
+    clearInteractions(fixture.local);
+
+    await fixture.service.reconcileReminders();
+
+    verify(
+      () => fixture.local.zonedSchedule(
+        id: any(named: 'id'),
+        title: 'Medicamento',
+        body: 'Vitamina D · 1 gota',
+        scheduledDate: any(named: 'scheduledDate'),
+        notificationDetails: any(named: 'notificationDetails'),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        payload: any(named: 'payload'),
+      ),
+    ).called(1);
+  });
+
+  test('UT-NOTIF-009 exact alarm denial falls back without losing it', () async {
+    final fixture = _serviceFixture(exactAlarmsAvailable: false);
+    await fixture.service.replaceReminders(
+      ownerId: 'account:user-1|agenda:exact-denied',
+      accountId: 'user-1',
+      babyId: 'baby-1',
+      reminders: [
+        NotificationReminder(
+          id: 'agenda:exact-denied',
+          title: 'Medicamento',
+          body: 'Vitamina D · 1 gota',
+          scheduledAt: DateTime.now().add(const Duration(hours: 1)),
+          route: '/agenda',
+          type: NotificationReminderType.medication,
+        ),
+      ],
+    );
+
+    verify(
+      () => fixture.local.zonedSchedule(
+        id: any(named: 'id'),
+        title: 'Medicamento',
+        body: any(named: 'body'),
+        scheduledDate: any(named: 'scheduledDate'),
+        notificationDetails: any(named: 'notificationDetails'),
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        payload: any(named: 'payload'),
+      ),
+    ).called(1);
+  });
+
+  test('UT-NOTIF-010 schedules in the device IANA timezone', () async {
+    timeZone = 'America/Santiago';
+    final fixture = _serviceFixture();
+    await fixture.service.replaceReminders(
+      ownerId: 'account:user-1|agenda:timezone',
+      accountId: 'user-1',
+      babyId: 'baby-1',
+      reminders: [
+        NotificationReminder(
+          id: 'agenda:timezone',
+          title: 'Control',
+          body: 'Control pediátrico',
+          scheduledAt: DateTime.now().add(const Duration(days: 1)),
+          route: '/agenda',
+          type: NotificationReminderType.healthControl,
+        ),
+      ],
+    );
+
+    expect((await fixture.service.diagnostics()).timeZone, 'America/Santiago');
+  });
+
   test('IT-NOTIF-001 granted schedules a reminder', () async {
     final fixture = _serviceFixture();
     await fixture.service.replaceReminders(
@@ -340,7 +431,7 @@ FirebaseNotificationService _permissionOnlyService() =>
       localNotifications: _MockLocalNotifications(),
     );
 
-_ServiceFixture _serviceFixture() {
+_ServiceFixture _serviceFixture({bool? exactAlarmsAvailable}) {
   final messaging = _MockFirebaseMessaging();
   final auth = _MockFirebaseAuth();
   final user = _MockUser();
@@ -368,6 +459,7 @@ _ServiceFixture _serviceFixture() {
     ),
   ).thenAnswer((_) async => true);
   when(local.getNotificationAppLaunchDetails).thenAnswer((_) async => null);
+  when(local.pendingNotificationRequests).thenAnswer((_) async => const []);
   when(
     () => local.zonedSchedule(
       id: any(named: 'id'),
@@ -389,6 +481,9 @@ _ServiceFixture _serviceFixture() {
       scheduleStore: NotificationScheduleStore(
         preferences: SharedPreferencesAsync(),
       ),
+      canScheduleExactNotifications: exactAlarmsAvailable == null
+          ? null
+          : () async => exactAlarmsAvailable,
     ),
     local,
   );

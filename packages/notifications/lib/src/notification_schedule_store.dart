@@ -12,6 +12,62 @@ class NotificationScheduleReplacement {
   final Map<String, int> platformIdsByReminder;
 }
 
+class NotificationScheduleData {
+  const NotificationScheduleData({
+    required this.title,
+    required this.body,
+    required this.scheduledAt,
+    required this.route,
+    required this.type,
+    required this.timeZone,
+  });
+
+  final String title;
+  final String body;
+  final DateTime scheduledAt;
+  final String route;
+  final String type;
+  final String timeZone;
+
+  Map<String, Object?> toJson({required int platformId}) => <String, Object?>{
+    'platformId': platformId,
+    'title': title,
+    'body': body,
+    'scheduledAtUtc': scheduledAt.toUtc().toIso8601String(),
+    'route': route,
+    'type': type,
+    'timeZone': timeZone,
+  };
+}
+
+class StoredNotificationSchedule {
+  const StoredNotificationSchedule({
+    required this.ownerId,
+    required this.accountId,
+    required this.babyId,
+    required this.reminderId,
+    required this.platformId,
+    required this.title,
+    required this.body,
+    required this.scheduledAt,
+    required this.route,
+    required this.type,
+    required this.timeZone,
+  });
+
+  final String ownerId;
+  final String accountId;
+  final String babyId;
+  final String reminderId;
+  final int platformId;
+  final String title;
+  final String body;
+  final DateTime scheduledAt;
+  final String route;
+  final String type;
+  final String timeZone;
+}
+
 class NotificationScheduleStore {
   NotificationScheduleStore({SharedPreferencesAsync? preferences})
     : _preferences = preferences ?? SharedPreferencesAsync();
@@ -25,6 +81,7 @@ class NotificationScheduleStore {
     required String accountId,
     required String babyId,
     required Iterable<String> reminderIds,
+    Map<String, NotificationScheduleData> reminderData = const {},
   }) async {
     final schedules = await _load();
     final previous = schedules[ownerId];
@@ -49,10 +106,18 @@ class NotificationScheduleStore {
       assignments[reminderId] = platformId;
     }
 
+    final records = <String, Object?>{};
+    for (final entry in assignments.entries) {
+      final data = reminderData[entry.key];
+      if (data != null) {
+        records[entry.key] = data.toJson(platformId: entry.value);
+      }
+    }
     schedules[ownerId] = <String, Object?>{
       'accountId': accountId,
       'babyId': babyId,
       'ids': assignments,
+      'records': records,
     };
     await _save(schedules);
     return NotificationScheduleReplacement(
@@ -64,6 +129,85 @@ class NotificationScheduleStore {
           : const <int>[],
       platformIdsByReminder: assignments,
     );
+  }
+
+  Future<List<StoredNotificationSchedule>> listForAccount(
+    String accountId,
+  ) async {
+    final schedules = await _load();
+    final result = <StoredNotificationSchedule>[];
+    for (final owner in schedules.entries) {
+      if (owner.value['accountId'] != accountId) continue;
+      final babyId = owner.value['babyId']?.toString() ?? '';
+      final records = owner.value['records'];
+      if (records is! Map) continue;
+      for (final entry in records.entries) {
+        final raw = entry.value;
+        if (raw is! Map) continue;
+        final platformId = (raw['platformId'] as num?)?.toInt();
+        final scheduledAt = DateTime.tryParse(
+          raw['scheduledAtUtc']?.toString() ?? '',
+        );
+        if (platformId == null || scheduledAt == null) continue;
+        result.add(
+          StoredNotificationSchedule(
+            ownerId: owner.key,
+            accountId: accountId,
+            babyId: babyId,
+            reminderId: entry.key.toString(),
+            platformId: platformId,
+            title: raw['title']?.toString() ?? '',
+            body: raw['body']?.toString() ?? '',
+            scheduledAt: scheduledAt,
+            route: raw['route']?.toString() ?? '/agenda',
+            type: raw['type']?.toString() ?? 'custom',
+            timeZone: raw['timeZone']?.toString() ?? 'UTC',
+          ),
+        );
+      }
+    }
+    result.sort(
+      (first, second) => first.scheduledAt.compareTo(second.scheduledAt),
+    );
+    return result;
+  }
+
+  Future<List<int>> pruneExpired({
+    required String accountId,
+    required DateTime now,
+  }) async {
+    final schedules = await _load();
+    final expiredPlatformIds = <int>[];
+    final emptyOwners = <String>[];
+    for (final owner in schedules.entries) {
+      if (owner.value['accountId'] != accountId) continue;
+      final ids = owner.value['ids'];
+      final records = owner.value['records'];
+      if (ids is! Map || records is! Map) continue;
+      final expiredReminderIds = <String>[];
+      for (final entry in records.entries) {
+        final raw = entry.value;
+        if (raw is! Map) continue;
+        final scheduledAt = DateTime.tryParse(
+          raw['scheduledAtUtc']?.toString() ?? '',
+        );
+        if (scheduledAt == null || !scheduledAt.isAfter(now)) {
+          expiredReminderIds.add(entry.key.toString());
+          final platformId = (raw['platformId'] as num?)?.toInt();
+          if (platformId != null) expiredPlatformIds.add(platformId);
+        }
+      }
+      for (final reminderId in expiredReminderIds) {
+        records.remove(reminderId);
+        ids.remove(reminderId);
+      }
+      if (ids.isEmpty) emptyOwners.add(owner.key);
+    }
+    for (final ownerId in emptyOwners) {
+      schedules.remove(ownerId);
+    }
+    await _save(schedules);
+    return expiredPlatformIds;
   }
 
   Future<List<int>> removeOwner(String ownerId) async {
@@ -84,6 +228,33 @@ class NotificationScheduleStore {
     final removedIds = <int>[];
     final owners = schedules.entries
         .where((entry) => entry.value['accountId'] == accountId)
+        .map((entry) => entry.key)
+        .toList(growable: false);
+    for (final owner in owners) {
+      final removed = schedules.remove(owner);
+      final ids = removed?['ids'];
+      if (ids is Map) {
+        removedIds.addAll(ids.values.whereType<num>().map((id) => id.toInt()));
+      }
+    }
+    await _save(schedules);
+    return removedIds;
+  }
+
+  Future<List<int>> removeOwnersExcept({
+    required String accountId,
+    required String babyId,
+    required Set<String> retainedOwnerIds,
+  }) async {
+    final schedules = await _load();
+    final removedIds = <int>[];
+    final owners = schedules.entries
+        .where(
+          (entry) =>
+              entry.value['accountId'] == accountId &&
+              entry.value['babyId'] == babyId &&
+              !retainedOwnerIds.contains(entry.key),
+        )
         .map((entry) => entry.key)
         .toList(growable: false);
     for (final owner in owners) {

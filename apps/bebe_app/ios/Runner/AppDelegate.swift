@@ -42,6 +42,8 @@ import UserNotifications
           return
         }
         UIApplication.shared.open(url) { opened in result(opened) }
+      case "timezone":
+        result(TimeZone.current.identifier)
       default:
         result(FlutterMethodNotImplemented)
       }
