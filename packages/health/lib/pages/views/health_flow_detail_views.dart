@@ -1456,19 +1456,123 @@ class _HealthRecordDetailView extends StatelessWidget {
   }
 }
 
-class _ExportReportView extends StatelessWidget {
+class _ExportReportView extends StatefulWidget {
   const _ExportReportView({required this.controller, required this.openFlow});
 
   final HealthFlowController controller;
   final HealthFlowNavigator openFlow;
 
+  @override
+  State<_ExportReportView> createState() => _ExportReportViewState();
+}
+
+class _ExportReportViewState extends State<_ExportReportView> {
+  ClinicalReportType _type = ClinicalReportType.pediatricControl;
+  int _periodDays = 30;
+  bool _includeCaregivers = false;
+  bool _includePhotos = false;
+  bool _includePrivateNotes = false;
+  bool _includeTimeline = false;
+  bool _exporting = false;
+  DateTimeRange? _customPeriod;
+  final Set<ClinicalReportSection> _sections = {
+    ClinicalReportSection.growth,
+    ClinicalReportSection.feeding,
+    ClinicalReportSection.medications,
+    ClinicalReportSection.vaccines,
+    ClinicalReportSection.appointments,
+    ClinicalReportSection.observations,
+    ClinicalReportSection.elimination,
+    ClinicalReportSection.sleep,
+  };
+
+  HealthFlowController get controller => widget.controller;
+  HealthFlowNavigator get openFlow => widget.openFlow;
+
+  List<int> get _periodOptions => switch (_type) {
+    ClinicalReportType.symptomConsultation => const [1, 2, 3, 7],
+    ClinicalReportType.pediatricControl => const [7, 30, 90],
+    ClinicalReportType.medicationFollowUp => const [7, 30, 90],
+    ClinicalReportType.growthNutrition => const [30, 90],
+    ClinicalReportType.fullHistory => const [30, 90],
+  };
+
+  ClinicalReportRequest get _request {
+    final generatedAt = controller.reportSnapshot.generatedAt;
+    final customEnd = _customPeriod?.end;
+    final requestedEnd = customEnd == null
+        ? generatedAt
+        : DateTime(
+            customEnd.year,
+            customEnd.month,
+            customEnd.day,
+            23,
+            59,
+            59,
+            999,
+          );
+    final dateTo = requestedEnd.isAfter(generatedAt)
+        ? generatedAt
+        : requestedEnd;
+    final dateFrom = _customPeriod?.start ??
+        generatedAt.subtract(Duration(days: _periodDays));
+    return ClinicalReportRequest(
+      babyId: controller.activeBaby?.id ?? '',
+      type: _type,
+      dateFrom: dateFrom,
+      dateTo: dateTo,
+      includePhotos: _includePhotos,
+      includeCaregiverNames: _includeCaregivers,
+      includePrivateNotes: _includePrivateNotes,
+      includeRawTimeline:
+          _includeTimeline || _type == ClinicalReportType.fullHistory,
+      sections: Set.unmodifiable(_sections),
+    );
+  }
+
+  Future<void> _selectCustomPeriod() async {
+    final now = DateTime.now();
+    final selected = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(now.year - 5),
+      lastDate: now,
+      initialDateRange: _customPeriod,
+      helpText: 'Período personalizado',
+      saveText: 'Aplicar',
+    );
+    if (selected != null && mounted) setState(() => _customPeriod = selected);
+  }
+
   Future<void> _export(BuildContext context, {required bool csv}) async {
+    if (_exporting) return;
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Antes de compartir'),
+        content: const Text(
+          'Este archivo contiene información personal y de salud del bebé. '
+          'Compártelo sólo con personas autorizadas.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Continuar'),
+          ),
+        ],
+      ),
+    );
+    if (accepted != true || !context.mounted) return;
+    setState(() => _exporting = true);
     try {
       const exporter = HealthReportExporter();
       if (csv) {
         await exporter.shareCsv(controller);
       } else {
-        await exporter.sharePdf(controller);
+        await exporter.sharePdf(controller, request: _request);
       }
       if (context.mounted) openFlow(HealthFlowAction.exported);
     } on Object catch (error) {
@@ -1478,6 +1582,8 @@ class _ExportReportView extends StatelessWidget {
         message: 'No se pudo generar el reporte: $error',
         variant: BebeInAppSnackbarVariant.error,
       );
+    } finally {
+      if (mounted) setState(() => _exporting = false);
     }
   }
 
@@ -1487,41 +1593,210 @@ class _ExportReportView extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
       children: [
         const HealthSectionHeading(
-          title: 'Exportar o compartir reporte',
-          subtitle: 'Selecciona cómo quieres compartir el resumen de salud.',
+          title: 'Generar informe clínico',
+          subtitle: 'Elige el propósito para mostrar sólo información útil.',
         ),
-        const SizedBox(height: 22),
-        HealthActionRow(
+        const SizedBox(height: 18),
+        DropdownButtonFormField<ClinicalReportType>(
+          initialValue: _type,
+          decoration: const InputDecoration(
+            labelText: '¿Para qué lo necesitas?',
+            border: OutlineInputBorder(),
+          ),
+          items: [
+            for (final type in ClinicalReportType.values)
+              DropdownMenuItem(value: type, child: Text(_reportTypeLabel(type))),
+          ],
+          onChanged: _exporting
+              ? null
+              : (value) {
+                  if (value == null) return;
+                  setState(() {
+                    _type = value;
+                    _customPeriod = null;
+                    if (!_periodOptions.contains(_periodDays)) {
+                      _periodDays = _periodOptions.first;
+                    }
+                  });
+                },
+        ),
+        const SizedBox(height: 18),
+        Text(
+          'Período',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 10),
+        SegmentedButton<int>(
+          segments: [
+            for (final days in _periodOptions)
+              ButtonSegment(
+                value: days,
+                label: Text(days == 1 ? '24 h' : '$days días'),
+              ),
+          ],
+          selected: {_periodDays},
+          showSelectedIcon: false,
+          onSelectionChanged: _exporting
+              ? null
+              : (values) => setState(() {
+                  _periodDays = values.first;
+                  _customPeriod = null;
+                }),
+        ),
+        if (_type != ClinicalReportType.symptomConsultation) ...[
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: _exporting ? null : _selectCustomPeriod,
+              icon: const Icon(Icons.date_range_outlined),
+              label: Text(
+                _customPeriod == null
+                    ? 'Período personalizado'
+                    : '${_shortDate(_customPeriod!.start)} - '
+                          '${_shortDate(_customPeriod!.end)}',
+              ),
+            ),
+          ),
+        ],
+        if (_type == ClinicalReportType.fullHistory) ...[
+          const SizedBox(height: 14),
+          HealthSurface(
+            color: Theme.of(context).colorScheme.errorContainer,
+            child: const Row(
+              children: [
+                Icon(Icons.warning_amber_rounded),
+                SizedBox(width: 12),
+                Expanded(child: Text('Este informe puede ser extenso.')),
+              ],
+            ),
+          ),
+        ],
+        const SizedBox(height: 18),
+        HealthSurface(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Secciones del informe',
+                style: TextStyle(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final section in const [
+                    ClinicalReportSection.growth,
+                    ClinicalReportSection.feeding,
+                    ClinicalReportSection.medications,
+                    ClinicalReportSection.vaccines,
+                    ClinicalReportSection.appointments,
+                    ClinicalReportSection.observations,
+                    ClinicalReportSection.elimination,
+                    ClinicalReportSection.sleep,
+                  ])
+                    FilterChip(
+                      label: Text(_reportSectionLabel(section)),
+                      selected: _sections.contains(section),
+                      onSelected: _exporting
+                          ? null
+                          : (selected) {
+                              if (!selected && _sections.length == 1) return;
+                              setState(() {
+                                if (selected) {
+                                  _sections.add(section);
+                                } else {
+                                  _sections.remove(section);
+                                }
+                              });
+                            },
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        HealthSurface(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Privacidad y detalle',
+                style: TextStyle(fontWeight: FontWeight.w800),
+              ),
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Incluir nombres de cuidadores'),
+                value: _includeCaregivers,
+                onChanged: _exporting
+                    ? null
+                    : (value) => setState(() => _includeCaregivers = value),
+              ),
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Incluir fotografías'),
+                subtitle: const Text('Desactivado por defecto'),
+                value: _includePhotos,
+                onChanged: _exporting
+                    ? null
+                    : (value) => setState(() => _includePhotos = value),
+              ),
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Incluir notas privadas'),
+                subtitle: const Text('Desactivado por defecto'),
+                value: _includePrivateNotes,
+                onChanged: _exporting
+                    ? null
+                    : (value) => setState(() => _includePrivateNotes = value),
+              ),
+              if (_type != ClinicalReportType.fullHistory)
+                SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Incluir timeline detallado'),
+                  value: _includeTimeline,
+                  onChanged: _exporting
+                      ? null
+                      : (value) => setState(() => _includeTimeline = value),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        _ClinicalReportPreview(
+          controller: controller,
+          request: _request,
+        ),
+        const SizedBox(height: 18),
+        HealthPrimaryButton(
+          label: _exporting ? 'Generando…' : 'Generar PDF y compartir',
           icon: Icons.picture_as_pdf_outlined,
-          title: 'Exportar PDF',
-          subtitle: 'Resumen visual listo para enviar o imprimir.',
-          tint: Theme.of(context).colorScheme.error,
-          onTap: () => _export(context, csv: false),
+          onPressed: _exporting || controller.activeBaby == null
+              ? null
+              : () => _export(context, csv: false),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         HealthActionRow(
           icon: Icons.table_chart_outlined,
-          title: 'Exportar CSV',
-          subtitle: 'Datos del período para análisis.',
+          title: 'Exportar historial CSV',
+          subtitle: 'Formato técnico con el detalle del período activo.',
           tint: Theme.of(context).colorScheme.tertiary,
-          onTap: () => _export(context, csv: true),
+          onTap: _exporting ? null : () => _export(context, csv: true),
         ),
-        const SizedBox(height: 12),
-        HealthActionRow(
-          icon: Icons.medical_services_outlined,
-          title: 'Compartir con pediatra',
-          subtitle: 'Abre las opciones seguras para compartir.',
-          tint: Theme.of(context).colorScheme.secondary,
-          onTap: () => _export(context, csv: false),
-        ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
         HealthSurface(
           child: Row(
             children: [
               const Icon(Icons.lock_outline_rounded),
               const SizedBox(width: 12),
               const Expanded(
-                child: Text('El reporte solo incluye el período seleccionado.'),
+                child: Text(
+                  'El PDF se genera localmente y no modifica los registros.',
+                ),
               ),
               HealthSyncBadge(
                 status: controller.offlineMode
@@ -1536,6 +1811,83 @@ class _ExportReportView extends StatelessWidget {
     );
   }
 }
+
+class _ClinicalReportPreview extends StatelessWidget {
+  const _ClinicalReportPreview({
+    required this.controller,
+    required this.request,
+  });
+
+  final HealthFlowController controller;
+  final ClinicalReportRequest request;
+
+  @override
+  Widget build(BuildContext context) {
+    ClinicalReportData? data;
+    try {
+      data = const HealthReportExporter().buildData(
+        controller,
+        request: request,
+      );
+    } on Object {
+      data = null;
+    }
+    return HealthSurface(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Vista previa del contenido',
+            style: TextStyle(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          if (data == null)
+            const Text('No hay datos suficientes para previsualizar.')
+          else ...[
+            Text(data.summary),
+            const SizedBox(height: 10),
+            Text(
+              '${data.feeding.recordCount} tomas · '
+              '${data.elimination.wetDiapers + data.elimination.stools} registros de eliminación · '
+              '${data.medications.length} medicamentos · '
+              '${data.observations.length} observaciones',
+            ),
+            if (data.timeline.isEmpty)
+              const Padding(
+                padding: EdgeInsets.only(top: 6),
+                child: Text('El timeline diario no se incluirá.'),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+String _reportTypeLabel(ClinicalReportType type) => switch (type) {
+  ClinicalReportType.pediatricControl => 'Control pediátrico',
+  ClinicalReportType.symptomConsultation => 'Consulta por síntomas',
+  ClinicalReportType.medicationFollowUp => 'Medicamentos',
+  ClinicalReportType.growthNutrition => 'Crecimiento / nutrición',
+  ClinicalReportType.fullHistory => 'Historial completo',
+};
+
+String _shortDate(DateTime value) =>
+    '${value.day.toString().padLeft(2, '0')}/'
+    '${value.month.toString().padLeft(2, '0')}/${value.year}';
+
+String _reportSectionLabel(ClinicalReportSection section) => switch (section) {
+  ClinicalReportSection.growth => 'Crecimiento',
+  ClinicalReportSection.feeding => 'Alimentación',
+  ClinicalReportSection.medications => 'Medicamentos',
+  ClinicalReportSection.vaccines => 'Vacunas',
+  ClinicalReportSection.appointments => 'Controles',
+  ClinicalReportSection.observations => 'Observaciones',
+  ClinicalReportSection.elimination => 'Eliminación',
+  ClinicalReportSection.sleep => 'Sueño',
+  ClinicalReportSection.timeline => 'Timeline',
+  ClinicalReportSection.photos => 'Fotografías',
+};
 
 class _ExportedReportView extends StatelessWidget {
   const _ExportedReportView({required this.controller, required this.openFlow});

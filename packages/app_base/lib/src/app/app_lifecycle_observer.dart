@@ -91,6 +91,7 @@ Future<void> _refreshSynchronizedData() async {
     ).reconcileDomainReminders(
       activeContextRepository: getIt<ActiveContextRepository>(),
       getAgendaOverview: getIt<GetAgendaOverview>(),
+      getHealthOverview: getIt<GetHealthOverview>(),
     );
     if (!reconciled) await notifications.reconcileReminders();
   } on Object catch (error, stackTrace) {

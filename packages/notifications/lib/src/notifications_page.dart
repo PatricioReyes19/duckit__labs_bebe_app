@@ -275,7 +275,8 @@ class _NotificationInspector extends StatelessWidget {
             for (final reminder in data.reminders.take(5))
               _DiagnosticRow(
                 reminder.channelId,
-                '${reminder.title} · ${_diagnosticDate(reminder.scheduledAt)}',
+                '${reminder.title} · ${_diagnosticDate(reminder.scheduledAt)}\n'
+                    'payload: ${reminder.payload}',
               ),
           ],
           const SizedBox(height: 12),

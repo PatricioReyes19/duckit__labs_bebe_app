@@ -88,6 +88,29 @@ void main() {
       ['account:user-1|register:feeding-1'],
     );
   });
+
+  test('vaccines create one preventive and one due reminder', () async {
+    final startsAt = DateTime.now().add(const Duration(days: 4));
+    await coordinator.scheduleHealth(
+      HealthEventEntity(
+        id: 'vaccine-1',
+        babyId: 'baby-1',
+        type: HealthEventType.vaccine,
+        title: 'Vacuna hexavalente',
+        description: '',
+        startsAt: startsAt,
+        status: HealthEventStatus.scheduled,
+      ),
+    );
+
+    final replacement = notifications.replacements.single;
+    expect(replacement.ownerId, 'account:user-1|health:vaccine-1');
+    expect(replacement.reminders, hasLength(2));
+    expect(
+      replacement.reminders.map((reminder) => reminder.type),
+      everyElement(NotificationReminderType.vaccine),
+    );
+  });
 }
 
 class _Replacement {

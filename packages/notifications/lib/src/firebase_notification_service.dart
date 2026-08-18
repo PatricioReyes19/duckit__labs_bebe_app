@@ -16,6 +16,22 @@ import 'notification_service.dart';
 
 bool _backgroundHandlerRegistered = false;
 
+const _openActionId = 'bebeapp_open';
+const _snoozeActionId = 'bebeapp_snooze';
+const _reminderCategoryId = 'bebeapp_reminder_actions';
+const _androidReminderActions = <AndroidNotificationAction>[
+  AndroidNotificationAction(
+    _openActionId,
+    'Abrir BebéApp',
+    showsUserInterface: true,
+  ),
+  AndroidNotificationAction(
+    _snoozeActionId,
+    'Recordar más tarde',
+    showsUserInterface: true,
+  ),
+];
+
 void registerNotificationBackgroundHandler() {
   if (_backgroundHandlerRegistered) {
     return;
@@ -95,7 +111,6 @@ class FirebaseNotificationService implements NotificationService {
     'system_alerts',
     'Alertas del sistema',
     description: 'Alertas persistentes que requieren atención.',
-    importance: Importance.high,
   );
 
   final FirebaseMessaging _messaging;
@@ -121,6 +136,8 @@ class FirebaseNotificationService implements NotificationService {
   String? _registeredUserId;
   String? _registeredToken;
   String? _lastReminderError;
+  DateTime? _lastTimeZoneCheckAt;
+  bool _timeZoneDatabaseInitialized = false;
   bool _initialized = false;
 
   static const _permissionChannel = MethodChannel(
@@ -179,8 +196,9 @@ class FirebaseNotificationService implements NotificationService {
     final localLaunch = await _localNotifications
         .getNotificationAppLaunchDetails();
     final localResponse = localLaunch?.notificationResponse;
-    if (localLaunch?.didNotificationLaunchApp ?? false) {
-      await _handleLocalNotificationTap(localResponse?.payload);
+    if ((localLaunch?.didNotificationLaunchApp ?? false) &&
+        localResponse != null) {
+      await _handleLocalNotificationResponse(localResponse);
     }
 
     final initialMessage = await _messaging.getInitialMessage();
@@ -191,19 +209,40 @@ class FirebaseNotificationService implements NotificationService {
 
   Future<void> _initializeLocalNotifications() async {
     await _configureLocalTimeZone();
-    const settings = InitializationSettings(
-      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+    final settings = InitializationSettings(
+      android: const AndroidInitializationSettings('@mipmap/ic_launcher'),
       iOS: IOSInitializationSettings(
         requestAlertPermission: false,
         requestBadgePermission: false,
         requestSoundPermission: false,
+        notificationCategories: <DarwinNotificationCategory>[
+          DarwinNotificationCategory(
+            _reminderCategoryId,
+            actions: <DarwinNotificationAction>[
+              DarwinNotificationAction.plain(
+                _openActionId,
+                'Abrir BebéApp',
+                options: const <DarwinNotificationActionOption>{
+                  DarwinNotificationActionOption.foreground,
+                },
+              ),
+              DarwinNotificationAction.plain(
+                _snoozeActionId,
+                'Recordar más tarde',
+                options: const <DarwinNotificationActionOption>{
+                  DarwinNotificationActionOption.foreground,
+                },
+              ),
+            ],
+          ),
+        ],
       ),
     );
 
     await _localNotifications.initialize(
       settings: settings,
       onDidReceiveNotificationResponse: (response) {
-        unawaited(_handleLocalNotificationTap(response.payload));
+        unawaited(_handleLocalNotificationResponse(response));
       },
     );
 
@@ -223,7 +262,17 @@ class FirebaseNotificationService implements NotificationService {
   }
 
   Future<void> _configureLocalTimeZone() async {
-    tz.initializeTimeZones();
+    if (!_timeZoneDatabaseInitialized) {
+      tz.initializeTimeZones();
+      _timeZoneDatabaseInitialized = true;
+    }
+    final now = DateTime.now();
+    final lastCheck = _lastTimeZoneCheckAt;
+    if (lastCheck != null &&
+        now.difference(lastCheck) < const Duration(seconds: 30)) {
+      return;
+    }
+    _lastTimeZoneCheckAt = now;
     if (kIsWeb) return;
     try {
       final timeZoneName = await _permissionChannel.invokeMethod<String>(
@@ -393,6 +442,7 @@ class FirebaseNotificationService implements NotificationService {
   @override
   Future<void> reconcileReminders() async {
     if (kIsWeb) return;
+    await _configureLocalTimeZone();
     final accountId = _auth.currentUser?.uid;
     if (accountId == null || !(await permissionState()).canDeliver) return;
     try {
@@ -465,6 +515,12 @@ class FirebaseNotificationService implements NotificationService {
                   orElse: () => NotificationReminderType.custom,
                 )
                 .channelId,
+            payload: <String, Object?>{
+              'reminder_id': record.reminderId,
+              'route': record.route,
+              'type': record.type,
+              if (record.babyId.isNotEmpty) 'baby_id': record.babyId,
+            },
           ),
       ],
     );
@@ -492,6 +548,19 @@ class FirebaseNotificationService implements NotificationService {
       await _localNotifications.cancel(id: platformId);
     }
   }
+
+  @override
+  Future<void> snoozeReminder(
+    NotificationReminder reminder, {
+    Duration delay = const Duration(minutes: 10),
+  }) => scheduleReminder(
+    id: 'snooze:${reminder.id}:${DateTime.now().millisecondsSinceEpoch}',
+    title: reminder.title,
+    body: reminder.body,
+    scheduledAt: DateTime.now().add(delay),
+    route: reminder.route,
+    type: reminder.type,
+  );
 
   @override
   Future<void> cancelRemindersForAccount(String accountId) async {
@@ -571,6 +640,40 @@ class FirebaseNotificationService implements NotificationService {
       _publishOpened(notification);
     } on Object {
       return;
+    }
+  }
+
+  Future<void> _handleLocalNotificationResponse(
+    NotificationResponse response,
+  ) async {
+    if (response.actionId != _snoozeActionId) {
+      await _handleLocalNotificationTap(response.payload);
+      return;
+    }
+    final payload = response.payload;
+    if (payload == null || payload.isEmpty) return;
+    try {
+      final raw = jsonDecode(payload);
+      if (raw is! Map) return;
+      final notification = AppNotification.fromJson(
+        raw.map((key, value) => MapEntry(key.toString(), value)),
+      );
+      final typeName = notification.data['reminder_type']?.toString();
+      await snoozeReminder(
+        NotificationReminder(
+          id: notification.id,
+          title: notification.title,
+          body: notification.body,
+          scheduledAt: notification.receivedAt,
+          route: notification.route ?? '/agenda',
+          type: NotificationReminderType.values.firstWhere(
+            (type) => type.name == typeName,
+            orElse: () => NotificationReminderType.custom,
+          ),
+        ),
+      );
+    } on Object catch (error) {
+      _lastReminderError = error.toString();
     }
   }
 
@@ -927,12 +1030,14 @@ extension on NotificationReminderType {
         category: AndroidNotificationCategory.alarm,
         audioAttributesUsage: AudioAttributesUsage.alarm,
         ticker: 'Medicamento de BebéApp',
+        actions: _androidReminderActions,
       ),
       iOS: DarwinNotificationDetails(
         presentAlert: true,
         presentBadge: true,
         presentSound: true,
         interruptionLevel: InterruptionLevel.timeSensitive,
+        categoryIdentifier: _reminderCategoryId,
       ),
     ),
     NotificationReminderType.healthControl ||
@@ -947,12 +1052,14 @@ extension on NotificationReminderType {
         priority: Priority.high,
         category: AndroidNotificationCategory.reminder,
         ticker: 'Recordatorio de BebéApp',
+        actions: _androidReminderActions,
       ),
       iOS: DarwinNotificationDetails(
         presentAlert: true,
         presentBadge: true,
         presentSound: true,
         interruptionLevel: InterruptionLevel.timeSensitive,
+        categoryIdentifier: _reminderCategoryId,
       ),
     ),
     NotificationReminderType.feeding => const NotificationDetails(
@@ -962,12 +1069,14 @@ extension on NotificationReminderType {
         channelDescription: 'Recordatorios opcionales de alimentación.',
         category: AndroidNotificationCategory.reminder,
         ticker: 'Recordatorio de alimentación',
+        actions: _androidReminderActions,
       ),
       iOS: DarwinNotificationDetails(
         presentAlert: true,
         presentBadge: true,
         presentSound: true,
         interruptionLevel: InterruptionLevel.active,
+        categoryIdentifier: _reminderCategoryId,
       ),
     ),
     NotificationReminderType.syncFailure => const NotificationDetails(
@@ -975,16 +1084,16 @@ extension on NotificationReminderType {
         'system_alerts',
         'Alertas del sistema',
         channelDescription: 'Alertas persistentes que requieren atención.',
-        importance: Importance.high,
-        priority: Priority.high,
         category: AndroidNotificationCategory.status,
         ticker: 'Alerta de BebéApp',
+        actions: _androidReminderActions,
       ),
       iOS: DarwinNotificationDetails(
         presentAlert: true,
         presentBadge: true,
         presentSound: true,
         interruptionLevel: InterruptionLevel.active,
+        categoryIdentifier: _reminderCategoryId,
       ),
     ),
   };

@@ -27,8 +27,11 @@ class _AppWrappersState extends State<AppWrappers> {
   bool _reduceMotion = false;
   bool _highContrast = false;
   double _textScaleFactor = 1;
-  DateTime? _lastReminderReconciliationAt;
+  String? _lastReminderReconciliationKey;
   bool _reconcilingReminders = false;
+  Timer? _persistentSyncAlertTimer;
+  String? _persistentSyncErrorKey;
+  bool _persistentSyncAlertScheduled = false;
 
   @override
   void initState() {
@@ -42,9 +45,14 @@ class _AppWrappersState extends State<AppWrappers> {
   }
 
   void _syncChanged(SyncUxState state) {
-    if (state.status == SyncUxStatus.synced &&
-        state.lastSuccessfulSyncAt != _lastReminderReconciliationAt) {
-      unawaited(_reconcileReminders(state.lastSuccessfulSyncAt));
+    _updatePersistentSyncAlert(state);
+    final reminderKey = '${state.status.name}:'
+        '${state.lastSuccessfulSyncAt?.microsecondsSinceEpoch}:'
+        '${state.pendingOperations}';
+    if ((state.status == SyncUxStatus.synced ||
+            state.status == SyncUxStatus.pending) &&
+        reminderKey != _lastReminderReconciliationKey) {
+      unawaited(_reconcileReminders(reminderKey));
     }
     if (!_syncAlertDeduplicator.shouldAlert(state)) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -65,7 +73,58 @@ class _AppWrappersState extends State<AppWrappers> {
     });
   }
 
-  Future<void> _reconcileReminders(DateTime? synchronizedAt) async {
+  void _updatePersistentSyncAlert(SyncUxState state) {
+    if (state.status != SyncUxStatus.error) {
+      _persistentSyncAlertTimer?.cancel();
+      _persistentSyncAlertTimer = null;
+      _persistentSyncErrorKey = null;
+      if (_persistentSyncAlertScheduled) {
+        _persistentSyncAlertScheduled = false;
+        unawaited(
+          getIt<NotificationService>().cancelReminders('sync-failure'),
+        );
+      }
+      return;
+    }
+
+    final errorKey = state.errorKey ?? state.errorScopes.join(',');
+    if (_persistentSyncErrorKey == errorKey &&
+        (_persistentSyncAlertTimer != null ||
+            _persistentSyncAlertScheduled)) {
+      return;
+    }
+    _persistentSyncAlertTimer?.cancel();
+    _persistentSyncErrorKey = errorKey;
+    _persistentSyncAlertTimer = Timer(const Duration(seconds: 30), () {
+      _persistentSyncAlertTimer = null;
+      unawaited(_schedulePersistentSyncAlert());
+    });
+  }
+
+  Future<void> _schedulePersistentSyncAlert() async {
+    if (_persistentSyncErrorKey == null) return;
+    try {
+      final service = getIt<NotificationService>();
+      if (!(await service.permissionState()).canDeliver ||
+          _persistentSyncErrorKey == null) {
+        return;
+      }
+      await service.scheduleReminder(
+        id: 'sync-failure',
+        title: 'Revisa la sincronización',
+        body: 'Algunos datos necesitan que abras BebéApp y reintentes.',
+        scheduledAt: DateTime.now().add(const Duration(seconds: 2)),
+        route: '/family',
+        type: NotificationReminderType.syncFailure,
+      );
+      _persistentSyncAlertScheduled = true;
+    } on Object catch (error, stackTrace) {
+      debugPrint('Persistent sync notification failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
+  }
+
+  Future<void> _reconcileReminders(String reconciliationKey) async {
     if (_reconcilingReminders) return;
     _reconcilingReminders = true;
     try {
@@ -75,8 +134,9 @@ class _AppWrappersState extends State<AppWrappers> {
       ).reconcileDomainReminders(
         activeContextRepository: getIt<ActiveContextRepository>(),
         getAgendaOverview: getIt<GetAgendaOverview>(),
+        getHealthOverview: getIt<GetHealthOverview>(),
       );
-      if (reconciled) _lastReminderReconciliationAt = synchronizedAt;
+      if (reconciled) _lastReminderReconciliationKey = reconciliationKey;
     } on Object catch (error, stackTrace) {
       debugPrint('Notification domain reconciliation failed: $error');
       debugPrintStack(stackTrace: stackTrace);
@@ -107,6 +167,7 @@ class _AppWrappersState extends State<AppWrappers> {
 
   @override
   void dispose() {
+    _persistentSyncAlertTimer?.cancel();
     unawaited(_settingsSubscription?.cancel());
     unawaited(_syncUxSubscription?.cancel());
     super.dispose();

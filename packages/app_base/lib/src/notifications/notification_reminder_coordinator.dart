@@ -44,6 +44,17 @@ class NotificationReminderCoordinator {
     );
   }
 
+  Future<void> scheduleHealth(HealthEventEntity event) async {
+    final accountId = await _accountId();
+    if (accountId == null) return;
+    await _notificationService.replaceReminders(
+      ownerId: healthOwner(accountId, event.id),
+      accountId: accountId,
+      babyId: event.babyId,
+      reminders: _healthReminders(event),
+    );
+  }
+
   Future<void> scheduleRegister(RegisteredEvent event) async {
     final accountId = await _accountId();
     if (accountId == null) return;
@@ -75,6 +86,7 @@ class NotificationReminderCoordinator {
   Future<bool> reconcileDomainReminders({
     required ActiveContextRepository activeContextRepository,
     required GetAgendaOverview getAgendaOverview,
+    required GetHealthOverview getHealthOverview,
   }) async {
     final accountId = await _accountId();
     if (accountId == null ||
@@ -83,6 +95,7 @@ class NotificationReminderCoordinator {
     }
     final context = await activeContextRepository.read();
     if (context == null || context.userId != accountId) return false;
+    await _notificationService.reconcileReminders();
     final overview = await getAgendaOverview(context.babyId);
     if (!overview.remindersEnabled) {
       await _notificationService.cancelRemindersForAccount(accountId);
@@ -91,10 +104,23 @@ class NotificationReminderCoordinator {
 
     final retainedOwners = <String>{};
     final now = DateTime.now();
+    final healthOverview = await getHealthOverview(context.babyId);
+    final scheduledHealthEvents = healthOverview.events.where(
+      (event) =>
+          event.status == HealthEventStatus.scheduled &&
+          event.startsAt.isAfter(now),
+    );
+    final healthOccurrenceKeys = <String>{};
+    for (final event in scheduledHealthEvents) {
+      healthOccurrenceKeys.add(_healthOccurrenceKey(event.type, event.startsAt));
+      retainedOwners.add(healthOwner(accountId, event.id));
+      await scheduleHealth(event);
+    }
     for (final event in overview.events) {
       if (event.isDeleted ||
           event.isDerivedFromRegister ||
-          !event.startsAt.isAfter(now)) {
+          !event.startsAt.isAfter(now) ||
+          _duplicatesHealthEvent(event, healthOccurrenceKeys)) {
         continue;
       }
       retainedOwners.add(agendaOwner(accountId, event.id));
@@ -110,7 +136,6 @@ class NotificationReminderCoordinator {
       babyId: context.babyId,
       ownerIds: retainedOwners,
     );
-    await _notificationService.reconcileReminders();
     return true;
   }
 
@@ -118,6 +143,9 @@ class NotificationReminderCoordinator {
 
   static String agendaOwner(String accountId, String eventId) =>
       'account:$accountId|agenda:$eventId';
+
+  static String healthOwner(String accountId, String eventId) =>
+      'account:$accountId|health:$eventId';
 
   static String registerOwner(String accountId, String eventId) =>
       'account:$accountId|register:$eventId';
@@ -268,6 +296,73 @@ class NotificationReminderCoordinator {
           ),
         ],
     };
+  }
+
+  static List<NotificationReminder> _healthReminders(HealthEventEntity event) {
+    if (event.status != HealthEventStatus.scheduled) return const [];
+    final startsAt = event.startsAt.toLocal();
+    final route = '/health';
+    if (event.type == HealthEventType.vaccine) {
+      return [
+        NotificationReminder(
+          id: 'health:${event.id}:24h',
+          title: 'Vacuna mañana',
+          body: event.title,
+          scheduledAt: startsAt.subtract(const Duration(hours: 24)),
+          route: route,
+          type: NotificationReminderType.vaccine,
+        ),
+        NotificationReminder(
+          id: 'health:${event.id}:due',
+          title: 'Vacuna programada',
+          body: event.title,
+          scheduledAt: startsAt,
+          route: route,
+          type: NotificationReminderType.vaccine,
+        ),
+      ];
+    }
+    return [
+      NotificationReminder(
+        id: 'health:${event.id}:24h',
+        title: 'Control de salud mañana',
+        body: event.title,
+        scheduledAt: startsAt.subtract(const Duration(hours: 24)),
+        route: route,
+        type: NotificationReminderType.healthControl,
+      ),
+      NotificationReminder(
+        id: 'health:${event.id}:2h',
+        title: 'Control de salud en 2 horas',
+        body: event.title,
+        scheduledAt: startsAt.subtract(const Duration(hours: 2)),
+        route: route,
+        type: NotificationReminderType.healthControl,
+      ),
+    ];
+  }
+
+  static bool _duplicatesHealthEvent(
+    AgendaEventEntity event,
+    Set<String> healthOccurrenceKeys,
+  ) {
+    final healthType = switch (event.category) {
+      AgendaCategory.vaccines => HealthEventType.vaccine,
+      AgendaCategory.controls => HealthEventType.pediatricControl,
+      AgendaCategory.medication || AgendaCategory.exams => null,
+    };
+    return healthType != null &&
+        healthOccurrenceKeys.contains(
+          _healthOccurrenceKey(healthType, event.startsAt),
+        );
+  }
+
+  static String _healthOccurrenceKey(
+    HealthEventType type,
+    DateTime startsAt,
+  ) {
+    final category = type == HealthEventType.vaccine ? 'vaccine' : 'control';
+    return '$category:${startsAt.toUtc().millisecondsSinceEpoch}';
   }
 
   static String _medicationBody(Map<String, Object?> details) {

@@ -332,6 +332,41 @@ void main() {
     expect((await fixture.service.diagnostics()).timeZone, 'America/Santiago');
   });
 
+  test('UT-NOTIF-011 snooze schedules a new occurrence', () async {
+    final fixture = _serviceFixture();
+    final before = DateTime.now();
+    await fixture.service.snoozeReminder(
+      NotificationReminder(
+        id: 'medication-original',
+        title: 'Medicamento',
+        body: 'Vitamina D · 1 gota',
+        scheduledAt: before,
+        route: '/agenda',
+        type: NotificationReminderType.medication,
+      ),
+    );
+
+    final scheduledAt =
+        verify(
+              () => fixture.local.zonedSchedule(
+                id: any(named: 'id'),
+                title: 'Medicamento',
+                body: any(named: 'body'),
+                scheduledDate: captureAny(named: 'scheduledDate'),
+                notificationDetails: any(named: 'notificationDetails'),
+                androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+                payload: any(named: 'payload'),
+              ),
+            ).captured.single
+            as tz.TZDateTime;
+    expect(
+      scheduledAt.toUtc().isAfter(
+        before.add(const Duration(minutes: 9)).toUtc(),
+      ),
+      isTrue,
+    );
+  });
+
   test('IT-NOTIF-001 granted schedules a reminder', () async {
     final fixture = _serviceFixture();
     await fixture.service.replaceReminders(

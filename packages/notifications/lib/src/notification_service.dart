@@ -66,6 +66,7 @@ class NotificationDiagnosticReminder {
     required this.scheduledAt,
     required this.type,
     required this.channelId,
+    required this.payload,
   });
 
   final String id;
@@ -74,6 +75,7 @@ class NotificationDiagnosticReminder {
   final DateTime scheduledAt;
   final NotificationReminderType type;
   final String channelId;
+  final Map<String, Object?> payload;
 }
 
 class NotificationDiagnostics {
@@ -134,6 +136,11 @@ abstract interface class NotificationService {
   });
 
   Future<void> cancelReminders(String ownerId);
+
+  Future<void> snoozeReminder(
+    NotificationReminder reminder, {
+    Duration delay = const Duration(minutes: 10),
+  });
 
   Future<void> cancelRemindersForAccount(String accountId);
 
