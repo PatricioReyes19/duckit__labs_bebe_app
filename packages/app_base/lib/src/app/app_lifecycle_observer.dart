@@ -84,8 +84,12 @@ Future<void> _refreshSynchronizedData() async {
   }
   try {
     final notifications = getIt<NotificationService>();
+    // A transient platform/Firebase failure during cold start must not disable
+    // local alarms for the whole process lifetime. initialize() is idempotent
+    // and now retries safely when the app returns to foreground.
+    await notifications.initialize();
     await notifications.refreshInbox();
-    final reconciled = await NotificationReminderCoordinator(
+    await NotificationReminderCoordinator(
       notificationService: notifications,
       getCurrentSession: getIt<GetCurrentSession>(),
     ).reconcileDomainReminders(
@@ -93,7 +97,6 @@ Future<void> _refreshSynchronizedData() async {
       getAgendaOverview: getIt<GetAgendaOverview>(),
       getHealthOverview: getIt<GetHealthOverview>(),
     );
-    if (!reconciled) await notifications.reconcileReminders();
   } on Object catch (error, stackTrace) {
     debugPrint('Lifecycle notification refresh failed: $error');
     debugPrintStack(stackTrace: stackTrace);

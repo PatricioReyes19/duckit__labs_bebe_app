@@ -185,6 +185,22 @@ void main() {
     expect(repository.drafts.single.details['reminder_interval_hours'], 3);
   });
 
+  test('breastfeeding keeps and persists the requested next alarm', () async {
+    final cubit = FeedingRegisterCubit(
+      saveRegisterEvent: saveRegisterEvent,
+      babyId: 'baby-1',
+    )
+      ..scheduleNextFeedingChanged(true)
+      ..reminderHoursChanged(2)
+      ..subtypeChanged('breast');
+    addTearDown(cubit.close);
+
+    await cubit.submit();
+
+    expect(repository.drafts.single.details['schedule_next_feeding'], isTrue);
+    expect(repository.drafts.single.details['reminder_interval_hours'], 2);
+  });
+
   test('sleep starts in progress without inventing a wake time', () async {
     final startedAt = DateTime(2026, 8, 11, 13, 30);
     final cubit = SleepRegisterCubit(

@@ -10,6 +10,7 @@ class NotificationReminderCoordinator {
 
   final NotificationService _notificationService;
   final GetCurrentSession _getCurrentSession;
+  static Future<bool>? _domainReconciliationInFlight;
 
   Future<NotificationPermissionState> permissionState() =>
       _notificationService.permissionState();
@@ -27,14 +28,25 @@ class NotificationReminderCoordinator {
 
   Future<void> scheduleAgenda(AgendaEventEntity event) async {
     final accountId = await _accountId();
-    if (accountId == null) return;
-    await _notificationService.replaceReminders(
-      ownerId: agendaOwner(accountId, event.id),
-      accountId: accountId,
-      babyId: event.babyId,
-      reminders: _agendaReminders(event),
-    );
+    if (accountId == null) {
+      throw StateError(
+        'No hay una sesión activa para programar el recordatorio.',
+      );
+    }
+    await _replaceAgendaReminders(accountId, event, _agendaReminders(event));
   }
+
+  Future<void> _replaceAgendaReminders(
+    String accountId,
+    AgendaEventEntity event,
+    List<NotificationReminder> reminders,
+  ) =>
+      _notificationService.replaceReminders(
+        ownerId: agendaOwner(accountId, event.id),
+        accountId: accountId,
+        babyId: event.babyId,
+        reminders: reminders,
+      );
 
   Future<void> cancelAgenda(String eventId) async {
     final accountId = await _accountId();
@@ -47,17 +59,28 @@ class NotificationReminderCoordinator {
   Future<void> scheduleHealth(HealthEventEntity event) async {
     final accountId = await _accountId();
     if (accountId == null) return;
-    await _notificationService.replaceReminders(
-      ownerId: healthOwner(accountId, event.id),
-      accountId: accountId,
-      babyId: event.babyId,
-      reminders: _healthReminders(event),
-    );
+    await _replaceHealthReminders(accountId, event, _healthReminders(event));
   }
+
+  Future<void> _replaceHealthReminders(
+    String accountId,
+    HealthEventEntity event,
+    List<NotificationReminder> reminders,
+  ) =>
+      _notificationService.replaceReminders(
+        ownerId: healthOwner(accountId, event.id),
+        accountId: accountId,
+        babyId: event.babyId,
+        reminders: reminders,
+      );
 
   Future<void> scheduleRegister(RegisteredEvent event) async {
     final accountId = await _accountId();
-    if (accountId == null) return;
+    if (accountId == null) {
+      throw StateError(
+        'No hay una sesión activa para programar el recordatorio.',
+      );
+    }
     final reminders = _registerReminders(event);
     final ownerId = registerOwner(accountId, event.id);
     if (reminders.isEmpty) {
@@ -71,6 +94,12 @@ class NotificationReminderCoordinator {
       reminders: reminders,
     );
   }
+
+  /// Requests permission only for records where the caregiver explicitly
+  /// enabled an alarm. Records without an alarm still use [scheduleRegister]
+  /// so an edited event can cancel its previous native schedule.
+  bool hasRegisterReminders(RegisteredEvent event) =>
+      _registerReminders(event).isNotEmpty;
 
   Future<void> cancelRegister(String eventId) async {
     final accountId = await _accountId();
@@ -87,6 +116,26 @@ class NotificationReminderCoordinator {
     required ActiveContextRepository activeContextRepository,
     required GetAgendaOverview getAgendaOverview,
     required GetHealthOverview getHealthOverview,
+  }) {
+    final running = _domainReconciliationInFlight;
+    if (running != null) return running;
+    final operation = _reconcileDomainReminders(
+      activeContextRepository: activeContextRepository,
+      getAgendaOverview: getAgendaOverview,
+      getHealthOverview: getHealthOverview,
+    );
+    _domainReconciliationInFlight = operation;
+    return operation.whenComplete(() {
+      if (identical(_domainReconciliationInFlight, operation)) {
+        _domainReconciliationInFlight = null;
+      }
+    });
+  }
+
+  Future<bool> _reconcileDomainReminders({
+    required ActiveContextRepository activeContextRepository,
+    required GetAgendaOverview getAgendaOverview,
+    required GetHealthOverview getHealthOverview,
   }) async {
     final accountId = await _accountId();
     if (accountId == null ||
@@ -95,7 +144,6 @@ class NotificationReminderCoordinator {
     }
     final context = await activeContextRepository.read();
     if (context == null || context.userId != accountId) return false;
-    await _notificationService.reconcileReminders();
     final overview = await getAgendaOverview(context.babyId);
     if (!overview.remindersEnabled) {
       await _notificationService.cancelRemindersForAccount(accountId);
@@ -105,6 +153,9 @@ class NotificationReminderCoordinator {
     final retainedOwners = <String>{};
     final now = DateTime.now();
     final healthOverview = await getHealthOverview(context.babyId);
+    final healthSchedules = <(HealthEventEntity, List<NotificationReminder>)>[];
+    final agendaSchedules = <(AgendaEventEntity, List<NotificationReminder>)>[];
+    final registerSchedules = <(RegisteredEvent, List<NotificationReminder>)>[];
     final scheduledHealthEvents = healthOverview.events.where(
       (event) =>
           event.status == HealthEventStatus.scheduled &&
@@ -112,32 +163,67 @@ class NotificationReminderCoordinator {
     );
     final healthOccurrenceKeys = <String>{};
     for (final event in scheduledHealthEvents) {
-      healthOccurrenceKeys.add(_healthOccurrenceKey(event.type, event.startsAt));
+      final reminders = _futureReminders(_healthReminders(event), now);
+      if (reminders.isEmpty) continue;
+      healthOccurrenceKeys
+          .add(_healthOccurrenceKey(event.type, event.startsAt));
       retainedOwners.add(healthOwner(accountId, event.id));
-      await scheduleHealth(event);
+      healthSchedules.add((event, reminders));
     }
     for (final event in overview.events) {
       if (event.isDeleted ||
           event.isDerivedFromRegister ||
+          _isLegacyGeneratedDose(event) ||
           !event.startsAt.isAfter(now) ||
           _duplicatesHealthEvent(event, healthOccurrenceKeys)) {
         continue;
       }
+      final reminders = _futureReminders(_agendaReminders(event), now);
+      if (reminders.isEmpty) continue;
       retainedOwners.add(agendaOwner(accountId, event.id));
-      await scheduleAgenda(event);
+      agendaSchedules.add((event, reminders));
     }
     for (final event in overview.registerEvents) {
       if (event.isDeleted) continue;
+      final reminders = _futureReminders(_registerReminders(event), now);
+      if (reminders.isEmpty) continue;
       retainedOwners.add(registerOwner(accountId, event.id));
-      await scheduleRegister(event);
+      registerSchedules.add((event, reminders));
     }
+
+    // Prune first. Legacy recurring-dose owners can number in the hundreds;
+    // keeping them until after scheduling makes every small replacement rewrite
+    // an unnecessarily large preference snapshot.
     await _notificationService.retainReminderOwners(
       accountId: accountId,
       babyId: context.babyId,
       ownerIds: retainedOwners,
     );
+    // Restore only the desired schedules that survived pruning. Running this
+    // before the domain projection is known can replay hundreds of legacy
+    // alarms after an app update and delay the actual cleanup for minutes.
+    await _notificationService.reconcileReminders();
+    for (final schedule in healthSchedules) {
+      await _replaceHealthReminders(accountId, schedule.$1, schedule.$2);
+    }
+    for (final schedule in agendaSchedules) {
+      await _replaceAgendaReminders(accountId, schedule.$1, schedule.$2);
+    }
+    for (final schedule in registerSchedules) {
+      final event = schedule.$1;
+      await _notificationService.replaceReminders(
+        ownerId: registerOwner(accountId, event.id),
+        accountId: accountId,
+        babyId: event.babyId,
+        reminders: schedule.$2,
+      );
+    }
     return true;
   }
+
+  static bool _isLegacyGeneratedDose(AgendaEventEntity event) =>
+      event.category == AgendaCategory.medication &&
+      event.id.startsWith('dose-');
 
   Future<String?> _accountId() async => (await _getCurrentSession())?.user.id;
 
@@ -165,9 +251,7 @@ class NotificationReminderCoordinator {
         _ => null,
       };
       if (interval == null) return const [];
-      final explicitEnd = DateTime.tryParse(
-        (details['end_date'] as String?) ?? '',
-      )?.toLocal();
+      final explicitEnd = _inclusiveLocalEndDate(details['end_date']);
       final horizon =
           explicitEnd ?? DateTime.now().add(const Duration(days: 30));
       var next = event.occurredAt.toLocal().add(interval);
@@ -210,7 +294,7 @@ class NotificationReminderCoordinator {
           'Próximo cambio de pañal',
           'Revisa si corresponde un nuevo cambio.',
           '/register/diaper',
-          NotificationReminderType.custom,
+          NotificationReminderType.diaper,
         ),
       _ => (
           'Recordatorio',
@@ -342,6 +426,14 @@ class NotificationReminderCoordinator {
     ];
   }
 
+  static List<NotificationReminder> _futureReminders(
+    List<NotificationReminder> reminders,
+    DateTime now,
+  ) =>
+      reminders
+          .where((reminder) => reminder.scheduledAt.isAfter(now))
+          .toList(growable: false);
+
   static bool _duplicatesHealthEvent(
     AgendaEventEntity event,
     Set<String> healthOccurrenceKeys,
@@ -382,5 +474,24 @@ class NotificationReminderCoordinator {
     return formattedDose.isEmpty
         ? 'Es hora de administrar $medication.'
         : '$medication · $formattedDose';
+  }
+
+  static DateTime? _inclusiveLocalEndDate(Object? value) {
+    final parsed = switch (value) {
+      final DateTime date => date.toLocal(),
+      final String text => DateTime.tryParse(text)?.toLocal(),
+      _ => null,
+    };
+    if (parsed == null) return null;
+    return DateTime(
+      parsed.year,
+      parsed.month,
+      parsed.day,
+      23,
+      59,
+      59,
+      999,
+      999,
+    );
   }
 }

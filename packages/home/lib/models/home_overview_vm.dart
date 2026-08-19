@@ -98,7 +98,8 @@ class HomeOverviewVm extends Equatable {
         type: switch (upcoming?.type) {
           domain.HealthEventType.vaccine => HomeUpcomingHealthKind.vaccine,
           domain.HealthEventType.pediatricControl ||
-          domain.HealthEventType.growthControl =>
+          domain.HealthEventType.growthControl ||
+          domain.HealthEventType.consultation =>
             HomeUpcomingHealthKind.control,
           null => HomeUpcomingHealthKind.control,
         },

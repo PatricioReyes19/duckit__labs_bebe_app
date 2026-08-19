@@ -68,6 +68,9 @@ void main() {
           title: 'Control $index',
           description: 'Pendiente de sincronizar',
           startsAt: now.add(Duration(days: index)),
+          appointmentKind: HealthAppointmentKind.wellChildControl,
+          reason: 'Seguimiento $index',
+          caregiverIds: const ['caregiver-1'],
         ),
       );
     }
@@ -76,6 +79,12 @@ void main() {
 
     expect(result.phase, RegisterSyncPhase.synced);
     expect(remote.rows, hasLength(101));
+    expect(
+      remote.rows['health-1']?.appointmentKind,
+      HealthAppointmentKind.wellChildControl,
+    );
+    expect(remote.rows['health-1']?.reason, 'Seguimiento 0');
+    expect(remote.rows['health-1']?.caregiverIds, ['caregiver-1']);
     expect(await local.countPending(), 0);
   });
 

@@ -1,6 +1,7 @@
 import '../../../domain/entities/agenda/agenda.dart';
 import '../../models/agenda_event_model.dart';
 import '../../network/supabase_rest_client.dart';
+import '../../sync/remote_sync_cursor.dart';
 
 abstract interface class AgendaEventRemoteDataSource {
   bool get isConfigured;
@@ -9,8 +10,16 @@ abstract interface class AgendaEventRemoteDataSource {
   Future<List<AgendaEventEntity>> pull({DateTime? updatedAfter});
 }
 
-class SupabaseAgendaEventRemoteDataSource
+abstract interface class PagedAgendaEventRemoteDataSource
     implements AgendaEventRemoteDataSource {
+  Future<List<AgendaEventEntity>> pullPage({
+    RemoteSyncCursor? after,
+    int limit = 200,
+  });
+}
+
+class SupabaseAgendaEventRemoteDataSource
+    implements PagedAgendaEventRemoteDataSource {
   const SupabaseAgendaEventRemoteDataSource(this._client);
 
   static const tableName = 'agenda_events';
@@ -49,6 +58,30 @@ class SupabaseAgendaEventRemoteDataSource
         .map(AgendaEventModel.fromRemoteJson)
         .map((model) => model.toEntity())
         .toList(growable: false);
+  }
+
+  @override
+  Future<List<AgendaEventEntity>> pullPage({
+    RemoteSyncCursor? after,
+    int limit = 200,
+  }) async {
+    final rows = await _client.select(
+      tableName,
+      filters: {if (after != null) 'or': _afterFilter(after)},
+      order: 'updated_at.asc,id.asc',
+      limit: limit,
+    );
+    return rows
+        .map(AgendaEventModel.fromRemoteJson)
+        .map((model) => model.toEntity())
+        .toList(growable: false);
+  }
+
+  static String _afterFilter(RemoteSyncCursor cursor) {
+    final timestamp = cursor.updatedAt.toUtc().toIso8601String();
+    final id = cursor.id.replaceAll('\\', '\\\\').replaceAll('"', '\\"');
+    return '(updated_at.gt.$timestamp,'
+        'and(updated_at.eq.$timestamp,id.gt."$id"))';
   }
 
   static AgendaEventModel _modelFromRpcResponse(Object? response) {

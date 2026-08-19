@@ -36,6 +36,7 @@ class SqliteRegisterEventRepository implements RegisterEventRepository {
   static const tableName = BebeDatabaseSchema.registerEvents;
   static const databaseVersion = BebeDatabaseSchema.version;
   static const syncCursorKey = 'register_events.remote_cursor';
+  static const syncCursorIdKey = 'register_events.remote_cursor_id';
 
   final BebeDatabase _database;
   final bool _ownsDatabase;
@@ -189,8 +190,7 @@ class SqliteRegisterEventRepository implements RegisterEventRepository {
     final database = await _database.database;
     final rows = await database.query(
       tableName,
-      where: 'sync_status != ?',
-      whereArgs: [RegisterSyncStatus.synced.name],
+      where: "sync_status != 'synced'",
       orderBy: 'updated_at ASC',
       limit: limit,
     );
@@ -203,8 +203,7 @@ class SqliteRegisterEventRepository implements RegisterEventRepository {
   Future<int> countPending() async {
     final database = await _database.database;
     final rows = await database.rawQuery(
-      'SELECT COUNT(*) FROM $tableName WHERE sync_status != ?',
-      [RegisterSyncStatus.synced.name],
+      "SELECT COUNT(*) FROM $tableName WHERE sync_status != 'synced'",
     );
     return sqlite.Sqflite.firstIntValue(rows) ?? 0;
   }
@@ -300,13 +299,36 @@ class SqliteRegisterEventRepository implements RegisterEventRepository {
     return DateTime.tryParse(rows.single['value']! as String)?.toUtc();
   }
 
-  Future<void> writeSyncCursor(DateTime value) async {
+  Future<String?> readSyncCursorId() async {
     final database = await _database.database;
-    await database.insert(
+    final rows = await database.query(
       BebeDatabaseSchema.syncMetadata,
-      {'key': syncCursorKey, 'value': value.toUtc().toIso8601String()},
-      conflictAlgorithm: sqlite.ConflictAlgorithm.replace,
+      columns: ['value'],
+      where: 'key = ?',
+      whereArgs: [syncCursorIdKey],
+      limit: 1,
     );
+    if (rows.isEmpty) return null;
+    final value = (rows.single['value']! as String).trim();
+    return value.isEmpty ? null : value;
+  }
+
+  Future<void> writeSyncCursor(DateTime value, {String? id}) async {
+    final database = await _database.database;
+    await database.transaction((transaction) async {
+      await transaction.insert(
+        BebeDatabaseSchema.syncMetadata,
+        {'key': syncCursorKey, 'value': value.toUtc().toIso8601String()},
+        conflictAlgorithm: sqlite.ConflictAlgorithm.replace,
+      );
+      if (id != null && id.isNotEmpty) {
+        await transaction.insert(
+          BebeDatabaseSchema.syncMetadata,
+          {'key': syncCursorIdKey, 'value': id},
+          conflictAlgorithm: sqlite.ConflictAlgorithm.replace,
+        );
+      }
+    });
   }
 
   Future<void> close() async {

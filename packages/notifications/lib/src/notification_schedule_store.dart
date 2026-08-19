@@ -6,10 +6,19 @@ class NotificationScheduleReplacement {
   const NotificationScheduleReplacement({
     required this.previousPlatformIds,
     required this.platformIdsByReminder,
+    required this.reminderIdsToSchedule,
   });
 
+  /// Native ids that must be cancelled because their reminder disappeared or
+  /// its persisted schedule changed.
   final List<int> previousPlatformIds;
+
+  /// Stable native id for every reminder in the desired owner snapshot.
   final Map<String, int> platformIdsByReminder;
+
+  /// Desired reminders that are new or changed. An empty set means the
+  /// replacement was an idempotent no-op at platform level.
+  final Set<String> reminderIdsToSchedule;
 }
 
 class NotificationScheduleData {
@@ -86,6 +95,7 @@ class NotificationScheduleStore {
     final schedules = await _load();
     final previous = schedules[ownerId];
     final previousIds = previous?['ids'];
+    final previousRecords = previous?['records'];
     final occupied = <int>{};
     for (final entry in schedules.entries) {
       if (entry.key == ownerId) continue;
@@ -95,10 +105,14 @@ class NotificationScheduleStore {
       }
     }
 
+    final desiredReminderIds = reminderIds.toSet();
     final assignments = <String, int>{};
-    for (final reminderId in reminderIds) {
+    for (final reminderId in desiredReminderIds) {
+      final storedId = previousIds is Map
+          ? (previousIds[reminderId] as num?)?.toInt()
+          : null;
       final stableKey = '$ownerId|$reminderId';
-      var platformId = _stablePositiveId(stableKey);
+      var platformId = storedId ?? _stablePositiveId(stableKey);
       while (occupied.contains(platformId)) {
         platformId = platformId == 0x7fffffff ? 1 : platformId + 1;
       }
@@ -113,21 +127,51 @@ class NotificationScheduleStore {
         records[entry.key] = data.toJson(platformId: entry.value);
       }
     }
-    schedules[ownerId] = <String, Object?>{
+    final desiredOwner = <String, Object?>{
       'accountId': accountId,
       'babyId': babyId,
       'ids': assignments,
       'records': records,
     };
-    await _save(schedules);
+    final reminderIdsToSchedule = <String>{};
+    for (final reminderId in assignments.keys) {
+      final previousRecord = previousRecords is Map
+          ? previousRecords[reminderId]
+          : null;
+      final currentRecord = records[reminderId];
+      final sameOwnerScope =
+          previous?['accountId'] == accountId && previous?['babyId'] == babyId;
+      if (!sameOwnerScope || !_jsonEquivalent(previousRecord, currentRecord)) {
+        reminderIdsToSchedule.add(reminderId);
+      }
+    }
+    final previousPlatformIds = <int>[];
+    if (previousIds is Map) {
+      for (final entry in previousIds.entries) {
+        final previousId = (entry.value as num?)?.toInt();
+        if (previousId == null) continue;
+        final reminderId = entry.key.toString();
+        if (!assignments.containsKey(reminderId) ||
+            assignments[reminderId] != previousId) {
+          previousPlatformIds.add(previousId);
+        }
+      }
+    }
+
+    final ownerChanged = !_jsonEquivalent(previous, desiredOwner);
+    if (assignments.isEmpty) {
+      if (previous != null) {
+        schedules.remove(ownerId);
+        await _save(schedules);
+      }
+    } else if (ownerChanged) {
+      schedules[ownerId] = desiredOwner;
+      await _save(schedules);
+    }
     return NotificationScheduleReplacement(
-      previousPlatformIds: previousIds is Map
-          ? previousIds.values
-                .whereType<num>()
-                .map((id) => id.toInt())
-                .toList(growable: false)
-          : const <int>[],
+      previousPlatformIds: previousPlatformIds,
       platformIdsByReminder: assignments,
+      reminderIdsToSchedule: reminderIdsToSchedule,
     );
   }
 
@@ -213,7 +257,7 @@ class NotificationScheduleStore {
   Future<List<int>> removeOwner(String ownerId) async {
     final schedules = await _load();
     final removed = schedules.remove(ownerId);
-    await _save(schedules);
+    if (removed != null) await _save(schedules);
     final ids = removed?['ids'];
     return ids is Map
         ? ids.values
@@ -249,12 +293,17 @@ class NotificationScheduleStore {
     final schedules = await _load();
     final removedIds = <int>[];
     final owners = schedules.entries
-        .where(
-          (entry) =>
-              entry.value['accountId'] == accountId &&
-              entry.value['babyId'] == babyId &&
-              !retainedOwnerIds.contains(entry.key),
-        )
+        .where((entry) {
+          if (entry.value['accountId'] != accountId) return false;
+          // Older versions persisted one Agenda owner per generated
+          // medication occurrence. Those owners use an internal namespace
+          // and are superseded by the single Register-series owner.
+          if (entry.key.startsWith('account:$accountId|agenda:dose-')) {
+            return true;
+          }
+          return entry.value['babyId'] == babyId &&
+              !retainedOwnerIds.contains(entry.key);
+        })
         .map((entry) => entry.key)
         .toList(growable: false);
     for (final owner in owners) {
@@ -299,4 +348,7 @@ class NotificationScheduleStore {
     final positive = hash & 0x7fffffff;
     return positive == 0 ? 1 : positive;
   }
+
+  static bool _jsonEquivalent(Object? first, Object? second) =>
+      jsonEncode(first) == jsonEncode(second);
 }

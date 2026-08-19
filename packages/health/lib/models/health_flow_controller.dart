@@ -178,6 +178,8 @@ class HealthConsultationRecord {
     required this.vigilance,
     required this.notes,
     required this.syncStatus,
+    required this.status,
+    this.appointmentKind = HealthAppointmentKind.consultation,
   });
 
   final String id;
@@ -190,6 +192,8 @@ class HealthConsultationRecord {
   final String? vigilance;
   final String? notes;
   final RegisterSyncStatus syncStatus;
+  final HealthEventStatus status;
+  final HealthAppointmentKind appointmentKind;
 }
 
 class HealthPediatricianSummary {
@@ -230,6 +234,7 @@ class HealthFlowController extends ChangeNotifier {
     required DeleteRegisterEvent deleteRegisterEvent,
     required HealthRepository healthRepository,
     required RegisterEventSyncService registerSyncService,
+    HealthEventSyncService? healthSyncService,
     InitialDataSyncCoordinator? initialDataSyncCoordinator,
     Connectivity? connectivity,
     DateTime Function()? clock,
@@ -240,12 +245,21 @@ class HealthFlowController extends ChangeNotifier {
        _deleteRegisterEvent = deleteRegisterEvent,
        _healthRepository = healthRepository,
        _registerSyncService = registerSyncService,
+       _healthSyncService = healthSyncService,
        _initialDataSyncCoordinator = initialDataSyncCoordinator,
        _connectivity = connectivity ?? Connectivity(),
        _clock = clock ?? DateTime.now,
-       _syncState = registerSyncService.state {
+       _registerSyncState = registerSyncService.state,
+       _healthSyncState = healthSyncService?.state {
+    _updateConsolidatedSyncState();
     _syncSubscription = _registerSyncService.states.listen((state) {
-      _syncState = state;
+      _registerSyncState = state;
+      _updateConsolidatedSyncState();
+      notifyListeners();
+    });
+    _healthSyncSubscription = _healthSyncService?.states.listen((state) {
+      _healthSyncState = state;
+      _updateConsolidatedSyncState();
       notifyListeners();
     });
     _connectivitySubscription = _connectivity.onConnectivityChanged.listen(
@@ -286,18 +300,22 @@ class HealthFlowController extends ChangeNotifier {
   final DeleteRegisterEvent _deleteRegisterEvent;
   final HealthRepository _healthRepository;
   final RegisterEventSyncService _registerSyncService;
+  final HealthEventSyncService? _healthSyncService;
   final InitialDataSyncCoordinator? _initialDataSyncCoordinator;
   final Connectivity _connectivity;
   final DateTime Function() _clock;
 
   late final StreamSubscription<RegisterSyncState> _syncSubscription;
+  StreamSubscription<RegisterSyncState>? _healthSyncSubscription;
   late final StreamSubscription<String> _activeBabySubscription;
   StreamSubscription<bool>? _domainHydrationSubscription;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   FamilyOverviewEntity? _family;
   HealthOverviewEntity? _overview;
   List<RegisteredEvent> _records = const [];
-  RegisterSyncState _syncState;
+  late RegisterSyncState _syncState;
+  RegisterSyncState _registerSyncState;
+  RegisterSyncState? _healthSyncState;
   HealthReportRange _reportRange = HealthReportRange.week;
   bool _isLoading = false;
   bool _loadedOnce = false;
@@ -392,8 +410,25 @@ class HealthFlowController extends ChangeNotifier {
 
   List<HealthConsultationRecord> get consultations {
     final result = <HealthConsultationRecord>[
+      for (final event in _overview?.events ?? const <HealthEventEntity>[])
+        if (event.appointmentKind == HealthAppointmentKind.consultation)
+          HealthConsultationRecord(
+            id: event.id,
+            title: event.reason ?? event.title,
+            summary: event.clinicalSummary ?? event.description,
+            pediatrician:
+                event.professionalName ?? 'Profesional no especificado',
+            occurredAt: event.startsAt,
+            treatment: event.indications,
+            followUp: null,
+            vigilance: null,
+            notes: event.notesBeforeVisit,
+            syncStatus: _registerSyncStatus(event.syncStatus),
+            status: event.effectiveStatus(_clock()),
+          ),
       for (final event in clinicalRecords)
-        if (event.details['observation_type'] == 'medical_consultation')
+        if (event.details['observation_type'] == 'medical_consultation' &&
+            !(_overview?.events.any((item) => item.id == event.id) ?? false))
           HealthConsultationRecord(
             id: event.id,
             title: _text(event.details['title']) ?? 'Consulta pediátrica',
@@ -407,6 +442,7 @@ class HealthFlowController extends ChangeNotifier {
             vigilance: _text(event.details['vigilance']),
             notes: _text(event.notes),
             syncStatus: event.syncStatus,
+            status: HealthEventStatus.completed,
           ),
     ]..sort((a, b) => b.occurredAt.compareTo(a.occurredAt));
     return List.unmodifiable(result);
@@ -531,8 +567,10 @@ class HealthFlowController extends ChangeNotifier {
   }
 
   void selectConsultation(HealthConsultationRecord consultation) {
-    _selectedRecordId = consultation.id;
-    _selectedHealthEventId = null;
+    final isCanonical =
+        _overview?.events.any((event) => event.id == consultation.id) ?? false;
+    _selectedRecordId = isCanonical ? null : consultation.id;
+    _selectedHealthEventId = isCanonical ? consultation.id : null;
   }
 
   void selectRecord(RegisteredEvent record) {
@@ -552,13 +590,22 @@ class HealthFlowController extends ChangeNotifier {
     _selectedRecordId = profile?.id;
   }
 
-  int get pendingSyncCount => _records
-      .where(
-        (event) =>
-            event.syncStatus == RegisterSyncStatus.pending ||
-            event.syncStatus == RegisterSyncStatus.failed,
-      )
-      .length;
+  int get pendingSyncCount =>
+      _records
+          .where(
+            (event) =>
+                event.syncStatus == RegisterSyncStatus.pending ||
+                event.syncStatus == RegisterSyncStatus.failed,
+          )
+          .length +
+      (_overview?.events
+              .where(
+                (event) =>
+                    event.syncStatus == HealthSyncStatus.pending ||
+                    event.syncStatus == HealthSyncStatus.failed,
+              )
+              .length ??
+          0);
 
   Future<void> load({bool force = false}) async {
     if (_isLoading || (_loadedOnce && !force)) return;
@@ -692,34 +739,132 @@ class HealthFlowController extends ChangeNotifier {
     required String followUp,
     required String vigilance,
     String? notes,
+    HealthAppointmentKind appointmentKind = HealthAppointmentKind.consultation,
+    bool finishSummary = true,
   }) async {
     final babyId = await _requireBabyId();
-    final saved = await _saveRegisterEvent(
-      RegisterEventDraft(
+    final now = _clock();
+    final isFuture = occurredAt.isAfter(now);
+    final hasSummary = summary.trim().isNotEmpty;
+    final status = isFuture
+        ? HealthEventStatus.scheduled
+        : finishSummary && hasSummary
+        ? HealthEventStatus.completed
+        : HealthEventStatus.attendedPendingSummary;
+    final saved = await _healthRepository.createEvent(
+      HealthEventDraft(
         babyId: babyId,
-        type: RegisterEventType.clinicalObservation,
-        occurredAt: occurredAt,
-        caregiverId: 'mother',
-        notes: notes,
-        schemaVersion: 2,
-        details: {
-          'observation_type': 'medical_consultation',
-          'title': reason.trim(),
-          'description': summary.trim(),
-          'pediatrician': pediatrician.trim(),
-          'treatment': treatment.trim(),
-          'follow_up': followUp.trim(),
-          'vigilance': vigilance.trim(),
-          'share_with_pediatrician': true,
-        },
+        type: appointmentKind == HealthAppointmentKind.wellChildControl
+            ? HealthEventType.pediatricControl
+            : HealthEventType.consultation,
+        title: reason.trim().isEmpty
+            ? appointmentKind == HealthAppointmentKind.wellChildControl
+                  ? 'Control de niño sano'
+                  : 'Consulta pediátrica'
+            : reason.trim(),
+        description: summary.trim(),
+        startsAt: occurredAt,
+        status: status,
+        appointmentKind: appointmentKind,
+        reason: reason.trim(),
+        timezone: occurredAt.timeZoneName,
+        attendedAt: isFuture ? null : occurredAt,
+        completedAt: status == HealthEventStatus.completed ? now : null,
+        professionalName: pediatrician.trim(),
+        notesBeforeVisit: notes?.trim(),
+        clinicalSummary: summary.trim(),
+        professionalAssessment: summary.trim(),
+        indications: [
+          treatment.trim(),
+          followUp.trim(),
+          vigilance.trim(),
+        ].where((value) => value.isNotEmpty).join('\n'),
       ),
     );
-    _selectedRecordId = saved.id;
+    _selectedHealthEventId = saved.id;
+    _selectedRecordId = null;
     await _refreshAfterSave();
     return HealthFlowSaveResult(
       kind: HealthFlowSaveKind.consultation,
       savedAt: DateTime.now(),
     );
+  }
+
+  Future<HealthEventEntity?> confirmSelectedAttendance({
+    required bool completeNow,
+  }) async {
+    final event = selectedHealthEvent;
+    if (event == null || !event.isAppointment) return null;
+    final now = _clock();
+    final updated = await _healthRepository.updateEvent(
+      event.id,
+      HealthEventPatch(
+        status:
+            completeNow && (event.clinicalSummary?.trim().isNotEmpty ?? false)
+            ? HealthEventStatus.completed
+            : HealthEventStatus.attendedPendingSummary,
+        attendedAt: now,
+        completedAt:
+            completeNow && (event.clinicalSummary?.trim().isNotEmpty ?? false)
+            ? now
+            : null,
+      ),
+    );
+    await load(force: true);
+    return updated;
+  }
+
+  Future<HealthEventEntity?> markSelectedNotAttended() async {
+    final event = selectedHealthEvent;
+    if (event == null || !event.isAppointment) return null;
+    final updated = await _healthRepository.updateEvent(
+      event.id,
+      const HealthEventPatch(status: HealthEventStatus.notAttended),
+    );
+    await load(force: true);
+    return updated;
+  }
+
+  Future<HealthEventEntity?> finalizeSelectedSummary({
+    required String clinicalSummary,
+    String? professionalAssessment,
+    String? indications,
+  }) async {
+    final event = selectedHealthEvent;
+    if (event == null || !event.isAppointment) return null;
+    final summary = clinicalSummary.trim();
+    if (summary.isEmpty) {
+      throw ArgumentError.value(
+        clinicalSummary,
+        'clinicalSummary',
+        'El resumen clínico es obligatorio para finalizar.',
+      );
+    }
+    final updated = await _healthRepository.updateEvent(
+      event.id,
+      HealthEventPatch(
+        status: HealthEventStatus.completed,
+        attendedAt: event.attendedAt ?? _clock(),
+        completedAt: _clock(),
+        clinicalSummary: summary,
+        professionalAssessment: professionalAssessment?.trim(),
+        indications: indications?.trim(),
+      ),
+    );
+    await load(force: true);
+    return updated;
+  }
+
+  Future<HealthEventEntity?> rescheduleSelected(DateTime startsAt) async {
+    final event = selectedHealthEvent;
+    if (event == null || !event.isAppointment) return null;
+    final replacement = await _healthRepository.rescheduleEvent(
+      event.id,
+      startsAt,
+    );
+    _selectedHealthEventId = replacement?.id;
+    await load(force: true);
+    return replacement;
   }
 
   Future<HealthFlowSaveResult> saveObservation({
@@ -787,8 +932,59 @@ class HealthFlowController extends ChangeNotifier {
 
   Future<void> retrySync() async {
     if (offlineMode) return;
-    await _registerSyncService.synchronize();
+    await Future.wait([
+      _registerSyncService.synchronize(),
+      if (_healthSyncService case final service?) service.synchronize(),
+    ]);
     await load(force: true);
+  }
+
+  void _updateConsolidatedSyncState() {
+    final states = [
+      _registerSyncState,
+      if (_healthSyncState case final state?) state,
+    ];
+    final phase = _highestPrioritySyncPhase(states);
+    final phaseStates = states.where((state) => state.phase == phase);
+    final lastSyncedValues = states
+        .map((state) => state.lastSyncedAt)
+        .whereType<DateTime>()
+        .toList(growable: false);
+    _syncState = RegisterSyncState(
+      phase: phase,
+      pendingCount: states.fold(
+        0,
+        (total, state) => total + state.pendingCount,
+      ),
+      failedCount: states.fold(0, (total, state) => total + state.failedCount),
+      lastSyncedAt: lastSyncedValues.isEmpty
+          ? null
+          : lastSyncedValues.reduce(
+              (oldest, value) => value.isBefore(oldest) ? value : oldest,
+            ),
+      message: phaseStates
+          .map((state) => state.message)
+          .whereType<String>()
+          .where((message) => message.trim().isNotEmpty)
+          .firstOrNull,
+    );
+  }
+
+  static RegisterSyncPhase _highestPrioritySyncPhase(
+    List<RegisterSyncState> states,
+  ) {
+    const priority = [
+      RegisterSyncPhase.failed,
+      RegisterSyncPhase.syncing,
+      RegisterSyncPhase.waitingForAuthentication,
+      RegisterSyncPhase.disabled,
+      RegisterSyncPhase.idle,
+      RegisterSyncPhase.synced,
+    ];
+    for (final phase in priority) {
+      if (states.any((state) => state.phase == phase)) return phase;
+    }
+    return RegisterSyncPhase.idle;
   }
 
   Future<bool> deleteSelectedRecord() async {
@@ -838,6 +1034,7 @@ class HealthFlowController extends ChangeNotifier {
   @override
   void dispose() {
     unawaited(_syncSubscription.cancel());
+    unawaited(_healthSyncSubscription?.cancel());
     unawaited(_activeBabySubscription.cancel());
     unawaited(_domainHydrationSubscription?.cancel());
     unawaited(_connectivitySubscription?.cancel());
@@ -882,6 +1079,14 @@ class HealthFlowController extends ChangeNotifier {
     final normalized = value.trim();
     return normalized.isEmpty ? null : normalized;
   }
+
+  static RegisterSyncStatus _registerSyncStatus(HealthSyncStatus value) =>
+      switch (value) {
+        HealthSyncStatus.synced => RegisterSyncStatus.synced,
+        HealthSyncStatus.pending => RegisterSyncStatus.pending,
+        HealthSyncStatus.syncing => RegisterSyncStatus.syncing,
+        HealthSyncStatus.failed => RegisterSyncStatus.failed,
+      };
 
   static T? _firstWhereOrNull<T>(Iterable<T> values, bool Function(T) test) {
     for (final value in values) {

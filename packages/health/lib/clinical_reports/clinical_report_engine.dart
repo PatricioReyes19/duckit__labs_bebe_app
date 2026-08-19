@@ -30,15 +30,16 @@ class ClinicalReportEngine {
     String appVersion = 'unknown',
   }) {
     final now = (generatedAt ?? DateTime.now()).toUtc();
-    final records = registerEvents
-        .where(
-          (event) =>
-              event.babyId == request.babyId &&
-              !event.isDeleted &&
-              _inPeriod(event.occurredAt, request),
-        )
-        .toList(growable: false)
-      ..sort((a, b) => a.occurredAt.compareTo(b.occurredAt));
+    final records =
+        registerEvents
+            .where(
+              (event) =>
+                  event.babyId == request.babyId &&
+                  !event.isDeleted &&
+                  _inPeriod(event.occurredAt, request),
+            )
+            .toList(growable: false)
+          ..sort((a, b) => a.occurredAt.compareTo(b.occurredAt));
     final health = healthEvents
         .where(
           (event) =>
@@ -46,7 +47,8 @@ class ClinicalReportEngine {
               _inPeriod(event.startsAt, request),
         )
         .toList(growable: false);
-    final periodDays = request.dateTo.difference(request.dateFrom).inMinutes /
+    final periodDays =
+        request.dateTo.difference(request.dateFrom).inMinutes /
         Duration.minutesPerDay;
 
     final observations = <ClinicalReportItem>[
@@ -106,9 +108,15 @@ class ClinicalReportEngine {
             title: event.title,
             detail: event.description,
             status: switch (event.status) {
+              HealthEventStatus.draft => 'Borrador',
               HealthEventStatus.scheduled => 'Programada',
+              HealthEventStatus.due => 'Corresponde hoy',
+              HealthEventStatus.attendancePending => 'Asistencia pendiente',
+              HealthEventStatus.attendedPendingSummary => 'Resumen pendiente',
               HealthEventStatus.completed => 'Aplicada',
+              HealthEventStatus.notAttended => 'No aplicada',
               HealthEventStatus.cancelled => 'Cancelada',
+              HealthEventStatus.rescheduled => 'Reprogramada',
             },
           ),
     ];
@@ -152,13 +160,20 @@ class ClinicalReportEngine {
             title: event.title,
             detail: event.description,
             status: switch (event.status) {
+              HealthEventStatus.draft => 'Borrador',
               HealthEventStatus.scheduled => 'Programado',
+              HealthEventStatus.due => 'Corresponde hoy',
+              HealthEventStatus.attendancePending => 'Asistencia pendiente',
+              HealthEventStatus.attendedPendingSummary => 'Resumen pendiente',
               HealthEventStatus.completed => 'Completado',
+              HealthEventStatus.notAttended => 'No asistieron',
               HealthEventStatus.cancelled => 'Cancelado',
+              HealthEventStatus.rescheduled => 'Reprogramado',
             },
           ),
       for (final event in records)
-        if (event.details['observation_type'] == 'medical_consultation')
+        if (event.details['observation_type'] == 'medical_consultation' &&
+            !health.any((item) => item.id == event.id))
           ClinicalReportItem(
             occurredAt: event.occurredAt,
             title: _text(event.details['title']) ?? 'Consulta pediátrica',
@@ -179,10 +194,10 @@ class ClinicalReportEngine {
     ClinicalReportRequest request,
     Map<String, String> caregiverNames,
   ) {
-    final includeAll = request.includeRawTimeline ||
+    final includeAll =
+        request.includeRawTimeline ||
         request.type == ClinicalReportType.fullHistory;
-    if (!includeAll &&
-        request.type != ClinicalReportType.symptomConsultation) {
+    if (!includeAll && request.type != ClinicalReportType.symptomConsultation) {
       return const [];
     }
     final result = <ClinicalTimelineItem>[];
@@ -263,7 +278,9 @@ class ClinicalReportEngine {
       _text(details['symptoms']),
       if (includePrivateNotes) _text(event.notes),
     ].whereType<String>().toSet();
-    return values.isEmpty ? 'Registro sin detalle adicional' : values.join(' · ');
+    return values.isEmpty
+        ? 'Registro sin detalle adicional'
+        : values.join(' · ');
   }
 
   static String _typeLabel(RegisterEventType type) => switch (type) {

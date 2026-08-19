@@ -33,6 +33,15 @@ class FamilySyncService {
     return operation.whenComplete(() => _running = null);
   }
 
+  Future<RegisterSyncState> ensureSynchronized() {
+    final current = _state;
+    if (current.phase == RegisterSyncPhase.synced &&
+        current.pendingCount == 0) {
+      return Future.value(current);
+    }
+    return synchronize();
+  }
+
   Future<RegisterSyncState> _drain() async {
     var result = _state;
     while (_rerunRequested) {
@@ -83,11 +92,20 @@ class FamilySyncService {
         ),
       );
       if (pending != null) {
-        final accepted = await _remote.push(pending);
-        await _local.markSnapshotSynced(attempted: pending, accepted: accepted);
+        await _remote.push(pending);
       }
       try {
         final snapshots = await _remote.pull();
+        if (pending != null) {
+          final accepted = snapshots.firstWhere(
+            (candidate) => candidate.overview.id == pending!.overview.id,
+            orElse: () => pending!,
+          );
+          await _local.markSnapshotSynced(
+            attempted: pending,
+            accepted: accepted,
+          );
+        }
         await _local.mergeRemote(snapshots);
         _lastPulledSnapshots = List.unmodifiable(snapshots);
       } on FormatException {
@@ -97,9 +115,13 @@ class FamilySyncService {
         // Repair that same canonical id once from the complete local graph.
         final repair = await _local.readPendingSnapshot(force: true);
         if (repair == null) rethrow;
-        final accepted = await _remote.push(repair);
-        await _local.markSnapshotSynced(attempted: repair, accepted: accepted);
+        await _remote.push(repair);
         final snapshots = await _remote.pull();
+        final accepted = snapshots.firstWhere(
+          (candidate) => candidate.overview.id == repair.overview.id,
+          orElse: () => repair,
+        );
+        await _local.markSnapshotSynced(attempted: repair, accepted: accepted);
         await _local.mergeRemote(snapshots);
         _lastPulledSnapshots = List.unmodifiable(snapshots);
       }

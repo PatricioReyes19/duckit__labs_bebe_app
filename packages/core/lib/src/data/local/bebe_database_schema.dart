@@ -1,7 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 
 abstract final class BebeDatabaseSchema {
-  static const version = 7;
+  static const version = 9;
 
   static const registerEvents = 'register_events';
   static const families = 'families';
@@ -174,6 +174,8 @@ CREATE TABLE IF NOT EXISTS $familyMembers (
   role TEXT NOT NULL,
   access_description TEXT NOT NULL,
   status TEXT NOT NULL,
+  appointment_kind TEXT,
+  appointment_json TEXT NOT NULL DEFAULT '{}',
   contact TEXT,
   invitation_code TEXT,
   invited_at INTEGER,
@@ -265,6 +267,8 @@ CREATE TABLE IF NOT EXISTS $healthMeasurements (
 CREATE INDEX IF NOT EXISTS idx_health_measurements_baby_recorded
 ON $healthMeasurements (baby_id, recorded_at DESC)
 ''');
+    await upgradePendingSyncIndexesV8(database);
+    await upgradeHealthAppointmentsV9(database);
     await database.execute('''
 CREATE TABLE IF NOT EXISTS $appSettings (
   id TEXT PRIMARY KEY,
@@ -285,6 +289,118 @@ CREATE TABLE IF NOT EXISTS $appSettings (
   sync_error TEXT
 )
 ''');
+  }
+
+  /// Pending rows are a small, ordered subset of each offline-first table.
+  /// These partial indexes keep synchronized history out of the queue scan.
+  static Future<void> upgradePendingSyncIndexesV8(Database database) async {
+    final existingTables = (await database.rawQuery(
+      "SELECT name FROM sqlite_master WHERE type = 'table'",
+    )).map((row) => row['name']).whereType<String>().toSet();
+    if (existingTables.contains(registerEvents)) {
+      await database.execute('''
+CREATE INDEX IF NOT EXISTS idx_register_events_pending_updated
+ON $registerEvents (updated_at)
+WHERE sync_status != 'synced'
+''');
+    }
+    if (existingTables.contains(agendaEvents)) {
+      await database.execute('''
+CREATE INDEX IF NOT EXISTS idx_agenda_events_pending_updated
+ON $agendaEvents (updated_at)
+WHERE sync_status != 'synced'
+''');
+    }
+    if (existingTables.contains(healthEvents)) {
+      await database.execute('''
+CREATE INDEX IF NOT EXISTS idx_health_events_pending_updated
+ON $healthEvents (updated_at)
+WHERE sync_status != 'synced'
+''');
+    }
+  }
+
+  /// Amplía `health_events` de forma aditiva y conserva los IDs existentes.
+  /// Los controles previos pasan a ser citas de control de niño sano; vacunas
+  /// y filas desconocidas permanecen sin `appointment_kind`.
+  static Future<void> upgradeHealthAppointmentsV9(Database database) async {
+    final existingTables = (await database.rawQuery(
+      "SELECT name FROM sqlite_master WHERE type = 'table'",
+    )).map((row) => row['name']).whereType<String>().toSet();
+    if (!existingTables.contains(healthEvents)) return;
+    final columns = (await database.rawQuery(
+      'PRAGMA table_info($healthEvents)',
+    )).map((row) => row['name']).whereType<String>().toSet();
+    if (!columns.contains('appointment_kind')) {
+      await database.execute(
+        'ALTER TABLE $healthEvents ADD COLUMN appointment_kind TEXT',
+      );
+    }
+    if (!columns.contains('appointment_json')) {
+      await database.execute(
+        "ALTER TABLE $healthEvents ADD COLUMN appointment_json TEXT NOT NULL DEFAULT '{}'",
+      );
+    }
+    await database.execute('''
+UPDATE $healthEvents
+SET appointment_kind = 'wellChildControl'
+WHERE appointment_kind IS NULL
+  AND event_type IN ('pediatricControl', 'growthControl')
+''');
+    await database.execute('''
+CREATE INDEX IF NOT EXISTS idx_health_appointments_baby_kind_starts
+ON $healthEvents (baby_id, appointment_kind, starts_at)
+WHERE appointment_kind IS NOT NULL
+''');
+    if (existingTables.contains(registerEvents)) {
+      await database.execute('''
+INSERT OR IGNORE INTO $healthEvents (
+  id, baby_id, event_type, title, description, starts_at, caregiver_id,
+  status, appointment_kind, appointment_json, created_at, updated_at,
+  sync_status, sync_error
+)
+SELECT
+  id,
+  baby_id,
+  'consultation',
+  COALESCE(NULLIF(json_extract(details_json, '\$.title'), ''),
+    'Consulta pediátrica'),
+  COALESCE(json_extract(details_json, '\$.description'), ''),
+  occurred_at,
+  NULL,
+  'completed',
+  'consultation',
+  json_object(
+    'reason', COALESCE(json_extract(details_json, '\$.title'), ''),
+    'timezone', 'UTC',
+    'attended_at', strftime('%Y-%m-%dT%H:%M:%fZ', occurred_at / 1000,
+      'unixepoch'),
+    'completed_at', strftime('%Y-%m-%dT%H:%M:%fZ', occurred_at / 1000,
+      'unixepoch'),
+    'professional_name',
+      COALESCE(json_extract(details_json, '\$.pediatrician'), ''),
+    'clinical_summary',
+      COALESCE(json_extract(details_json, '\$.description'), ''),
+    'indications', trim(
+      COALESCE(json_extract(details_json, '\$.treatment'), '') || ' ' ||
+      COALESCE(json_extract(details_json, '\$.follow_up'), '') || ' ' ||
+      COALESCE(json_extract(details_json, '\$.vigilance'), '')
+    ),
+    'notes_before_visit', COALESCE(notes, ''),
+    'created_by', COALESCE(caregiver_id, '')
+  ),
+  created_at,
+  updated_at,
+  'pending',
+  NULL
+FROM $registerEvents
+WHERE event_type = 'clinical_observation'
+  AND deleted_at IS NULL
+  AND json_valid(details_json)
+  AND json_extract(details_json, '\$.observation_type') =
+    'medical_consultation'
+''');
+    }
   }
 
   static Future<void> upgradeHealthAndSettingsForSync(Database database) async {

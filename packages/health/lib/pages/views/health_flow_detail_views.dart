@@ -83,7 +83,13 @@ class HealthFlowDetailView extends StatelessWidget {
     if ((kind == HealthSectionKind.consultations ||
             kind == HealthSectionKind.controls) &&
         action == HealthFlowAction.register) {
-      return _ConsultationWizard(controller: controller, openFlow: openFlow);
+      return _ConsultationWizard(
+        controller: controller,
+        openFlow: openFlow,
+        appointmentKind: kind == HealthSectionKind.controls
+            ? HealthAppointmentKind.wellChildControl
+            : HealthAppointmentKind.consultation,
+      );
     }
     if (kind == HealthSectionKind.pediatricCare &&
         action == HealthFlowAction.register) {
@@ -376,10 +382,15 @@ class _MeasurementFormState extends State<_MeasurementForm> {
 }
 
 class _ConsultationWizard extends StatefulWidget {
-  const _ConsultationWizard({required this.controller, required this.openFlow});
+  const _ConsultationWizard({
+    required this.controller,
+    required this.openFlow,
+    required this.appointmentKind,
+  });
 
   final HealthFlowController controller;
   final HealthFlowNavigator openFlow;
+  final HealthAppointmentKind appointmentKind;
 
   @override
   State<_ConsultationWizard> createState() => _ConsultationWizardState();
@@ -475,13 +486,26 @@ class _ConsultationWizardState extends State<_ConsultationWizard> {
               ],
               Expanded(
                 child: HealthPrimaryButton(
-                  label: step == 2 ? 'Guardar consulta' : 'Continuar',
+                  label: step == 2
+                      ? occurredAt.isAfter(DateTime.now())
+                            ? 'Programar cita'
+                            : 'Finalizar resumen'
+                      : 'Continuar',
                   busy: busy,
-                  onPressed: step == 2 ? _save : _continue,
+                  onPressed: step == 2 ? () => _save(true) : _continue,
                 ),
               ),
             ],
           ),
+          if (step == 2 && !occurredAt.isAfter(DateTime.now())) ...[
+            const SizedBox(height: 10),
+            HealthPrimaryButton(
+              label: 'Guardar para completar después',
+              outlined: true,
+              busy: busy,
+              onPressed: () => _save(false),
+            ),
+          ],
         ],
       ),
     );
@@ -506,7 +530,6 @@ class _ConsultationWizardState extends State<_ConsultationWizard> {
             labelText: 'Pediatra',
             prefixIcon: Icon(Icons.person_outline_rounded),
           ),
-          validator: _required,
         ),
         const SizedBox(height: 14),
         TextFormField(
@@ -592,18 +615,20 @@ class _ConsultationWizardState extends State<_ConsultationWizard> {
 
   void _continue() {
     if (step == 0 && !(formKey.currentState?.validate() ?? false)) return;
-    if (step == 1 && summary.text.trim().isEmpty) {
+    setState(() => step++);
+  }
+
+  Future<void> _save(bool finishSummary) async {
+    if (finishSummary &&
+        !occurredAt.isAfter(DateTime.now()) &&
+        summary.text.trim().isEmpty) {
       BebeInAppSnackbar.show(
         context,
-        message: 'Agrega el resumen de la consulta.',
+        message: 'Agrega el resumen clínico antes de finalizar.',
         variant: BebeInAppSnackbarVariant.warning,
       );
       return;
     }
-    setState(() => step++);
-  }
-
-  Future<void> _save() async {
     setState(() => busy = true);
     try {
       await widget.controller.saveConsultation(
@@ -615,6 +640,8 @@ class _ConsultationWizardState extends State<_ConsultationWizard> {
         followUp: followUp.text,
         vigilance: vigilance.text,
         notes: notes.text,
+        appointmentKind: widget.appointmentKind,
+        finishSummary: finishSummary,
       );
       if (mounted) widget.openFlow(HealthFlowAction.success);
     } on Object catch (error) {
@@ -885,10 +912,15 @@ class _HealthSavedView extends StatelessWidget {
         'La curva de crecimiento ya incluye este dato.',
         Icons.monitor_weight_outlined,
       ),
-      HealthSectionKind.consultations || HealthSectionKind.controls => (
+      HealthSectionKind.consultations => (
         '¡Consulta guardada!',
         'Las indicaciones están disponibles en el historial clínico.',
         Icons.medical_information_outlined,
+      ),
+      HealthSectionKind.controls => (
+        '¡Control guardado!',
+        'El control está disponible en el historial clínico.',
+        Icons.health_and_safety_outlined,
       ),
       _ => (
         '¡Registro guardado!',
@@ -1156,9 +1188,8 @@ class _HealthRecordDetailView extends StatelessWidget {
 
   List<Widget> _consultationDetail(BuildContext context) {
     final selectedEvent = controller.selectedHealthEvent;
-    if (selectedEvent != null &&
-        (selectedEvent.type == HealthEventType.pediatricControl ||
-            selectedEvent.type == HealthEventType.growthControl)) {
+    if (selectedEvent != null && selectedEvent.isAppointment) {
+      final status = selectedEvent.effectiveStatus(DateTime.now());
       return [
         HealthActionRow(
           icon: selectedEvent.type == HealthEventType.growthControl
@@ -1168,7 +1199,7 @@ class _HealthRecordDetailView extends StatelessWidget {
           subtitle: selectedEvent.description.trim().isEmpty
               ? 'Sin descripción adicional'
               : selectedEvent.description,
-          trailing: _EventStatusLabel(selectedEvent.status),
+          trailing: _EventStatusLabel(status),
         ),
         const SizedBox(height: 10),
         HealthActionRow(
@@ -1177,6 +1208,76 @@ class _HealthRecordDetailView extends StatelessWidget {
           subtitle:
               '${healthDateLabel(selectedEvent.startsAt)} · ${healthTimeLabel(selectedEvent.startsAt)}',
         ),
+        if (selectedEvent.professionalName?.trim().isNotEmpty ?? false) ...[
+          const SizedBox(height: 10),
+          HealthActionRow(
+            icon: Icons.person_outline_rounded,
+            title: 'Profesional',
+            subtitle: selectedEvent.professionalName,
+          ),
+        ],
+        if (selectedEvent.clinicalSummary?.trim().isNotEmpty ?? false) ...[
+          const SizedBox(height: 10),
+          HealthActionRow(
+            icon: Icons.description_outlined,
+            title: 'Resumen clínico',
+            subtitle: selectedEvent.clinicalSummary,
+          ),
+        ],
+        if (selectedEvent.indications?.trim().isNotEmpty ?? false) ...[
+          const SizedBox(height: 10),
+          HealthActionRow(
+            icon: Icons.medical_information_outlined,
+            title: 'Indicaciones',
+            subtitle: selectedEvent.indications,
+          ),
+        ],
+        if (status == HealthEventStatus.due ||
+            status == HealthEventStatus.attendancePending) ...[
+          const SizedBox(height: 18),
+          HealthPrimaryButton(
+            key: const ValueKey('health-confirm-attendance-now'),
+            label: 'Sí, completar ahora',
+            icon: Icons.check_circle_outline_rounded,
+            onPressed: () => _completeAppointment(context),
+          ),
+          const SizedBox(height: 10),
+          HealthPrimaryButton(
+            key: const ValueKey('health-confirm-attendance-later'),
+            label: 'Sí, completar después',
+            outlined: true,
+            onPressed: () =>
+                controller.confirmSelectedAttendance(completeNow: false),
+          ),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            key: const ValueKey('health-mark-not-attended'),
+            onPressed: controller.markSelectedNotAttended,
+            icon: const Icon(Icons.event_busy_outlined),
+            label: const Text('No asistimos'),
+          ),
+        ],
+        if (status == HealthEventStatus.attendedPendingSummary) ...[
+          const SizedBox(height: 18),
+          HealthPrimaryButton(
+            key: const ValueKey('health-finalize-summary'),
+            label: 'Completar resumen',
+            icon: Icons.edit_note_rounded,
+            onPressed: () => _completeAppointment(context),
+          ),
+        ],
+        if (status == HealthEventStatus.scheduled ||
+            status == HealthEventStatus.due ||
+            status == HealthEventStatus.attendancePending) ...[
+          const SizedBox(height: 10),
+          HealthPrimaryButton(
+            key: const ValueKey('health-reschedule-appointment'),
+            label: 'Reprogramar',
+            icon: Icons.event_repeat_outlined,
+            outlined: true,
+            onPressed: () => _rescheduleAppointment(context, selectedEvent),
+          ),
+        ],
       ];
     }
 
@@ -1250,6 +1351,98 @@ class _HealthRecordDetailView extends StatelessWidget {
         onPressed: () => openFlow(HealthFlowAction.reports),
       ),
     ];
+  }
+
+  Future<void> _completeAppointment(BuildContext context) async {
+    final summary = TextEditingController(
+      text: controller.selectedHealthEvent?.clinicalSummary,
+    );
+    final assessment = TextEditingController(
+      text: controller.selectedHealthEvent?.professionalAssessment,
+    );
+    final indications = TextEditingController(
+      text: controller.selectedHealthEvent?.indications,
+    );
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Completar atención'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                key: const ValueKey('health-clinical-summary-field'),
+                controller: summary,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Resumen clínico *',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: assessment,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  labelText: 'Evaluación profesional',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: indications,
+                maxLines: 3,
+                decoration: const InputDecoration(labelText: 'Indicaciones'),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Finalizar resumen'),
+          ),
+        ],
+      ),
+    );
+    if (accepted == true && context.mounted) {
+      try {
+        await controller.finalizeSelectedSummary(
+          clinicalSummary: summary.text,
+          professionalAssessment: assessment.text,
+          indications: indications.text,
+        );
+      } on ArgumentError catch (error) {
+        if (context.mounted) _showError(context, error);
+      }
+    }
+    summary.dispose();
+    assessment.dispose();
+    indications.dispose();
+  }
+
+  Future<void> _rescheduleAppointment(
+    BuildContext context,
+    HealthEventEntity event,
+  ) async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: event.startsAt.toLocal(),
+      firstDate: DateTime.now().subtract(const Duration(days: 1)),
+      lastDate: DateTime.now().add(const Duration(days: 730)),
+    );
+    if (date == null || !context.mounted) return;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(event.startsAt.toLocal()),
+    );
+    if (time == null) return;
+    await controller.rescheduleSelected(
+      DateTime(date.year, date.month, date.day, time.hour, time.minute),
+    );
   }
 
   List<Widget> _pediatricianDetail(BuildContext context) {
@@ -1514,7 +1707,8 @@ class _ExportReportViewState extends State<_ExportReportView> {
     final dateTo = requestedEnd.isAfter(generatedAt)
         ? generatedAt
         : requestedEnd;
-    final dateFrom = _customPeriod?.start ??
+    final dateFrom =
+        _customPeriod?.start ??
         generatedAt.subtract(Duration(days: _periodDays));
     return ClinicalReportRequest(
       babyId: controller.activeBaby?.id ?? '',
@@ -1605,7 +1799,10 @@ class _ExportReportViewState extends State<_ExportReportView> {
           ),
           items: [
             for (final type in ClinicalReportType.values)
-              DropdownMenuItem(value: type, child: Text(_reportTypeLabel(type))),
+              DropdownMenuItem(
+                value: type,
+                child: Text(_reportTypeLabel(type)),
+              ),
           ],
           onChanged: _exporting
               ? null
@@ -1623,9 +1820,9 @@ class _ExportReportViewState extends State<_ExportReportView> {
         const SizedBox(height: 18),
         Text(
           'Período',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w800,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 10),
         SegmentedButton<int>(
@@ -1767,10 +1964,7 @@ class _ExportReportViewState extends State<_ExportReportView> {
           ),
         ),
         const SizedBox(height: 16),
-        _ClinicalReportPreview(
-          controller: controller,
-          request: _request,
-        ),
+        _ClinicalReportPreview(controller: controller, request: _request),
         const SizedBox(height: 18),
         HealthPrimaryButton(
           label: _exporting ? 'Generando…' : 'Generar PDF y compartir',
@@ -2168,6 +2362,27 @@ class _EventStatusLabel extends StatelessWidget {
       HealthEventStatus.cancelled => (
         'Cancelado',
         Theme.of(context).colorScheme.error,
+      ),
+      HealthEventStatus.draft => (
+        'Borrador',
+        Theme.of(context).colorScheme.outline,
+      ),
+      HealthEventStatus.due => ('Hoy', Theme.of(context).colorScheme.primary),
+      HealthEventStatus.attendancePending => (
+        'Confirmar asistencia',
+        Theme.of(context).colorScheme.primary,
+      ),
+      HealthEventStatus.attendedPendingSummary => (
+        'Resumen pendiente',
+        Theme.of(context).colorScheme.secondary,
+      ),
+      HealthEventStatus.notAttended => (
+        'No asistieron',
+        Theme.of(context).colorScheme.error,
+      ),
+      HealthEventStatus.rescheduled => (
+        'Reprogramado',
+        Theme.of(context).colorScheme.outline,
       ),
     };
     return Container(

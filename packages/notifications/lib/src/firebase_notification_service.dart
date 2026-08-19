@@ -105,6 +105,14 @@ class FirebaseNotificationService implements NotificationService {
     'feeding_reminders',
     'Alimentación',
     description: 'Recordatorios opcionales de alimentación.',
+    importance: Importance.high,
+  );
+
+  static const _careChannel = AndroidNotificationChannel(
+    'care_reminders',
+    'Cuidados diarios',
+    description: 'Recordatorios configurados de pañal y cuidados cotidianos.',
+    importance: Importance.high,
   );
 
   static const _systemChannel = AndroidNotificationChannel(
@@ -139,10 +147,12 @@ class FirebaseNotificationService implements NotificationService {
   DateTime? _lastTimeZoneCheckAt;
   bool _timeZoneDatabaseInitialized = false;
   bool _initialized = false;
+  Future<void>? _initializing;
 
   static const _permissionChannel = MethodChannel(
     'com.duckitlabs.bebeapp/notification_permission',
   );
+  static const _bulkCancellationThreshold = 20;
 
   @override
   List<AppNotification> get currentNotifications =>
@@ -156,54 +166,74 @@ class FirebaseNotificationService implements NotificationService {
   Stream<AppNotification> get openedNotifications => _openedController.stream;
 
   @override
-  Future<void> initialize() async {
+  Future<void> initialize() {
     if (_initialized) {
-      return;
+      return Future<void>.value();
     }
-    _initialized = true;
+    final running = _initializing;
+    if (running != null) return running;
 
-    await refreshInbox();
-    await _initializeLocalNotifications();
-    await reconcileReminders();
-    await _messaging.setForegroundNotificationPresentationOptions(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
+    final operation = _initializeOnce();
+    _initializing = operation;
+    return operation.whenComplete(() {
+      if (identical(_initializing, operation)) {
+        _initializing = null;
+      }
+    });
+  }
 
-    _subscriptions
-      ..add(
-        FirebaseMessaging.onMessage.listen(
-          (message) => unawaited(_handleForegroundMessage(message)),
-        ),
-      )
-      ..add(
-        FirebaseMessaging.onMessageOpenedApp.listen(
-          (message) => unawaited(_handleOpenedRemoteMessage(message)),
-        ),
-      )
-      ..add(
-        _messaging.onTokenRefresh.listen(
-          (token) => unawaited(_registerToken(token)),
-        ),
-      )
-      ..add(
-        _auth.userChanges().listen(
-          (user) => unawaited(_handleAuthenticatedUser(user)),
-        ),
+  Future<void> _initializeOnce() async {
+    try {
+      await refreshInbox();
+      await _initializeLocalNotifications();
+      await _messaging.setForegroundNotificationPresentationOptions(
+        alert: true,
+        badge: true,
+        sound: true,
       );
 
-    final localLaunch = await _localNotifications
-        .getNotificationAppLaunchDetails();
-    final localResponse = localLaunch?.notificationResponse;
-    if ((localLaunch?.didNotificationLaunchApp ?? false) &&
-        localResponse != null) {
-      await _handleLocalNotificationResponse(localResponse);
-    }
+      _subscriptions
+        ..add(
+          FirebaseMessaging.onMessage.listen(
+            (message) => unawaited(_handleForegroundMessage(message)),
+          ),
+        )
+        ..add(
+          FirebaseMessaging.onMessageOpenedApp.listen(
+            (message) => unawaited(_handleOpenedRemoteMessage(message)),
+          ),
+        )
+        ..add(
+          _messaging.onTokenRefresh.listen(
+            (token) => unawaited(_registerToken(token)),
+          ),
+        )
+        ..add(
+          _auth.userChanges().listen(
+            (user) => unawaited(_handleAuthenticatedUser(user)),
+          ),
+        );
 
-    final initialMessage = await _messaging.getInitialMessage();
-    if (initialMessage != null) {
-      await _handleOpenedRemoteMessage(initialMessage);
+      final localLaunch = await _localNotifications
+          .getNotificationAppLaunchDetails();
+      final localResponse = localLaunch?.notificationResponse;
+      if ((localLaunch?.didNotificationLaunchApp ?? false) &&
+          localResponse != null) {
+        await _handleLocalNotificationResponse(localResponse);
+      }
+
+      final initialMessage = await _messaging.getInitialMessage();
+      if (initialMessage != null) {
+        await _handleOpenedRemoteMessage(initialMessage);
+      }
+      _initialized = true;
+    } on Object {
+      for (final subscription in _subscriptions) {
+        await subscription.cancel();
+      }
+      _subscriptions.clear();
+      _initialized = false;
+      rethrow;
     }
   }
 
@@ -255,6 +285,7 @@ class FirebaseNotificationService implements NotificationService {
       _medicationChannel,
       _healthChannel,
       _feedingChannel,
+      _careChannel,
       _systemChannel,
     ]) {
       await android?.createNotificationChannel(channel);
@@ -321,6 +352,7 @@ class FirebaseNotificationService implements NotificationService {
     for (final previousId in replacement.previousPlatformIds) {
       await _localNotifications.cancel(id: previousId);
     }
+    if (!replacement.reminderIdsToSchedule.contains(id)) return;
     final platformId = replacement.platformIdsByReminder[id]!;
     await _scheduleLocal(
       platformId: platformId,
@@ -337,11 +369,14 @@ class FirebaseNotificationService implements NotificationService {
     required String babyId,
     required List<NotificationReminder> reminders,
   }) async {
-    if (kIsWeb ||
-        accountId.isEmpty ||
-        ownerId.isEmpty ||
-        _auth.currentUser?.uid != accountId) {
-      return;
+    if (kIsWeb) return;
+    if (accountId.isEmpty || ownerId.isEmpty) {
+      throw ArgumentError('accountId y ownerId son obligatorios.');
+    }
+    if (_auth.currentUser?.uid != accountId) {
+      throw StateError(
+        'No se pueden programar recordatorios para otra cuenta.',
+      );
     }
     final permission = await permissionState();
     await initialize();
@@ -363,7 +398,9 @@ class FirebaseNotificationService implements NotificationService {
     for (final previousId in replacement.previousPlatformIds) {
       await _localNotifications.cancel(id: previousId);
     }
+    final reminderIdsToSchedule = replacement.reminderIdsToSchedule;
     for (final reminder in futureReminders) {
+      if (!reminderIdsToSchedule.contains(reminder.id)) continue;
       final platformId = replacement.platformIdsByReminder[reminder.id];
       if (platformId == null) continue;
       await _scheduleLocal(
@@ -412,7 +449,7 @@ class FirebaseNotificationService implements NotificationService {
         body: reminder.body,
         scheduledDate: tz.TZDateTime.from(reminder.scheduledAt, tz.local),
         notificationDetails: reminder.type.notificationDetails,
-        androidScheduleMode: requiresExact && exactAvailable != false
+        androidScheduleMode: requiresExact && exactAvailable == true
             ? AndroidScheduleMode.exactAllowWhileIdle
             : AndroidScheduleMode.inexactAllowWhileIdle,
         payload: jsonEncode(notification.toJson()),
@@ -583,6 +620,15 @@ class FirebaseNotificationService implements NotificationService {
       babyId: babyId,
       retainedOwnerIds: ownerIds,
     );
+    if (platformIds.length >= _bulkCancellationThreshold) {
+      await _localNotifications.cancelAllPendingNotifications();
+      // Reconciliation computes the desired owner set before calling this
+      // method and recreates it immediately afterwards. Clearing the retained
+      // snapshot here prevents hundreds of obsolete owners from being read and
+      // rewritten once per reminder during that migration.
+      await _scheduleStore.removeAccount(accountId);
+      return;
+    }
     for (final platformId in platformIds) {
       await _localNotifications.cancel(id: platformId);
     }
@@ -1006,6 +1052,7 @@ extension on NotificationReminderType {
     NotificationReminderType.vaccine ||
     NotificationReminderType.custom => 'health_reminders',
     NotificationReminderType.feeding => 'feeding_reminders',
+    NotificationReminderType.diaper => 'care_reminders',
     NotificationReminderType.syncFailure => 'system_alerts',
   };
 
@@ -1013,8 +1060,9 @@ extension on NotificationReminderType {
     NotificationReminderType.medication ||
     NotificationReminderType.healthControl ||
     NotificationReminderType.vaccine ||
-    NotificationReminderType.custom => true,
+    NotificationReminderType.custom ||
     NotificationReminderType.feeding ||
+    NotificationReminderType.diaper => true,
     NotificationReminderType.syncFailure => false,
   };
 
@@ -1067,8 +1115,30 @@ extension on NotificationReminderType {
         'feeding_reminders',
         'Alimentación',
         channelDescription: 'Recordatorios opcionales de alimentación.',
+        importance: Importance.high,
+        priority: Priority.high,
         category: AndroidNotificationCategory.reminder,
         ticker: 'Recordatorio de alimentación',
+        actions: _androidReminderActions,
+      ),
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+        interruptionLevel: InterruptionLevel.active,
+        categoryIdentifier: _reminderCategoryId,
+      ),
+    ),
+    NotificationReminderType.diaper => const NotificationDetails(
+      android: AndroidNotificationDetails(
+        'care_reminders',
+        'Cuidados diarios',
+        channelDescription:
+            'Recordatorios configurados de pañal y cuidados cotidianos.',
+        importance: Importance.high,
+        priority: Priority.high,
+        category: AndroidNotificationCategory.reminder,
+        ticker: 'Recordatorio de pañal',
         actions: _androidReminderActions,
       ),
       iOS: DarwinNotificationDetails(

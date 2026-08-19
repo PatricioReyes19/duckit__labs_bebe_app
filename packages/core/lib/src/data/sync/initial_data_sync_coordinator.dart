@@ -101,6 +101,8 @@ class InitialDataSyncCoordinator {
   SyncUxState _syncUxState = const SyncUxState.pending();
   bool _hasHydratedDomains = false;
   Future<void> _tail = Future<void>.value();
+  final Set<RealtimeSyncTarget> _pendingRealtimeTargets = {};
+  Completer<void>? _realtimeDrainCompleter;
 
   InitialDataSyncState get state => _state;
   Stream<InitialDataSyncState> get states => _states.stream;
@@ -123,8 +125,29 @@ class InitialDataSyncCoordinator {
     () => _synchronizeInitial(startRealtime, onMilestone, beforeDomainSync),
   );
 
-  Future<void> synchronizeFromRealtime(RealtimeSyncTarget target) =>
-      _enqueue(() => _synchronizeRealtimeTarget(target));
+  Future<void> synchronizeFromRealtime(RealtimeSyncTarget target) {
+    _pendingRealtimeTargets.add(target);
+    final active = _realtimeDrainCompleter;
+    if (active != null) return active.future;
+
+    final completer = Completer<void>();
+    _realtimeDrainCompleter = completer;
+    scheduleMicrotask(() async {
+      try {
+        while (_pendingRealtimeTargets.isNotEmpty) {
+          final targets = Set<RealtimeSyncTarget>.of(_pendingRealtimeTargets);
+          _pendingRealtimeTargets.clear();
+          await _enqueue(() => _synchronizeRealtimeTargets(targets));
+        }
+        completer.complete();
+      } on Object catch (error, stackTrace) {
+        completer.completeError(error, stackTrace);
+      } finally {
+        _realtimeDrainCompleter = null;
+      }
+    });
+    return completer.future;
+  }
 
   /// Reutiliza exactamente la misma cola y secuencia del sync inicial.
   Future<SyncUxState> retry() async {
@@ -187,18 +210,24 @@ class InitialDataSyncCoordinator {
         );
       }
 
-      // Do not parallelize: all following tables contain Baby-owned children.
+      // Family/Babies is now hydrated. These repositories are independent
+      // children, so serial awaits only lengthen cold start.
       onMilestone?.call(InitialDataSyncMilestone.domainSyncStarted);
-      final register = await _registerSyncService.synchronize();
-      final agenda = await _agendaSyncService.synchronize();
-      final health = await _healthSyncService.synchronize();
-      final preferences = await _appSettingsSyncService.synchronize();
+      final childStates = await Future.wait<RegisterSyncState>([
+        _registerSyncService.synchronize(),
+        _agendaSyncService.synchronize(),
+        _healthSyncService.synchronize(),
+        _appSettingsSyncService.synchronize(),
+      ]);
+      final register = childStates[0];
+      final agenda = childStates[1];
+      final health = childStates[2];
+      final preferences = childStates[3];
       await _registerAgendaCoordinator.reconcile();
       _registerAgendaCoordinator.startListening();
       await startRealtime?.call();
       onMilestone?.call(InitialDataSyncMilestone.domainSyncCompleted);
 
-      final childStates = [register, agenda, health, preferences];
       final failed = childStates.any(
         (state) => state.phase == RegisterSyncPhase.failed,
       );
@@ -232,37 +261,36 @@ class InitialDataSyncCoordinator {
     }
   }
 
-  Future<void> _synchronizeRealtimeTarget(RealtimeSyncTarget target) async {
-    if (target == RealtimeSyncTarget.preferences) {
-      await _appSettingsSyncService.synchronize();
-      return;
+  Future<void> _synchronizeRealtimeTargets(
+    Set<RealtimeSyncTarget> targets,
+  ) async {
+    final preferencesRequested = targets.remove(RealtimeSyncTarget.preferences);
+    final familyChanged = targets.contains(RealtimeSyncTarget.family);
+
+    if (targets.isNotEmpty) {
+      final family = familyChanged
+          ? await _familySyncService.synchronize()
+          : await _familySyncService.ensureSynchronized();
+      if (_familyAllowsChildren(family)) {
+        final syncRegister =
+            familyChanged || targets.contains(RealtimeSyncTarget.register);
+        final syncAgenda =
+            familyChanged || targets.contains(RealtimeSyncTarget.agenda);
+        final syncHealth =
+            familyChanged || targets.contains(RealtimeSyncTarget.health);
+        await Future.wait<void>([
+          if (syncRegister) _registerSyncService.synchronize().then((_) {}),
+          if (syncAgenda) _agendaSyncService.synchronize().then((_) {}),
+          if (syncHealth) _healthSyncService.synchronize().then((_) {}),
+          if (preferencesRequested)
+            _appSettingsSyncService.synchronize().then((_) {}),
+        ]);
+        if (syncRegister) await _registerAgendaCoordinator.reconcile();
+        return;
+      }
     }
 
-    final family = await _familySyncService.synchronize();
-    if (!_familyAllowsChildren(family)) return;
-
-    switch (target) {
-      case RealtimeSyncTarget.register:
-        await _registerSyncService.synchronize();
-        await _registerAgendaCoordinator.reconcile();
-
-      case RealtimeSyncTarget.agenda:
-        await _agendaSyncService.synchronize();
-
-      case RealtimeSyncTarget.health:
-        await _healthSyncService.synchronize();
-
-      case RealtimeSyncTarget.family:
-        // A prior child notification may have been skipped while Family was
-        // unavailable. Pull all Baby-owned children to guarantee convergence.
-        await _registerSyncService.synchronize();
-        await _agendaSyncService.synchronize();
-        await _healthSyncService.synchronize();
-        await _registerAgendaCoordinator.reconcile();
-
-      case RealtimeSyncTarget.preferences:
-        break;
-    }
+    if (preferencesRequested) await _appSettingsSyncService.synchronize();
   }
 
   Future<T> _enqueue<T>(Future<T> Function() action) {
@@ -330,6 +358,7 @@ class InitialDataSyncCoordinator {
       };
 
   Future<void> close() async {
+    await _realtimeDrainCompleter?.future;
     await _tail;
     for (final subscription in _syncSubscriptions) {
       await subscription.cancel();

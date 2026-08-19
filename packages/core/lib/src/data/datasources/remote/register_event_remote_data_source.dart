@@ -4,6 +4,7 @@ import '../../../domain/entities/register/register.dart';
 import '../../models/register_event_model.dart';
 import '../../network/supabase_remote_exception.dart';
 import '../../network/supabase_rest_client.dart';
+import '../../sync/remote_sync_cursor.dart';
 
 abstract interface class RegisterEventRemoteDataSource {
   bool get isConfigured;
@@ -14,8 +15,16 @@ abstract interface class RegisterEventRemoteDataSource {
   Future<List<RegisteredEvent>> pull({DateTime? updatedAfter});
 }
 
-class SupabaseRegisterEventRemoteDataSource
+abstract interface class PagedRegisterEventRemoteDataSource
     implements RegisterEventRemoteDataSource {
+  Future<List<RegisteredEvent>> pullPage({
+    RemoteSyncCursor? after,
+    int limit = 200,
+  });
+}
+
+class SupabaseRegisterEventRemoteDataSource
+    implements PagedRegisterEventRemoteDataSource {
   const SupabaseRegisterEventRemoteDataSource(this._client);
 
   static const tableName = 'register_events';
@@ -59,6 +68,30 @@ class SupabaseRegisterEventRemoteDataSource
         .map(RegisterEventModel.fromRemoteJson)
         .map((model) => model.toEntity())
         .toList(growable: false);
+  }
+
+  @override
+  Future<List<RegisteredEvent>> pullPage({
+    RemoteSyncCursor? after,
+    int limit = 200,
+  }) async {
+    final rows = await _client.select(
+      tableName,
+      filters: {if (after != null) 'or': _afterFilter(after)},
+      order: 'updated_at.asc,id.asc',
+      limit: limit,
+    );
+    return rows
+        .map(RegisterEventModel.fromRemoteJson)
+        .map((model) => model.toEntity())
+        .toList(growable: false);
+  }
+
+  static String _afterFilter(RemoteSyncCursor cursor) {
+    final timestamp = cursor.updatedAt.toUtc().toIso8601String();
+    final id = cursor.id.replaceAll('\\', '\\\\').replaceAll('"', '\\"');
+    return '(updated_at.gt.$timestamp,'
+        'and(updated_at.eq.$timestamp,id.gt."$id"))';
   }
 
   Future<Map<String, Object?>> _prepareDetails(RegisteredEvent event) async {

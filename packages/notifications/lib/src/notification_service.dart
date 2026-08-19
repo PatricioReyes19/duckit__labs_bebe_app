@@ -26,6 +26,7 @@ enum NotificationReminderType {
   healthControl,
   vaccine,
   feeding,
+  diaper,
   syncFailure,
   custom,
 }

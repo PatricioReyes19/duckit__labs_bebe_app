@@ -151,62 +151,187 @@ void main() {
     expect(allScheduledIds, [firstId]);
   });
 
-  test('UT-NOTIF-006 edit cancels and reschedules the same reminder', () async {
+  test(
+    'UT-NOTIF-006 edit replaces the stable id without cancel churn',
+    () async {
+      final fixture = _serviceFixture();
+      final reminder = NotificationReminder(
+        id: 'agenda:event-2',
+        title: 'Recordatorio de Agenda',
+        body: 'Tienes un recordatorio programado.',
+        scheduledAt: DateTime.now().add(const Duration(hours: 2)),
+        route: '/agenda/events/event-2',
+      );
+      await fixture.service.replaceReminders(
+        ownerId: 'account:user-1|agenda:event-2',
+        accountId: 'user-1',
+        babyId: 'baby-1',
+        reminders: [reminder],
+      );
+      final scheduledId =
+          verify(
+                () => fixture.local.zonedSchedule(
+                  id: captureAny(named: 'id'),
+                  title: any(named: 'title'),
+                  body: any(named: 'body'),
+                  scheduledDate: any(named: 'scheduledDate'),
+                  notificationDetails: any(named: 'notificationDetails'),
+                  androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+                  payload: any(named: 'payload'),
+                ),
+              ).captured.single
+              as int;
+
+      await fixture.service.replaceReminders(
+        ownerId: 'account:user-1|agenda:event-2',
+        accountId: 'user-1',
+        babyId: 'baby-1',
+        reminders: [
+          NotificationReminder(
+            id: reminder.id,
+            title: reminder.title,
+            body: reminder.body,
+            scheduledAt: reminder.scheduledAt.add(const Duration(hours: 1)),
+            route: reminder.route,
+          ),
+        ],
+      );
+
+      verifyNever(() => fixture.local.cancel(id: scheduledId));
+      verify(
+        () => fixture.local.zonedSchedule(
+          id: scheduledId,
+          title: any(named: 'title'),
+          body: any(named: 'body'),
+          scheduledDate: any(named: 'scheduledDate'),
+          notificationDetails: any(named: 'notificationDetails'),
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          payload: any(named: 'payload'),
+        ),
+      ).called(1);
+    },
+  );
+
+  test('UT-NOTIF-006B identical reconciliation is a native no-op', () async {
     final fixture = _serviceFixture();
     final reminder = NotificationReminder(
-      id: 'agenda:event-2',
-      title: 'Recordatorio de Agenda',
-      body: 'Tienes un recordatorio programado.',
+      id: 'agenda:event-idempotent',
+      title: 'Medicamento',
+      body: 'Vitamina D · 1 gota',
       scheduledAt: DateTime.now().add(const Duration(hours: 2)),
-      route: '/agenda/events/event-2',
+      route: '/agenda/events/event-idempotent',
+      type: NotificationReminderType.medication,
     );
     await fixture.service.replaceReminders(
-      ownerId: 'account:user-1|agenda:event-2',
+      ownerId: 'account:user-1|agenda:event-idempotent',
       accountId: 'user-1',
       babyId: 'baby-1',
       reminders: [reminder],
     );
-    final scheduledId =
-        verify(
-              () => fixture.local.zonedSchedule(
-                id: captureAny(named: 'id'),
-                title: any(named: 'title'),
-                body: any(named: 'body'),
-                scheduledDate: any(named: 'scheduledDate'),
-                notificationDetails: any(named: 'notificationDetails'),
-                androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-                payload: any(named: 'payload'),
-              ),
-            ).captured.single
-            as int;
+    clearInteractions(fixture.local);
 
     await fixture.service.replaceReminders(
-      ownerId: 'account:user-1|agenda:event-2',
+      ownerId: 'account:user-1|agenda:event-idempotent',
       accountId: 'user-1',
       babyId: 'baby-1',
-      reminders: [
-        NotificationReminder(
-          id: reminder.id,
-          title: reminder.title,
-          body: reminder.body,
-          scheduledAt: reminder.scheduledAt.add(const Duration(hours: 1)),
-          route: reminder.route,
-        ),
-      ],
+      reminders: [reminder],
     );
 
-    verify(() => fixture.local.cancel(id: scheduledId)).called(1);
-    verify(
+    verifyNever(() => fixture.local.cancel(id: any(named: 'id')));
+    verifyNever(
       () => fixture.local.zonedSchedule(
-        id: scheduledId,
+        id: any(named: 'id'),
         title: any(named: 'title'),
         body: any(named: 'body'),
         scheduledDate: any(named: 'scheduledDate'),
         notificationDetails: any(named: 'notificationDetails'),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: any(named: 'androidScheduleMode'),
         payload: any(named: 'payload'),
       ),
-    ).called(1);
+    );
+  });
+
+  test(
+    'UT-NOTIF-006C large stale cleanup uses one bulk cancellation',
+    () async {
+      final fixture = _serviceFixture();
+      final scheduledAt = DateTime.now().add(const Duration(hours: 2));
+      for (var index = 0; index < 21; index++) {
+        await fixture.service.replaceReminders(
+          ownerId: 'account:user-1|agenda:stale-$index',
+          accountId: 'user-1',
+          babyId: 'baby-1',
+          reminders: [
+            NotificationReminder(
+              id: 'stale-$index',
+              title: 'Recordatorio obsoleto',
+              body: 'Debe limpiarse en lote.',
+              scheduledAt: scheduledAt,
+              route: '/agenda',
+            ),
+          ],
+        );
+      }
+      clearInteractions(fixture.local);
+
+      await fixture.service.retainReminderOwners(
+        accountId: 'user-1',
+        babyId: 'baby-1',
+        ownerIds: const {},
+      );
+
+      verify(() => fixture.local.cancelAllPendingNotifications()).called(1);
+      verifyNever(() => fixture.local.cancel(id: any(named: 'id')));
+
+      clearInteractions(fixture.local);
+      await fixture.service.retainReminderOwners(
+        accountId: 'user-1',
+        babyId: 'baby-1',
+        ownerIds: const {},
+      );
+
+      verifyNever(fixture.local.cancelAllPendingNotifications);
+      verifyNever(() => fixture.local.cancel(id: any(named: 'id')));
+    },
+  );
+
+  test('UT-NOTIF-006D legacy generated dose owner is never retained', () async {
+    final fixture = _serviceFixture();
+    const ownerId = 'account:user-1|agenda:dose-event-legacy-123';
+    await fixture.service.replaceReminders(
+      ownerId: ownerId,
+      accountId: 'user-1',
+      babyId: 'baby-1',
+      reminders: [
+        NotificationReminder(
+          id: 'agenda:legacy-dose',
+          title: 'Medicamento',
+          body: 'Dosis heredada',
+          scheduledAt: DateTime.now().add(const Duration(hours: 2)),
+          route: '/agenda',
+          type: NotificationReminderType.medication,
+        ),
+      ],
+    );
+    clearInteractions(fixture.local);
+
+    await fixture.service.retainReminderOwners(
+      accountId: 'user-1',
+      babyId: 'baby-1',
+      ownerIds: const {ownerId},
+    );
+
+    verify(() => fixture.local.cancel(id: any(named: 'id'))).called(1);
+    verifyNever(fixture.local.cancelAllPendingNotifications);
+
+    clearInteractions(fixture.local);
+    await fixture.service.retainReminderOwners(
+      accountId: 'user-1',
+      babyId: 'baby-1',
+      ownerIds: const {ownerId},
+    );
+    verifyNever(() => fixture.local.cancel(id: any(named: 'id')));
+    verifyNever(fixture.local.cancelAllPendingNotifications);
   });
 
   test('UT-NOTIF-007 delete cancels the scheduled reminder', () async {
@@ -279,36 +404,39 @@ void main() {
     ).called(1);
   });
 
-  test('UT-NOTIF-009 exact alarm denial falls back without losing it', () async {
-    final fixture = _serviceFixture(exactAlarmsAvailable: false);
-    await fixture.service.replaceReminders(
-      ownerId: 'account:user-1|agenda:exact-denied',
-      accountId: 'user-1',
-      babyId: 'baby-1',
-      reminders: [
-        NotificationReminder(
-          id: 'agenda:exact-denied',
-          title: 'Medicamento',
-          body: 'Vitamina D · 1 gota',
-          scheduledAt: DateTime.now().add(const Duration(hours: 1)),
-          route: '/agenda',
-          type: NotificationReminderType.medication,
-        ),
-      ],
-    );
+  test(
+    'UT-NOTIF-009 exact alarm denial falls back without losing it',
+    () async {
+      final fixture = _serviceFixture(exactAlarmsAvailable: false);
+      await fixture.service.replaceReminders(
+        ownerId: 'account:user-1|agenda:exact-denied',
+        accountId: 'user-1',
+        babyId: 'baby-1',
+        reminders: [
+          NotificationReminder(
+            id: 'agenda:exact-denied',
+            title: 'Medicamento',
+            body: 'Vitamina D · 1 gota',
+            scheduledAt: DateTime.now().add(const Duration(hours: 1)),
+            route: '/agenda',
+            type: NotificationReminderType.medication,
+          ),
+        ],
+      );
 
-    verify(
-      () => fixture.local.zonedSchedule(
-        id: any(named: 'id'),
-        title: 'Medicamento',
-        body: any(named: 'body'),
-        scheduledDate: any(named: 'scheduledDate'),
-        notificationDetails: any(named: 'notificationDetails'),
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-        payload: any(named: 'payload'),
-      ),
-    ).called(1);
-  });
+      verify(
+        () => fixture.local.zonedSchedule(
+          id: any(named: 'id'),
+          title: 'Medicamento',
+          body: any(named: 'body'),
+          scheduledDate: any(named: 'scheduledDate'),
+          notificationDetails: any(named: 'notificationDetails'),
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          payload: any(named: 'payload'),
+        ),
+      ).called(1);
+    },
+  );
 
   test('UT-NOTIF-010 schedules in the device IANA timezone', () async {
     timeZone = 'America/Santiago';
@@ -366,6 +494,42 @@ void main() {
       isTrue,
     );
   });
+
+  test(
+    'UT-NOTIF-012 initialization retries after a transient failure',
+    () async {
+      final fixture = _serviceFixture();
+      var attempts = 0;
+      when(
+        () => fixture.local.initialize(
+          settings: any(named: 'settings'),
+          onDidReceiveNotificationResponse: any(
+            named: 'onDidReceiveNotificationResponse',
+          ),
+        ),
+      ).thenAnswer((_) async {
+        attempts++;
+        if (attempts == 1) throw StateError('transient platform failure');
+        return true;
+      });
+
+      await expectLater(fixture.service.initialize(), throwsStateError);
+      await fixture.service.initialize();
+
+      expect(attempts, 2);
+    },
+  );
+
+  test(
+    'UT-NOTIF-013 initialization defers schedule restoration until pruning',
+    () async {
+      final fixture = _serviceFixture();
+
+      await fixture.service.initialize();
+
+      verifyNever(fixture.local.pendingNotificationRequests);
+    },
+  );
 
   test('IT-NOTIF-001 granted schedules a reminder', () async {
     final fixture = _serviceFixture();
@@ -466,7 +630,7 @@ FirebaseNotificationService _permissionOnlyService() =>
       localNotifications: _MockLocalNotifications(),
     );
 
-_ServiceFixture _serviceFixture({bool? exactAlarmsAvailable}) {
+_ServiceFixture _serviceFixture({bool? exactAlarmsAvailable = true}) {
   final messaging = _MockFirebaseMessaging();
   final auth = _MockFirebaseAuth();
   final user = _MockUser();
@@ -507,6 +671,7 @@ _ServiceFixture _serviceFixture({bool? exactAlarmsAvailable}) {
     ),
   ).thenAnswer((_) async {});
   when(() => local.cancel(id: any(named: 'id'))).thenAnswer((_) async {});
+  when(local.cancelAllPendingNotifications).thenAnswer((_) async {});
   return _ServiceFixture(
     FirebaseNotificationService(
       messaging: messaging,

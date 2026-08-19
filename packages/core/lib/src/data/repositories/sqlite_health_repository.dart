@@ -25,6 +25,7 @@ class SqliteHealthRepository implements HealthRepository {
   final DateTime Function() _clock;
   final _changes = StreamController<void>.broadcast();
 
+  @override
   Stream<void> get changes => _changes.stream;
 
   @override
@@ -61,6 +62,25 @@ class SqliteHealthRepository implements HealthRepository {
       startsAt: draft.startsAt.toUtc(),
       caregiverId: draft.caregiverId,
       status: draft.status,
+      appointmentKind: draft.appointmentKind,
+      reason: draft.reason,
+      timezone: draft.timezone,
+      attendedAt: draft.attendedAt,
+      completedAt: draft.completedAt,
+      professionalName: draft.professionalName,
+      specialty: draft.specialty,
+      facility: draft.facility,
+      caregiverIds: draft.caregiverIds,
+      notesBeforeVisit: draft.notesBeforeVisit,
+      questionsToAsk: draft.questionsToAsk,
+      clinicalSummary: draft.clinicalSummary,
+      professionalAssessment: draft.professionalAssessment,
+      indications: draft.indications,
+      medications: draft.medications,
+      measurements: draft.measurements,
+      attachments: draft.attachments,
+      nextAppointmentId: draft.nextAppointmentId,
+      createdBy: draft.createdBy,
       createdAt: now,
       updatedAt: now,
       syncStatus: HealthSyncStatus.pending,
@@ -76,25 +96,21 @@ class SqliteHealthRepository implements HealthRepository {
   }
 
   @override
+  Future<HealthEventEntity?> getEvent(String id) async =>
+      _findById(await _database.database, id);
+
+  @override
   Future<HealthEventEntity?> updateEvent(
     String id,
     HealthEventPatch patch,
   ) async {
     final existing = await _findById(await _database.database, id);
     if (existing == null) return null;
-    final changes = <String, Object?>{
-      if (patch.type != null) 'event_type': patch.type!.name,
-      if (patch.title != null) 'title': patch.title!.trim(),
-      if (patch.description != null) 'description': patch.description!.trim(),
-      if (patch.startsAt != null)
-        'starts_at': patch.startsAt!.toUtc().millisecondsSinceEpoch,
-      if (patch.caregiverId != null) 'caregiver_id': patch.caregiverId,
-      if (patch.clearCaregiver) 'caregiver_id': null,
-      if (patch.status != null) 'status': patch.status!.name,
-      'updated_at': _nextTimestamp(existing.updatedAt).millisecondsSinceEpoch,
-      'sync_status': HealthSyncStatus.pending.name,
-      'sync_error': null,
-    };
+    final updated = _applyPatch(existing, patch);
+    final changes = HealthEventModel.fromEntity(updated).toRow()
+      ..remove('id')
+      ..remove('baby_id')
+      ..remove('created_at');
     final database = await _database.database;
     if (changes.isNotEmpty) {
       await database.update(
@@ -108,12 +124,72 @@ class SqliteHealthRepository implements HealthRepository {
     return _findById(database, id);
   }
 
+  @override
+  Future<HealthEventEntity?> rescheduleEvent(
+    String id,
+    DateTime startsAt,
+  ) async {
+    final database = await _database.database;
+    final existing = await _findById(database, id);
+    if (existing == null || !existing.isAppointment) return null;
+    final newId = _idGenerator();
+    final now = _nextTimestamp(existing.updatedAt);
+    final replacement = HealthEventEntity(
+      id: newId,
+      babyId: existing.babyId,
+      type: existing.type,
+      title: existing.title,
+      description: existing.description,
+      startsAt: startsAt.toUtc(),
+      status: HealthEventStatus.scheduled,
+      appointmentKind: existing.appointmentKind,
+      reason: existing.reason,
+      timezone: existing.timezone,
+      professionalName: existing.professionalName,
+      specialty: existing.specialty,
+      facility: existing.facility,
+      caregiverIds: existing.caregiverIds,
+      notesBeforeVisit: existing.notesBeforeVisit,
+      questionsToAsk: existing.questionsToAsk,
+      createdBy: existing.createdBy,
+      caregiverId: existing.caregiverId,
+      createdAt: now,
+      updatedAt: now,
+      syncStatus: HealthSyncStatus.pending,
+    );
+    final previous = _applyPatch(
+      existing,
+      HealthEventPatch(
+        status: HealthEventStatus.rescheduled,
+        nextAppointmentId: newId,
+      ),
+    );
+    await database.transaction((transaction) async {
+      await transaction.update(
+        BebeDatabaseSchema.healthEvents,
+        HealthEventModel.fromEntity(previous).toRow()
+          ..remove('id')
+          ..remove('baby_id')
+          ..remove('created_at'),
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      await transaction.insert(
+        BebeDatabaseSchema.healthEvents,
+        HealthEventModel.fromEntity(replacement).toRow(),
+        conflictAlgorithm: sqlite.ConflictAlgorithm.abort,
+      );
+    });
+    _notify();
+    return _findById(database, newId);
+  }
+
   Future<List<HealthEventEntity>> listPending({int limit = 100}) async {
     final database = await _database.database;
     final rows = await database.rawQuery(
-      '$_selectBase WHERE h.sync_status != ? '
+      "$_selectBase WHERE h.sync_status != 'synced' "
       'ORDER BY h.updated_at ASC LIMIT ?',
-      [HealthSyncStatus.synced.name, limit],
+      [limit],
     );
     return rows
         .map(HealthEventModel.fromRow)
@@ -125,8 +201,7 @@ class SqliteHealthRepository implements HealthRepository {
     final database = await _database.database;
     final rows = await database.rawQuery(
       'SELECT COUNT(*) FROM ${BebeDatabaseSchema.healthEvents} '
-      'WHERE sync_status != ?',
-      [HealthSyncStatus.synced.name],
+      "WHERE sync_status != 'synced'",
     );
     return sqlite.Sqflite.firstIntValue(rows) ?? 0;
   }
@@ -170,6 +245,25 @@ class SqliteHealthRepository implements HealthRepository {
         description: remote.description,
         startsAt: remote.startsAt,
         status: remote.status,
+        appointmentKind: remote.appointmentKind,
+        reason: remote.reason,
+        timezone: remote.timezone,
+        attendedAt: remote.attendedAt,
+        completedAt: remote.completedAt,
+        professionalName: remote.professionalName,
+        specialty: remote.specialty,
+        facility: remote.facility,
+        caregiverIds: remote.caregiverIds,
+        notesBeforeVisit: remote.notesBeforeVisit,
+        questionsToAsk: remote.questionsToAsk,
+        clinicalSummary: remote.clinicalSummary,
+        professionalAssessment: remote.professionalAssessment,
+        indications: remote.indications,
+        medications: remote.medications,
+        measurements: remote.measurements,
+        attachments: remote.attachments,
+        nextAppointmentId: remote.nextAppointmentId,
+        createdBy: remote.createdBy,
         caregiverId: remote.caregiverId,
         createdAt: remote.createdAt,
         updatedAt: remote.updatedAt,
@@ -239,6 +333,45 @@ LEFT JOIN ${BebeDatabaseSchema.familyMembers} c ON c.id = h.caregiver_id
         ? candidate
         : previous.add(const Duration(milliseconds: 1));
   }
+
+  HealthEventEntity _applyPatch(
+    HealthEventEntity existing,
+    HealthEventPatch patch,
+  ) => HealthEventEntity(
+    id: existing.id,
+    babyId: existing.babyId,
+    type: patch.type ?? existing.type,
+    title: patch.title?.trim() ?? existing.title,
+    description: patch.description?.trim() ?? existing.description,
+    startsAt: patch.startsAt?.toUtc() ?? existing.startsAt,
+    caregiverId: patch.clearCaregiver
+        ? null
+        : patch.caregiverId ?? existing.caregiverId,
+    status: patch.status ?? existing.status,
+    appointmentKind: patch.appointmentKind ?? existing.appointmentKind,
+    reason: patch.reason ?? existing.reason,
+    timezone: patch.timezone ?? existing.timezone,
+    attendedAt: patch.attendedAt ?? existing.attendedAt,
+    completedAt: patch.completedAt ?? existing.completedAt,
+    professionalName: patch.professionalName ?? existing.professionalName,
+    specialty: patch.specialty ?? existing.specialty,
+    facility: patch.facility ?? existing.facility,
+    caregiverIds: patch.caregiverIds ?? existing.caregiverIds,
+    notesBeforeVisit: patch.notesBeforeVisit ?? existing.notesBeforeVisit,
+    questionsToAsk: patch.questionsToAsk ?? existing.questionsToAsk,
+    clinicalSummary: patch.clinicalSummary ?? existing.clinicalSummary,
+    professionalAssessment:
+        patch.professionalAssessment ?? existing.professionalAssessment,
+    indications: patch.indications ?? existing.indications,
+    medications: patch.medications ?? existing.medications,
+    measurements: patch.measurements ?? existing.measurements,
+    attachments: patch.attachments ?? existing.attachments,
+    nextAppointmentId: patch.nextAppointmentId ?? existing.nextAppointmentId,
+    createdBy: patch.createdBy ?? existing.createdBy,
+    createdAt: existing.createdAt,
+    updatedAt: _nextTimestamp(existing.updatedAt),
+    syncStatus: HealthSyncStatus.pending,
+  );
 
   void _notify() {
     if (!_changes.isClosed) _changes.add(null);

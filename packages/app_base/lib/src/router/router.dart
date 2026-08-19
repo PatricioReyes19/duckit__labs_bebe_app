@@ -43,6 +43,7 @@ GoRouter createAppRouter({
     deleteRegisterEvent: getIt<DeleteRegisterEvent>(),
     healthRepository: getIt<HealthRepository>(),
     registerSyncService: getIt<RegisterEventSyncService>(),
+    healthSyncService: getIt<HealthEventSyncService>(),
     initialDataSyncCoordinator: getIt<InitialDataSyncCoordinator>(),
   );
   final notificationReminders = NotificationReminderCoordinator(
@@ -145,8 +146,30 @@ GoRouter createAppRouter({
                     registerEvent: RegisterPage.open,
                     openRegisterHistory: (context) =>
                         context.push(HomeDailyHistoryPage.fullPath),
-                    openEvent: (context, eventId) =>
-                        context.push(AgendaSubpage.eventDetailPath(eventId)),
+                    openEvent: (context, eventId) {
+                      const healthPrefix = 'health:';
+                      if (!eventId.startsWith(healthPrefix)) {
+                        context.push(AgendaSubpage.eventDetailPath(eventId));
+                        return;
+                      }
+                      unawaited(() async {
+                        final event = await getIt<HealthRepository>().getEvent(
+                          eventId.substring(healthPrefix.length),
+                        );
+                        if (event == null || !context.mounted) return;
+                        healthFlowController.selectHealthEvent(event);
+                        final kind = event.appointmentKind ==
+                                HealthAppointmentKind.consultation
+                            ? HealthSectionKind.consultations
+                            : HealthSectionKind.controls;
+                        context.go(
+                          HealthSectionPage.flowLocation(
+                            kind,
+                            HealthFlowAction.detail,
+                          ),
+                        );
+                      }());
+                    },
                     routes: [
                       AgendaSubpage(
                         kind: AgendaSubpageKind.reminderSettings,
@@ -410,6 +433,7 @@ GoRouter createAppRouter({
               ),
             ],
           ),
+          _registerRoute(notificationReminders),
         ],
       ),
       GoRoute(
@@ -554,64 +578,6 @@ GoRouter createAppRouter({
           description: 'Selecciona el perfil con el que deseas continuar.',
         ),
       ),
-      RegisterPage(
-        parentNavigatorKey: rootNavigatorKey,
-        saveRegisterEvent: (_) => getIt<SaveRegisterEvent>(),
-        updateRegisterEvent: (_) => getIt<UpdateRegisterEvent>(),
-        getFamilyOverview: (_) => getIt<GetFamilyOverview>(),
-        onNotificationsPressed: (context) => context.push('/notifications'),
-        onHomePressed: (context) => context.go(StartupPaths.home),
-        onAgendaPressed: (context) => context.go(AgendaPage.fullPath),
-        onHealthPressed: (context) => context.go(HealthPage.fullPath),
-        onFamilyPressed: (context) => context.go(FamilyPage.fullPath),
-        onBabyPressed: (context) =>
-            unawaited(_selectActiveBabyFromSheet(context)),
-        onSaved: (context, event) {
-          unawaited(
-            _scheduleRegisterReminderWithPermission(
-              notificationReminders,
-              event,
-            ),
-          );
-          BebeInAppSnackbar.show(
-            context,
-            title: 'Registro guardado',
-            message: 'Ya está disponible en el historial.',
-            variant: BebeInAppSnackbarVariant.success,
-          );
-          if (context.canPop()) {
-            context.pop();
-          } else {
-            context.go(StartupPaths.home);
-          }
-        },
-        onUpdated: (context, event) {
-          unawaited(
-            _scheduleRegisterReminderWithPermission(
-              notificationReminders,
-              event,
-            ),
-          );
-          BebeInAppSnackbar.show(
-            context,
-            title: 'Registro actualizado',
-            message: 'Los cambios ya están disponibles en el historial.',
-            variant: BebeInAppSnackbarVariant.success,
-          );
-          if (context.canPop()) {
-            context.pop();
-          } else {
-            context.go(StartupPaths.home);
-          }
-        },
-        onCancel: (context) {
-          if (context.canPop()) {
-            context.pop();
-          } else {
-            context.go(StartupPaths.home);
-          }
-        },
-      ),
       GoRoute(
         path: '/notifications',
         parentNavigatorKey: rootNavigatorKey,
@@ -626,6 +592,41 @@ GoRouter createAppRouter({
     ],
   );
 }
+
+RegisterPage _registerRoute(
+  NotificationReminderCoordinator notificationReminders,
+) =>
+    RegisterPage(
+      saveRegisterEvent: (_) => getIt<SaveRegisterEvent>(),
+      updateRegisterEvent: (_) => getIt<UpdateRegisterEvent>(),
+      getFamilyOverview: (_) => getIt<GetFamilyOverview>(),
+      onNotificationsPressed: (context) => context.push('/notifications'),
+      onHomePressed: (context) => context.go(StartupPaths.home),
+      onAgendaPressed: (context) => context.go(AgendaPage.fullPath),
+      onHealthPressed: (context) => context.go(HealthPage.fullPath),
+      onFamilyPressed: (context) => context.go(FamilyPage.fullPath),
+      onBabyPressed: (context) =>
+          unawaited(_selectActiveBabyFromSheet(context)),
+      onSaved: (context, event) => _finishRegisterSave(
+        context: context,
+        coordinator: notificationReminders,
+        event: event,
+        isUpdate: false,
+      ),
+      onUpdated: (context, event) => _finishRegisterSave(
+        context: context,
+        coordinator: notificationReminders,
+        event: event,
+        isUpdate: true,
+      ),
+      onCancel: (context) {
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go(StartupPaths.home);
+        }
+      },
+    );
 
 Future<void> _scheduleAgendaReminderWithPermission(
   BuildContext context,
@@ -659,7 +660,23 @@ Future<void> _scheduleAgendaReminderWithPermission(
     }
   }
   if (permission.canDeliver) {
-    await coordinator.scheduleAgenda(event);
+    try {
+      await coordinator.scheduleAgenda(event);
+    } on Object catch (error, stackTrace) {
+      debugPrint('No se pudo programar el recordatorio de Agenda: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      if (context.mounted) {
+        BebeInAppSnackbar.show(
+          context,
+          title: 'Recordatorio guardado; alarma pendiente',
+          message:
+              'No pudimos programar la alerta. Revisa el estado de notificaciones.',
+          variant: BebeInAppSnackbarVariant.error,
+          actionLabel: 'Revisar',
+          onActionPressed: () => context.push('/notifications'),
+        );
+      }
+    }
     return;
   }
   if (!context.mounted) return;
@@ -674,26 +691,149 @@ Future<void> _scheduleAgendaReminderWithPermission(
   );
 }
 
-Future<void> _scheduleRegisterReminderWithPermission(
+enum _RegisterReminderStatus { none, scheduled, permissionRequired, failed }
+
+class _RegisterReminderResult {
+  const _RegisterReminderResult(
+    this.status, {
+    this.permission = NotificationPermissionState.unknown,
+  });
+
+  final _RegisterReminderStatus status;
+  final NotificationPermissionState permission;
+}
+
+Future<void> _finishRegisterSave({
+  required BuildContext context,
+  required NotificationReminderCoordinator coordinator,
+  required RegisteredEvent event,
+  required bool isUpdate,
+}) async {
+  final result = await _scheduleRegisterReminderWithPermission(
+    context,
+    coordinator,
+    event,
+  );
+  if (!context.mounted) return;
+  if (context.canPop()) {
+    context.pop();
+  } else {
+    context.go(StartupPaths.home);
+  }
+
+  final messenger = appScaffoldMessengerKey.currentState;
+  if (messenger == null) return;
+  switch (result.status) {
+    case _RegisterReminderStatus.none:
+      BebeInAppSnackbar.showOn(
+        messenger,
+        title: isUpdate ? 'Registro actualizado' : 'Registro guardado',
+        message: 'Ya está disponible en el historial.',
+        variant: BebeInAppSnackbarVariant.success,
+      );
+      return;
+    case _RegisterReminderStatus.scheduled:
+      BebeInAppSnackbar.showOn(
+        messenger,
+        title: isUpdate
+            ? 'Registro y alarma actualizados'
+            : 'Registro y alarma guardados',
+        message: 'La alerta quedó programada en este dispositivo.',
+        variant: BebeInAppSnackbarVariant.success,
+      );
+      return;
+    case _RegisterReminderStatus.permissionRequired:
+      BebeInAppSnackbar.showOn(
+        messenger,
+        title: 'Registro guardado sin alarma',
+        message:
+            'Activa las notificaciones para recibir este recordatorio a tiempo.',
+        variant: BebeInAppSnackbarVariant.warning,
+        actionLabel:
+            result.permission.requiresSettings ? 'Configuración' : 'Activar',
+        onActionPressed: result.permission.requiresSettings
+            ? () => unawaited(coordinator.openSettings())
+            : () => getIt<GoRouter>().push('/notifications'),
+      );
+      return;
+    case _RegisterReminderStatus.failed:
+      BebeInAppSnackbar.showOn(
+        messenger,
+        title: 'Registro guardado; alarma pendiente',
+        message:
+            'No pudimos programar la alerta. Revisa el estado de notificaciones.',
+        variant: BebeInAppSnackbarVariant.error,
+        actionLabel: 'Revisar',
+        onActionPressed: () => getIt<GoRouter>().push('/notifications'),
+      );
+      return;
+  }
+}
+
+Future<_RegisterReminderResult> _scheduleRegisterReminderWithPermission(
+  BuildContext context,
   NotificationReminderCoordinator coordinator,
   RegisteredEvent event,
 ) async {
-  final permission = await coordinator.permissionState();
-  if (permission.canDeliver) {
-    await coordinator.scheduleRegister(event);
-    return;
+  final hasReminder = coordinator.hasRegisterReminders(event);
+  if (!hasReminder) {
+    try {
+      await coordinator.scheduleRegister(event);
+      return const _RegisterReminderResult(_RegisterReminderStatus.none);
+    } on Object catch (error, stackTrace) {
+      debugPrint('No se pudo limpiar el recordatorio del registro: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      return const _RegisterReminderResult(_RegisterReminderStatus.failed);
+    }
   }
-  final messenger = appScaffoldMessengerKey.currentState;
-  if (messenger == null) return;
-  BebeInAppSnackbar.showOn(
-    messenger,
-    message: 'El registro se guardó, pero el recordatorio necesita permiso.',
-    variant: BebeInAppSnackbarVariant.warning,
-    actionLabel: permission.requiresSettings ? 'Configuración' : 'Activar',
-    onActionPressed: permission.requiresSettings
-        ? () => unawaited(coordinator.openSettings())
-        : () => getIt<GoRouter>().push('/notifications'),
-  );
+
+  var permission = await coordinator.permissionState();
+  if (permission == NotificationPermissionState.notDetermined &&
+      context.mounted) {
+    final shouldRequest = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Activar alarmas'),
+        content: const Text(
+          'Permite las notificaciones para que BebéApp pueda avisarte de esta alimentación, cambio de pañal o dosis, incluso si la app está cerrada.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Ahora no'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Continuar'),
+          ),
+        ],
+      ),
+    );
+    if (shouldRequest == true) {
+      permission = await coordinator.preparePermission();
+    }
+  }
+  if (!permission.canDeliver) {
+    return _RegisterReminderResult(
+      _RegisterReminderStatus.permissionRequired,
+      permission: permission,
+    );
+  }
+
+  try {
+    await coordinator.scheduleRegister(event);
+    return _RegisterReminderResult(
+      _RegisterReminderStatus.scheduled,
+      permission: permission,
+    );
+  } on Object catch (error, stackTrace) {
+    debugPrint('No se pudo programar el recordatorio del registro: $error');
+    debugPrintStack(stackTrace: stackTrace);
+    return _RegisterReminderResult(
+      _RegisterReminderStatus.failed,
+      permission: permission,
+    );
+  }
 }
 
 void _backToAuthEntry(BuildContext context) {

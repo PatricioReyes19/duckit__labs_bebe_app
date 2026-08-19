@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../../domain/entities/health/health.dart';
 import '../../domain/repositories/health/health_repository.dart';
 import '../repositories/sqlite_health_repository.dart';
@@ -11,6 +13,9 @@ class OfflineFirstHealthRepository implements HealthRepository {
   final HealthEventSyncService _syncService;
 
   @override
+  Stream<void> get changes => _local.changes;
+
+  @override
   Future<HealthOverviewEntity> getOverview(String babyId) =>
       _local.getOverview(babyId);
 
@@ -22,6 +27,9 @@ class OfflineFirstHealthRepository implements HealthRepository {
   }
 
   @override
+  Future<HealthEventEntity?> getEvent(String id) => _local.getEvent(id);
+
+  @override
   Future<HealthEventEntity?> updateEvent(
     String id,
     HealthEventPatch patch,
@@ -29,6 +37,16 @@ class OfflineFirstHealthRepository implements HealthRepository {
     final updated = await _local.updateEvent(id, patch);
     if (updated != null) _scheduleSync();
     return updated;
+  }
+
+  @override
+  Future<HealthEventEntity?> rescheduleEvent(
+    String id,
+    DateTime startsAt,
+  ) async {
+    final rescheduled = await _local.rescheduleEvent(id, startsAt);
+    if (rescheduled != null) _scheduleSync();
+    return rescheduled;
   }
 
   void _scheduleSync() => scheduleBackgroundSync(

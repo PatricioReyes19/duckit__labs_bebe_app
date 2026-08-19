@@ -23,7 +23,9 @@ void main() {
 }
 
 Future<ByteData> _loadAsset(String key) async {
-  final bytes = await File(key).readAsBytes();
+  final candidates = [File(key), File('../../$key')];
+  final file = candidates.firstWhere((candidate) => candidate.existsSync());
+  final bytes = await file.readAsBytes();
   return ByteData.sublistView(bytes);
 }
 

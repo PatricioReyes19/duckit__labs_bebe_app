@@ -38,20 +38,29 @@ class SupabaseFamilyRemoteDataSource implements FamilyRemoteDataSource {
       'apply_family_snapshot',
       parameters: {'payload': snapshot.toRemoteJson()},
     );
-    final snapshots = await pull();
-    return snapshots.firstWhere(
-      (candidate) => candidate.overview.id == snapshot.overview.id,
-      orElse: () => snapshot,
-    );
+    // The following aggregate pull is owned by FamilySyncService. Pulling
+    // here as well doubled every family write from four reads to eight.
+    return snapshot;
   }
 
   @override
   Future<List<FamilySyncSnapshot>> pull() async {
     final results = await Future.wait([
-      _client.select('families', order: 'updated_at.asc'),
-      _client.select('babies', order: 'updated_at.asc'),
-      _client.select('baby_caregivers'),
-      _client.select('profiles'),
+      _client.select(
+        'families',
+        columns: 'id,name,updated_at',
+        order: 'updated_at.asc',
+      ),
+      _client.select(
+        'babies',
+        columns: 'id,family_id,display_name,birth_date,updated_at',
+        order: 'updated_at.asc',
+      ),
+      _client.select(
+        'baby_caregivers',
+        columns: 'baby_id,user_id,role,can_write',
+      ),
+      _client.select('profiles', columns: 'id,display_name,email'),
     ]);
     final families = results[0];
     final babies = results[1];

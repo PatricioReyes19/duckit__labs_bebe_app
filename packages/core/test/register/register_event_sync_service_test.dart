@@ -10,7 +10,7 @@ void main() {
 
   late SqliteRegisterEventRepository local;
   late BebeDatabase database;
-  late _MemoryRemote remote;
+  late _PagedMemoryRemote remote;
   late RegisterEventSyncService syncService;
   late RegisterSyncState parentState;
   var sequence = 0;
@@ -27,7 +27,7 @@ void main() {
       idGenerator: () => 'event-${++sequence}',
       clock: () => now,
     );
-    remote = _MemoryRemote();
+    remote = _PagedMemoryRemote();
     parentState = RegisterSyncState(
       phase: RegisterSyncPhase.synced,
       lastSyncedAt: now,
@@ -187,6 +187,29 @@ void main() {
     expect(remote.rows[saved.id]?.isDeleted, isTrue);
     expect(await local.listByBaby('baby-1'), isEmpty);
   });
+
+  test('paginates deltas with updated_at and id as a stable cursor', () async {
+    for (var index = 0; index < 401; index += 1) {
+      final id = 'remote-${index.toString().padLeft(3, '0')}';
+      remote.rows[id] = RegisteredEvent(
+        id: id,
+        babyId: 'baby-1',
+        type: RegisterEventType.diaper,
+        occurredAt: now,
+        createdAt: now,
+        updatedAt: now,
+        details: const {'subtype': 'wet'},
+        syncStatus: RegisterSyncStatus.synced,
+      );
+    }
+
+    await syncService.synchronize();
+
+    expect(await local.listByBaby('baby-1'), hasLength(401));
+    expect(remote.pullPageCalls, 3);
+    expect(await local.readSyncCursor(), now);
+    expect(await local.readSyncCursorId(), 'remote-400');
+  });
 }
 
 RegisterEventDraft _feedingDraft(DateTime now) => RegisterEventDraft(
@@ -238,5 +261,31 @@ class _MemoryRemote implements RegisterEventRemoteDataSource {
     );
     rows[event.id] = remote;
     return remote;
+  }
+}
+
+class _PagedMemoryRemote extends _MemoryRemote
+    implements PagedRegisterEventRemoteDataSource {
+  int pullPageCalls = 0;
+
+  @override
+  Future<List<RegisteredEvent>> pullPage({
+    RemoteSyncCursor? after,
+    int limit = 200,
+  }) async {
+    pullPageCalls += 1;
+    final ordered =
+        rows.values.where((event) {
+          if (after == null) return true;
+          final timeComparison = event.updatedAt.compareTo(after.updatedAt);
+          return timeComparison > 0 ||
+              (timeComparison == 0 && event.id.compareTo(after.id) > 0);
+        }).toList()..sort((first, second) {
+          final timeComparison = first.updatedAt.compareTo(second.updatedAt);
+          return timeComparison != 0
+              ? timeComparison
+              : first.id.compareTo(second.id);
+        });
+    return ordered.take(limit).toList(growable: false);
   }
 }

@@ -107,36 +107,40 @@ class _RegisterPageViewState extends State<RegisterPageView> {
 
   @override
   Widget build(BuildContext context) {
-    return MultiBlocListener(
-      listeners: [
+    // Cada BlocProvider padre es lazy. Escuchar sólo el formulario visible
+    // evita construir los otros cinco Cubits durante el primer frame.
+    return switch (_kind) {
+      RegisterEventKind.feeding =>
         BlocListener<FeedingRegisterCubit, RegisterFormState>(
           listener: _onSubmissionChanged,
+          child: _feeding(),
         ),
+      RegisterEventKind.sleep =>
         BlocListener<SleepRegisterCubit, RegisterFormState>(
           listener: _onSubmissionChanged,
+          child: _sleep(),
         ),
+      RegisterEventKind.diaper =>
         BlocListener<DiaperRegisterCubit, RegisterFormState>(
           listener: _onSubmissionChanged,
+          child: _diaper(),
         ),
+      RegisterEventKind.observation =>
         BlocListener<ClinicalObservationRegisterCubit, RegisterFormState>(
           listener: _onSubmissionChanged,
+          child: _clinicalObservation(),
         ),
+      RegisterEventKind.medication =>
         BlocListener<MedicationRegisterCubit, RegisterFormState>(
           listener: _onSubmissionChanged,
+          child: _medication(),
         ),
+      RegisterEventKind.measurement =>
         BlocListener<MeasurementRegisterCubit, RegisterFormState>(
           listener: _onSubmissionChanged,
+          child: _measurement(),
         ),
-      ],
-      child: switch (_kind) {
-        RegisterEventKind.feeding => _feeding(),
-        RegisterEventKind.sleep => _sleep(),
-        RegisterEventKind.diaper => _diaper(),
-        RegisterEventKind.observation => _clinicalObservation(),
-        RegisterEventKind.medication => _medication(),
-        RegisterEventKind.measurement => _measurement(),
-      },
-    );
+    };
   }
 
   void _onSubmissionChanged(BuildContext context, RegisterFormState state) {

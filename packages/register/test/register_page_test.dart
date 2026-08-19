@@ -103,6 +103,39 @@ void main() {
     expect(find.byType(ClinicalObservationRegisterForm), findsNothing);
   });
 
+  testWidgets('cached family paints Register without another family query', (
+    tester,
+  ) async {
+    final repository = _MemoryRepository();
+    final familyRepository = _FamilyRepository(_familyOverview());
+    final getFamilyOverview = GetFamilyOverview(familyRepository);
+    await getFamilyOverview();
+    expect(familyRepository.readCount, 1);
+
+    final router = _router(
+      repository: repository,
+      initialLocation: RegisterPage.fullPath,
+      getFamilyOverview: getFamilyOverview,
+    );
+    addTearDown(router.dispose);
+    addTearDown(familyRepository.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp.router(
+        theme: bebeTheme.lightTheme(),
+        routerConfig: router,
+      ),
+    );
+    await tester.pump();
+
+    expect(familyRepository.readCount, 1);
+    expect(
+      find.byKey(const ValueKey('register-baby-switch-loading')),
+      findsNothing,
+    );
+    expect(find.byType(FeedingRegisterForm), findsOneWidget);
+  });
+
   testWidgets('invalid register child redirects to the register root', (
     tester,
   ) async {
@@ -252,7 +285,7 @@ void main() {
     await tester.pump();
     expect(
       find.byKey(const ValueKey('register-baby-switch-loading')),
-      findsOneWidget,
+      findsNothing,
     );
     await tester.pumpAndSettle();
 
@@ -323,13 +356,17 @@ class _FamilyRepository extends Fake implements FamilyRepository {
   _FamilyRepository(this.overview);
 
   FamilyOverviewEntity overview;
+  int readCount = 0;
   final StreamController<String> _changes = StreamController.broadcast();
 
   @override
   Stream<String> get activeBabyChanges => _changes.stream;
 
   @override
-  Future<FamilyOverviewEntity> getCurrent() async => overview;
+  Future<FamilyOverviewEntity> getCurrent() async {
+    readCount++;
+    return overview;
+  }
 
   void switchTo(String babyId) {
     overview = FamilyOverviewEntity(

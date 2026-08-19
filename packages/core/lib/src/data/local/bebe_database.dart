@@ -62,6 +62,12 @@ class BebeDatabase {
           if (oldVersion < 7) {
             await BebeDatabaseSchema.upgradeCoreRelationsV7(database);
           }
+          if (oldVersion < 8) {
+            await BebeDatabaseSchema.upgradePendingSyncIndexesV8(database);
+          }
+          if (oldVersion < 9) {
+            await BebeDatabaseSchema.upgradeHealthAppointmentsV9(database);
+          }
         },
       ),
     );

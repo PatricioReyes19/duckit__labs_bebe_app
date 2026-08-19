@@ -245,6 +245,7 @@ void main() {
       auth: auth,
       localNotifications: localNotifications,
       inboxStore: NotificationInboxStore(preferences: SharedPreferencesAsync()),
+      canScheduleExactNotifications: () async => true,
     );
 
     await service.scheduleReminder(
@@ -308,6 +309,36 @@ void main() {
       details.android?.audioAttributesUsage,
       isNot(AudioAttributesUsage.alarm),
     );
+  });
+
+  test('diaper reminders use the daily-care channel', () async {
+    final fixture = _scheduledServiceFixture();
+
+    await fixture.service.scheduleReminder(
+      id: 'diaper-due',
+      title: 'Próximo cambio de pañal',
+      body: 'Revisa si corresponde un nuevo cambio.',
+      scheduledAt: DateTime.now().add(const Duration(hours: 1)),
+      type: NotificationReminderType.diaper,
+    );
+
+    final details =
+        verify(
+              () => fixture.local.zonedSchedule(
+                id: any(named: 'id'),
+                title: 'Próximo cambio de pañal',
+                body: any(named: 'body'),
+                scheduledDate: any(named: 'scheduledDate'),
+                notificationDetails: captureAny(named: 'notificationDetails'),
+                androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+                payload: any(named: 'payload'),
+              ),
+            ).captured.single
+            as NotificationDetails;
+
+    expect(details.android?.channelId, 'care_reminders');
+    expect(details.android?.importance, Importance.high);
+    expect(details.android?.category, AndroidNotificationCategory.reminder);
   });
 }
 

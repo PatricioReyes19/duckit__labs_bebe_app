@@ -186,6 +186,28 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('breastfeeding exposes the optional next-feeding alarm', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _FormTestApp(
+        theme: bebeTheme.lightTheme(),
+        child: FeedingRegisterForm(
+          subtype: 'breast',
+          onSideChanged: (_) {},
+          onScheduleNextFeedingChanged: (_) {},
+          onMoodChanged: (_) {},
+        ),
+      ),
+    );
+
+    expect(find.text('Programar próxima toma'), findsOneWidget);
+    expect(
+      find.text('Activa una alarma para la próxima alimentación.'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('category carousel scrolls across the full screen width',
       (tester) async {
     tester.view.physicalSize = const Size(320, 932);

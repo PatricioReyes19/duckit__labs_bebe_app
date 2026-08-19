@@ -26,7 +26,6 @@ begin
   end if;
 end;
 $$;
-
 -- Every non-empty UID already referenced by a user-owned table is an existing
 -- Firebase identity in the current data model. Preserve it with a minimal
 -- public profile rather than deleting the referencing row.
@@ -42,7 +41,6 @@ from (
 where nullif(trim(user_id), '') is not null
   and char_length(user_id) <= 128
 on conflict (id) do nothing;
-
 do $$
 declare
   orphan_sample text;
@@ -104,7 +102,6 @@ begin
   end if;
 end;
 $$;
-
 -- CONSTRAINTS ---------------------------------------------------------------
 
 do $$
@@ -189,7 +186,6 @@ begin
   end if;
 end;
 $$;
-
 -- Preserve compatibility for authenticated Firebase users referenced by old
 -- RPCs. Only the current JWT subject may receive an automatic minimal profile;
 -- arbitrary caregiver ids must already exist and otherwise fail the FK.
@@ -211,27 +207,22 @@ begin
   return new;
 end;
 $$;
-
 revoke all on function public.ensure_current_user_profile_reference()
   from public;
-
 drop trigger if exists baby_caregivers_ensure_profile
   on public.baby_caregivers;
 create trigger baby_caregivers_ensure_profile
 before insert or update of user_id on public.baby_caregivers
 for each row execute function public.ensure_current_user_profile_reference();
-
 drop trigger if exists push_devices_ensure_profile on public.push_devices;
 create trigger push_devices_ensure_profile
 before insert or update of user_id on public.push_devices
 for each row execute function public.ensure_current_user_profile_reference();
-
 drop trigger if exists user_preferences_ensure_profile
   on public.user_preferences;
 create trigger user_preferences_ensure_profile
 before insert or update of user_id on public.user_preferences
 for each row execute function public.ensure_current_user_profile_reference();
-
 -- RLS -----------------------------------------------------------------------
 -- Identity remains in profiles; authorization remains baby_caregivers + Baby.
 
@@ -244,7 +235,6 @@ drop policy if exists "register events insert care circle"
   on public.register_events;
 drop policy if exists "register events update care circle"
   on public.register_events;
-
 create policy "register events select care circle"
   on public.register_events for select to anon, authenticated
   using ((select public.can_access_baby(baby_id)));
@@ -262,7 +252,6 @@ create policy "register events update care circle"
     (select public.can_access_baby(baby_id, true))
     and updated_by = auth.jwt() ->> 'sub'
   );
-
 drop policy if exists "agenda events select own" on public.agenda_events;
 drop policy if exists "agenda events insert own" on public.agenda_events;
 drop policy if exists "agenda events update own" on public.agenda_events;
@@ -272,7 +261,6 @@ drop policy if exists "agenda events insert care circle"
   on public.agenda_events;
 drop policy if exists "agenda events update care circle"
   on public.agenda_events;
-
 create policy "agenda events select care circle"
   on public.agenda_events for select to anon, authenticated
   using ((select public.can_access_baby(baby_id)));
@@ -290,7 +278,6 @@ create policy "agenda events update care circle"
     (select public.can_access_baby(baby_id, true))
     and updated_by = auth.jwt() ->> 'sub'
   );
-
 -- RPCS ----------------------------------------------------------------------
 -- `owner_id` remains the historical creator for compatibility. Baby is the
 -- aggregate owner and must already have been synchronized by FamilySync.
@@ -357,7 +344,6 @@ begin
   return result;
 end;
 $$;
-
 create or replace function public.apply_agenda_event(payload jsonb)
 returns public.agenda_events
 language plpgsql
@@ -427,7 +413,6 @@ begin
   return result;
 end;
 $$;
-
 -- Health already had a Baby FK, but its historical RPC still called
 -- bootstrap_baby. Keep all Baby-owned writes under the same parent-first
 -- contract so a child write can never manufacture a placeholder aggregate.
@@ -490,7 +475,6 @@ begin
   return result;
 end;
 $$;
-
 revoke all on function public.apply_register_event(jsonb) from public;
 revoke all on function public.apply_agenda_event(jsonb) from public;
 revoke all on function public.apply_health_event(jsonb) from public;
@@ -500,7 +484,6 @@ grant execute on function public.apply_agenda_event(jsonb)
   to anon, authenticated;
 grant execute on function public.apply_health_event(jsonb)
   to anon, authenticated;
-
 -- caregiver_id intentionally has no remote FK in this migration. Local rows
 -- currently store family_members.id while remote membership uses
--- baby_caregivers(user_id, baby_id); choosing profiles(id) would be incorrect.
+-- baby_caregivers(user_id, baby_id); choosing profiles(id) would be incorrect.;

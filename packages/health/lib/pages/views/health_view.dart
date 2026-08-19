@@ -215,6 +215,10 @@ class _UpcomingEventCard extends StatelessWidget {
         const Icon(Icons.monitor_weight_outlined),
         BebeAgendaEventCardVariant.success,
       ),
+      HealthEventType.consultation => (
+        const Icon(Icons.medical_information_outlined),
+        BebeAgendaEventCardVariant.information,
+      ),
     };
 
     return BebeAgendaEventCard(

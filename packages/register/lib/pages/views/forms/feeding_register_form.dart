@@ -112,25 +112,22 @@ class FeedingRegisterForm extends StatelessWidget {
             ),
           ],
         ),
-        if (!isBreastfeeding) ...[
-          SizedBox(height: spacing.spacingXl),
-          BebeSettingsSwitchTile(
-            title: 'Programar próxima toma',
-            description:
-                'Activa una alarma para la próxima mamadera o fórmula.',
-            value: scheduleNextFeeding,
-            onChanged: onScheduleNextFeedingChanged,
+        SizedBox(height: spacing.spacingXl),
+        BebeSettingsSwitchTile(
+          title: 'Programar próxima toma',
+          description: 'Activa una alarma para la próxima alimentación.',
+          value: scheduleNextFeeding,
+          onChanged: onScheduleNextFeedingChanged,
+        ),
+        if (scheduleNextFeeding) ...[
+          SizedBox(height: spacing.spacingL),
+          BebePickerField(
+            compact: true,
+            label: 'Recordar próxima toma',
+            value: reminderLabel,
+            kind: BebePickerFieldKind.selection,
+            onPressed: onReminderPressed,
           ),
-          if (scheduleNextFeeding) ...[
-            SizedBox(height: spacing.spacingL),
-            BebePickerField(
-              compact: true,
-              label: 'Recordar próxima toma',
-              value: reminderLabel,
-              kind: BebePickerFieldKind.selection,
-              onPressed: onReminderPressed,
-            ),
-          ],
         ],
         SizedBox(height: spacing.spacingXl),
         BebeSegmentedFormField<String>(

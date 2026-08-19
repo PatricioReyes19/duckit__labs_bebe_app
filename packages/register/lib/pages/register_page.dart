@@ -14,7 +14,7 @@ typedef SaveRegisterEventFactory = SaveRegisterEvent Function(
 typedef UpdateRegisterEventFactory = UpdateRegisterEvent Function(
   BuildContext context,
 );
-typedef RegisterRouteSaved = void Function(
+typedef RegisterRouteSaved = FutureOr<void> Function(
   BuildContext context,
   RegisteredEvent event,
 );
@@ -296,22 +296,31 @@ class _FamilyAwareRegisterContent extends StatefulWidget {
 class _FamilyAwareRegisterContentState
     extends State<_FamilyAwareRegisterContent> {
   late Future<FamilyOverviewEntity> _family;
+  FamilyOverviewEntity? _cachedFamily;
   late final StreamSubscription<String> _activeBabySubscription;
 
   @override
   void initState() {
     super.initState();
-    _family = widget.getFamilyOverview();
+    _cachedFamily = widget.getFamilyOverview.cached;
+    _family =
+        _cachedFamily == null ? _loadFamily() : Future.value(_cachedFamily!);
     _activeBabySubscription = widget.getFamilyOverview.activeBabyChanges.listen(
       (_) {
         if (mounted) {
-          final nextFamily = widget.getFamilyOverview();
           setState(() {
-            _family = nextFamily;
+            _cachedFamily = null;
+            _family = _loadFamily();
           });
         }
       },
     );
+  }
+
+  Future<FamilyOverviewEntity> _loadFamily() async {
+    final family = await widget.getFamilyOverview();
+    if (mounted) setState(() => _cachedFamily = family);
+    return family;
   }
 
   @override
@@ -322,6 +331,13 @@ class _FamilyAwareRegisterContentState
 
   @override
   Widget build(BuildContext context) {
+    final cached = _cachedFamily;
+    if (cached != null) {
+      return KeyedSubtree(
+        key: ValueKey('register-active-baby-${cached.activeBabyId}'),
+        child: widget.builder(context, cached),
+      );
+    }
     return FutureBuilder<FamilyOverviewEntity>(
       future: _family,
       builder: (context, snapshot) {
@@ -346,17 +362,43 @@ class _RegisterBabySwitchLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.all(context.theme.spacing.spacingXl),
-        child: BebeStatusBanner(
-          key: const ValueKey('register-baby-switch-loading'),
-          title: 'Cambiando de bebé',
-          description: 'Estamos cargando sus registros y preferenciasâ€¦',
-          type: BebeStatusBannerType.information,
-          leading: const SizedBox.square(
-            dimension: 22,
-            child: CircularProgressIndicator(strokeWidth: 2.5),
+    final spacing = context.theme.spacing;
+    return Scaffold(
+      key: const ValueKey('register-baby-switch-loading'),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: EdgeInsets.all(spacing.spacingXl),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const BebeSkeleton.circle(size: 40),
+                  SizedBox(width: spacing.spacingM),
+                  const Expanded(
+                    child: BebeSkeleton.line(height: 22, width: 180),
+                  ),
+                  const BebeSkeleton.circle(size: 40),
+                ],
+              ),
+              SizedBox(height: spacing.spacingXl),
+              const BebeSkeleton(height: 92),
+              SizedBox(height: spacing.spacingXl),
+              Row(
+                children: [
+                  for (var index = 0; index < 3; index++) ...[
+                    const Expanded(child: BebeSkeleton(height: 72)),
+                    if (index != 2) SizedBox(width: spacing.spacingM),
+                  ],
+                ],
+              ),
+              SizedBox(height: spacing.spacing2xl),
+              const BebeSkeleton.line(height: 20, width: 190),
+              SizedBox(height: spacing.spacingM),
+              const BebeSkeleton(height: 260),
+              SizedBox(height: spacing.spacingXl),
+              const BebeSkeleton.line(height: 48),
+            ],
           ),
         ),
       ),
@@ -468,7 +510,9 @@ class _RegisterContent extends StatelessWidget {
             // cambio recreaba la página, repetía la carga del perfil activo y
             // dejaba un frame blanco entre formularios.
             onKindChanged: (_) {},
-            onSaved: (event) => onSaved(pageContext, event),
+            onSaved: (event) => unawaited(
+              Future<void>.sync(() => onSaved(pageContext, event)),
+            ),
             onCancel: () => onCancel(pageContext),
             onNotificationsPressed: onNotificationsPressed == null
                 ? null

@@ -61,7 +61,7 @@ abstract class CoreDataModule {
       HealthEventSyncService(
         local,
         remote,
-        parentSyncBarrier: familySyncService.synchronize,
+        parentSyncBarrier: familySyncService.ensureSynchronized,
       );
 
   @lazySingleton
@@ -110,8 +110,14 @@ abstract class CoreDataModule {
     AgendaRepository repository,
     RegisterEventRepository registerRepository,
     AppSettingsRepository settingsRepository,
+    HealthRepository healthRepository,
   ) =>
-      GetAgendaOverview(repository, registerRepository, settingsRepository);
+      GetAgendaOverview(
+        repository,
+        registerRepository,
+        settingsRepository,
+        healthRepository,
+      );
 
   @lazySingleton
   GetHealthOverview getHealthOverview(HealthRepository repository) =>

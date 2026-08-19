@@ -1,6 +1,6 @@
 begin;
 
-select plan(11);
+select plan(16);
 
 select ok(
   exists (
@@ -84,6 +84,39 @@ select unlike(
   pg_get_functiondef('public.apply_health_event(jsonb)'::regprocedure),
   'bootstrap_baby',
   'health RPC cannot manufacture a Baby'
+);
+
+select ok(
+  to_regclass('public.agenda_events_updated_id_idx') is not null,
+  'agenda delta pull has a stable updated_at + id index'
+);
+select like(
+  (select with_check from pg_policies
+   where schemaname = 'public' and tablename = 'register_events'
+     and policyname = 'register events insert care circle'),
+  '%SELECT auth.jwt() AS jwt%',
+  'register INSERT evaluates auth.jwt once per statement'
+);
+select like(
+  (select with_check from pg_policies
+   where schemaname = 'public' and tablename = 'register_events'
+     and policyname = 'register events update care circle'),
+  '%SELECT auth.jwt() AS jwt%',
+  'register UPDATE evaluates auth.jwt once per statement'
+);
+select like(
+  (select with_check from pg_policies
+   where schemaname = 'public' and tablename = 'agenda_events'
+     and policyname = 'agenda events insert care circle'),
+  '%SELECT auth.jwt() AS jwt%',
+  'agenda INSERT evaluates auth.jwt once per statement'
+);
+select like(
+  (select with_check from pg_policies
+   where schemaname = 'public' and tablename = 'agenda_events'
+     and policyname = 'agenda events update care circle'),
+  '%SELECT auth.jwt() AS jwt%',
+  'agenda UPDATE evaluates auth.jwt once per statement'
 );
 
 select * from finish();

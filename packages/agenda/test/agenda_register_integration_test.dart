@@ -127,22 +127,12 @@ void main() {
       find.byKey(const ValueKey('agenda-upcoming-scroll-viewport')),
     );
     await tester.pumpAndSettle();
-    await tester.drag(
-      find.byKey(const ValueKey('agenda-upcoming-scroll-list')),
-      const Offset(0, -900),
-    );
-    await tester.pumpAndSettle();
     expect(
       find.descendant(
         of: find.byKey(const ValueKey('agenda-upcoming-scroll-list')),
         matching: find.text('Próxima dosis: Vitamina D'),
       ),
-      findsOneWidget,
-    );
-    expect(find.text('Diario · 4x'), findsOneWidget);
-    expect(
-      find.bySemanticsLabel(RegExp(r'4 ocurrencias agrupadas')),
-      findsOneWidget,
+      findsNothing,
     );
 
     await tester.ensureVisible(find.text('Registrar evento ahora'));

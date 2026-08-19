@@ -2,6 +2,7 @@ import 'dart:async';
 
 import '../repositories/sqlite_agenda_repository.dart';
 import 'agenda_event_remote_data_source.dart';
+import 'remote_sync_cursor.dart';
 import 'register_event_sync_service.dart';
 
 /// Agenda uses the same observable sync vocabulary as register history so UI
@@ -23,6 +24,7 @@ class AgendaEventSyncService {
   RegisterSyncState _state = const RegisterSyncState.idle();
   Future<RegisterSyncState>? _running;
   bool _rerunRequested = false;
+  static const pullPageSize = 200;
 
   RegisterSyncState get state => _state;
   Stream<RegisterSyncState> get states => _states.stream;
@@ -81,6 +83,7 @@ class AgendaEventSyncService {
     var failedCount = 0;
     Object? lastError;
     DateTime? newest = await _local.readSyncCursor();
+    RemoteSyncCursor? completedPullCursor;
     var pullCompleted = false;
     while (pendingCount > 0 && failedCount == 0) {
       final pending = await _local.listPending();
@@ -101,19 +104,47 @@ class AgendaEventSyncService {
       pendingCount = await _local.countPending();
     }
     try {
-      final pulled = await _remote.pull(
-        updatedAfter: await _local.readSyncCursor(),
-      );
-      for (final event in pulled) {
-        await _local.mergeRemote(event);
-        newest = _newest(newest, event.updatedAt);
+      final storedTimestamp = await _local.readSyncCursor();
+      if (_remote case final PagedAgendaEventRemoteDataSource paged) {
+        var cursor = storedTimestamp == null
+            ? null
+            : RemoteSyncCursor(
+                updatedAt: storedTimestamp,
+                id: await _local.readSyncCursorId() ?? '',
+              );
+        while (true) {
+          final pulled = await paged.pullPage(
+            after: cursor,
+            limit: pullPageSize,
+          );
+          for (final event in pulled) {
+            await _local.mergeRemote(event);
+            newest = _newest(newest, event.updatedAt);
+            cursor = RemoteSyncCursor(updatedAt: event.updatedAt, id: event.id);
+          }
+          if (pulled.length < pullPageSize) break;
+        }
+        completedPullCursor = cursor;
+      } else {
+        final pulled = await _remote.pull(updatedAfter: storedTimestamp);
+        for (final event in pulled) {
+          await _local.mergeRemote(event);
+          newest = _newest(newest, event.updatedAt);
+        }
       }
       pullCompleted = true;
     } on Object catch (error) {
       failedCount += 1;
       lastError = error;
     }
-    if (pullCompleted && newest != null) await _local.writeSyncCursor(newest);
+    if (pullCompleted) {
+      final cursor = completedPullCursor;
+      if (cursor != null) {
+        await _local.writeSyncCursor(cursor.updatedAt, id: cursor.id);
+      } else if (newest != null) {
+        await _local.writeSyncCursor(newest);
+      }
+    }
     pendingCount = await _local.countPending();
     if (failedCount == 0 && pendingCount > 0) {
       _rerunRequested = true;

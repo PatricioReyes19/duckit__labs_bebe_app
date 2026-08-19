@@ -77,7 +77,9 @@ class _VaccinesSectionViewState extends State<VaccinesSectionView> {
                 title: event.title,
                 subtitle:
                     '${event.description} · ${healthDateLabel(event.startsAt)}',
-                trailing: _HealthEventStatus(event.status),
+                trailing: _HealthEventStatus(
+                  event.effectiveStatus(DateTime.now()),
+                ),
                 onTap: () {
                   widget.controller.selectHealthEvent(event);
                   widget.openFlow(HealthFlowAction.detail);
@@ -159,7 +161,7 @@ class ControlsSectionView extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           HealthPrimaryButton(
-            label: 'Registrar nueva consulta',
+            label: 'Programar nuevo control',
             icon: Icons.add_rounded,
             onPressed: () => openFlow(HealthFlowAction.register),
           ),
@@ -362,13 +364,16 @@ class ConsultationsSectionView extends StatelessWidget {
       builder: (context) {
         final consultations = controller.consultations;
         final now = DateTime.now();
-        final upcoming = controller.controls
-            .where(
-              (event) =>
-                  event.status == HealthEventStatus.scheduled &&
-                  !event.startsAt.isBefore(now),
-            )
-            .firstOrNull;
+        final upcoming =
+            (controller.overview?.events ?? const <HealthEventEntity>[])
+                .where(
+                  (event) =>
+                      event.appointmentKind ==
+                          HealthAppointmentKind.consultation &&
+                      event.status == HealthEventStatus.scheduled &&
+                      !event.startsAt.isBefore(now),
+                )
+                .firstOrNull;
         return [
           if (upcoming != null)
             HealthSurface(
@@ -603,6 +608,8 @@ class ClinicalHistorySectionView extends StatelessWidget {
                 HealthEventType.pediatricControl =>
                   Icons.medical_services_outlined,
                 HealthEventType.growthControl => Icons.monitor_weight_outlined,
+                HealthEventType.consultation =>
+                  Icons.medical_information_outlined,
               },
               color: Theme.of(context).colorScheme.primary,
               onTap: () {
@@ -1029,9 +1036,21 @@ class _HealthEventStatus extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final (label, color) = switch (status) {
-      HealthEventStatus.completed => ('Aplicada', colors.tertiary),
+      HealthEventStatus.draft => ('Borrador', colors.outline),
       HealthEventStatus.scheduled => ('Próxima', colors.secondary),
+      HealthEventStatus.due => ('Hoy', colors.primary),
+      HealthEventStatus.attendancePending => (
+        'Confirma asistencia',
+        colors.primary,
+      ),
+      HealthEventStatus.attendedPendingSummary => (
+        'Resumen pendiente',
+        colors.secondary,
+      ),
+      HealthEventStatus.completed => ('Completada', colors.tertiary),
+      HealthEventStatus.notAttended => ('No asistieron', colors.error),
       HealthEventStatus.cancelled => ('Cancelada', colors.error),
+      HealthEventStatus.rescheduled => ('Reprogramada', colors.outline),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),

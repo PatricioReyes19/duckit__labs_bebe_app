@@ -70,8 +70,9 @@ void main() {
             type: HealthEventType.pediatricControl,
             title: 'Control pediátrico trimestral',
             description: 'Seguimiento programado',
-            startsAt: now.add(const Duration(days: 10)),
+            startsAt: now.subtract(const Duration(hours: 1)),
             status: HealthEventStatus.scheduled,
+            appointmentKind: HealthAppointmentKind.wellChildControl,
           ),
           HealthEventEntity(
             id: 'control-2',
@@ -81,6 +82,7 @@ void main() {
             description: 'Control de peso y talla',
             startsAt: now.add(const Duration(days: 20)),
             status: HealthEventStatus.scheduled,
+            appointmentKind: HealthAppointmentKind.wellChildControl,
           ),
         ],
         measurements: [
@@ -377,6 +379,52 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('WT-HEALTH-APPT-001 confirma asistencia sin cerrar el resumen', (
+    tester,
+  ) async {
+    controller.selectHealthEvent(
+      controller.controls.firstWhere((event) => event.id == 'control-1'),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: bebeTheme.lightTheme(),
+        home: Scaffold(
+          body: HealthFlowDetailView(
+            kind: HealthSectionKind.controls,
+            action: HealthFlowAction.detail,
+            controller: controller,
+            openFlow: _ignoreAction,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(
+      find.byKey(const ValueKey('health-confirm-attendance-later')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('health-mark-not-attended')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('health-reschedule-appointment')),
+      findsOneWidget,
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey('health-confirm-attendance-later')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      controller.selectedHealthEvent?.status,
+      HealthEventStatus.attendedPendingSummary,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('la tarjeta completa del pediatra abre el detalle', (
     tester,
   ) async {
@@ -616,10 +664,50 @@ class _HealthRepository extends Fake implements HealthRepository {
   Future<HealthOverviewEntity>? nextOverview;
 
   @override
+  Stream<void> get changes => const Stream.empty();
+
+  @override
   Future<HealthOverviewEntity> getOverview(String babyId) async {
     final pending = nextOverview;
     nextOverview = null;
     return pending == null ? overview : pending;
+  }
+
+  @override
+  Future<HealthEventEntity?> getEvent(String id) async =>
+      overview.events.where((event) => event.id == id).firstOrNull;
+
+  @override
+  Future<HealthEventEntity?> updateEvent(
+    String id,
+    HealthEventPatch patch,
+  ) async {
+    final index = overview.events.indexWhere((event) => event.id == id);
+    if (index < 0) return null;
+    final current = overview.events[index];
+    final updated = HealthEventEntity(
+      id: current.id,
+      babyId: current.babyId,
+      type: patch.type ?? current.type,
+      title: patch.title ?? current.title,
+      description: patch.description ?? current.description,
+      startsAt: patch.startsAt ?? current.startsAt,
+      status: patch.status ?? current.status,
+      appointmentKind: patch.appointmentKind ?? current.appointmentKind,
+      reason: patch.reason ?? current.reason,
+      timezone: patch.timezone ?? current.timezone,
+      attendedAt: patch.attendedAt ?? current.attendedAt,
+      completedAt: patch.completedAt ?? current.completedAt,
+      professionalName: patch.professionalName ?? current.professionalName,
+      clinicalSummary: patch.clinicalSummary ?? current.clinicalSummary,
+      professionalAssessment:
+          patch.professionalAssessment ?? current.professionalAssessment,
+      indications: patch.indications ?? current.indications,
+      createdAt: current.createdAt,
+      updatedAt: DateTime.now(),
+    );
+    overview.events[index] = updated;
+    return updated;
   }
 }
 

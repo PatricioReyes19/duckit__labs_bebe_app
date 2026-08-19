@@ -289,6 +289,7 @@ extension GetItInjectableX on _i174.GetIt {
               gh<_i494.AgendaRepository>(),
               gh<_i494.RegisterEventRepository>(),
               gh<_i494.AppSettingsRepository>(),
+              gh<_i494.HealthRepository>(),
             ));
     gh.lazySingleton<_i494.GetHomeOverview>(
         () => coreDataModule.getHomeOverview(

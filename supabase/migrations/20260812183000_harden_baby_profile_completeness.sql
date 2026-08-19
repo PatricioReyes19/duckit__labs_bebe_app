@@ -8,25 +8,21 @@ alter table public.babies
 alter table public.babies
   add constraint babies_family_id_required
   check (family_id is not null) not valid;
-
 alter table public.babies
   drop constraint if exists babies_display_name_required;
 alter table public.babies
   add constraint babies_display_name_required
   check (nullif(btrim(display_name), '') is not null) not valid;
-
 alter table public.babies
   drop constraint if exists babies_birth_date_required;
 alter table public.babies
   add constraint babies_birth_date_required
   check (birth_date is not null) not valid;
-
 alter table public.families
   drop constraint if exists families_name_required;
 alter table public.families
   add constraint families_name_required
   check (nullif(btrim(name), '') is not null) not valid;
-
 -- A complete local snapshot may repair a compatibility placeholder even when
 -- the placeholder received a newer server timestamp from a failed child sync.
 create or replace function public.apply_family_snapshot(payload jsonb)
@@ -184,11 +180,9 @@ begin
   return result;
 end;
 $$;
-
 revoke all on function public.apply_family_snapshot(jsonb) from public;
 grant execute on function public.apply_family_snapshot(jsonb)
   to anon, authenticated;
-
 -- Kept for binary compatibility with old clients, but it can no longer create
 -- a placeholder Baby. Parent synchronization must happen first.
 create or replace function public.bootstrap_baby(
@@ -228,7 +222,6 @@ begin
   return result;
 end;
 $$;
-
 -- Invitations reference an already synchronized Baby. They must never create
 -- a second or incomplete parent row as a side effect.
 create or replace function public.create_care_invitation(
@@ -360,7 +353,6 @@ begin
   );
 end;
 $$;
-
 revoke all on function public.bootstrap_baby(text, text) from public;
 grant execute on function public.bootstrap_baby(text, text)
   to anon, authenticated;
@@ -370,7 +362,6 @@ revoke all on function public.create_care_invitation(
 grant execute on function public.create_care_invitation(
   text, text, text, text, text, text, boolean, text
 ) to anon, authenticated;
-
 -- Operational preflight. This intentionally does not fabricate a birth date.
 -- Run before/after deployment to find profiles that still require local repair.
 create or replace function public.incomplete_baby_profiles()
@@ -398,7 +389,6 @@ as $$
     )
   order by baby.created_at, baby.id;
 $$;
-
 revoke all on function public.incomplete_baby_profiles() from public;
 grant execute on function public.incomplete_baby_profiles()
   to anon, authenticated;

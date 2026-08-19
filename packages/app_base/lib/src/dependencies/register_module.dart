@@ -58,7 +58,7 @@ abstract class RegisterModule {
       RegisterEventSyncService(
         local,
         remote,
-        parentSyncBarrier: familySyncService.synchronize,
+        parentSyncBarrier: familySyncService.ensureSynchronized,
       );
 
   @lazySingleton
@@ -76,7 +76,7 @@ abstract class RegisterModule {
       AgendaEventSyncService(
         local,
         remote,
-        parentSyncBarrier: familySyncService.synchronize,
+        parentSyncBarrier: familySyncService.ensureSynchronized,
       );
 
   @lazySingleton

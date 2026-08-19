@@ -34,19 +34,16 @@ void main() {
       );
       expect((await harness.health.getOverview('baby-1')).events, hasLength(1));
       expect((await harness.settings.get()).name, 'Remote Owner');
-      expect(
-        trace,
-        containsAllInOrder([
-          'profile',
-          'family',
-          'register',
-          'agenda',
-          'health',
-          'preferences',
-          'agenda-push',
-          'realtime',
-        ]),
-      );
+      expect(trace.indexOf('profile'), lessThan(trace.indexOf('family')));
+      for (final child in const [
+        'register',
+        'agenda',
+        'health',
+        'preferences',
+      ]) {
+        expect(trace.indexOf('family'), lessThan(trace.indexOf(child)));
+      }
+      expect(trace, contains('agenda-push'));
       expect(trace.last, 'realtime');
     },
   );
@@ -112,6 +109,22 @@ void main() {
       await harness.agenda.listDerivedBySource('remote-medication'),
       hasLength(1),
     );
+  });
+
+  test('PERF-SYNC-004 coalesces a realtime burst into one pull', () async {
+    final trace = <String>[];
+    final harness = await _SyncHarness.create(now: now, trace: trace);
+    addTearDown(harness.close);
+    await harness.initial.synchronize();
+    trace.clear();
+
+    await Future.wait([
+      for (var index = 0; index < 10; index += 1)
+        harness.initial.synchronizeFromRealtime(RealtimeSyncTarget.register),
+    ]);
+
+    expect(trace.where((entry) => entry == 'register'), hasLength(1));
+    expect(trace.where((entry) => entry == 'family'), isEmpty);
   });
 
   test('IT-SYNCUX-003 retry success returns the status to synced', () async {

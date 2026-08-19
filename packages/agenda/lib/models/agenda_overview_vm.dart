@@ -106,6 +106,10 @@ class AgendaOverviewVm {
     final endOfDay = DateTime(day.year, day.month, day.day, 23, 59, 59);
     final result = events
         .where((event) => event.startsAt.isAfter(endOfDay))
+        // Recurring treatments are represented by their series card in
+        // Programado. Showing every projected occurrence here duplicates the
+        // treatment and makes this list grow with its duration.
+        .where((event) => !event.isRecurring)
         .where(_matchesSelectedCategory)
         .toList();
     result.sort((first, second) => first.startsAt.compareTo(second.startsAt));

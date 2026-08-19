@@ -25,10 +25,7 @@ class FeedingRegisterCubit extends RegisterFormCubit {
   bool get scheduleNextFeeding => state.value<bool>('scheduleNextFeeding');
   int get reminderHours => state.value<int>('reminderHours');
 
-  void subtypeChanged(String value) {
-    setValue('subtype', value);
-    if (value == 'breast') setValue('scheduleNextFeeding', false);
-  }
+  void subtypeChanged(String value) => setValue('subtype', value);
 
   void sideChanged(String value) => setValue('side', value);
   void amountMlChanged(String value) => setValue('amountMl', value);
@@ -73,9 +70,8 @@ class FeedingRegisterCubit extends RegisterFormCubit {
         'end_at': endAt?.toUtc().toIso8601String(),
         'mood': mood,
         'symptoms': symptoms.trim(),
-        if (subtype != 'breast') 'schedule_next_feeding': scheduleNextFeeding,
-        if (subtype != 'breast' && scheduleNextFeeding)
-          'reminder_interval_hours': reminderHours,
+        'schedule_next_feeding': scheduleNextFeeding,
+        if (scheduleNextFeeding) 'reminder_interval_hours': reminderHours,
       },
     );
   }
