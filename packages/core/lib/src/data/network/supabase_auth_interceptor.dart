@@ -5,12 +5,10 @@ import 'access_token_provider.dart';
 
 class SupabaseAuthInterceptor extends Interceptor {
   SupabaseAuthInterceptor({
-    required Dio dio,
+    required this._dio,
     required SupabaseConfiguration configuration,
-    required AccessTokenProvider tokenProvider,
-  }) : _dio = dio,
-       _configuration = configuration,
-       _tokenProvider = tokenProvider;
+    required this._tokenProvider,
+  }) : _configuration = configuration;
 
   static const _retriedKey = 'supabase.auth.retried';
 

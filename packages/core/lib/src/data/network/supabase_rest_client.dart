@@ -69,8 +69,8 @@ class SupabaseRestClient {
       queryParameters: <String, Object?>{
         'select': columns,
         ...filters,
-        if (order != null) 'order': order,
-        if (limit != null) 'limit': limit,
+        'order': ?order,
+        'limit': ?limit,
       },
     );
     return _collection(response.data);
@@ -84,7 +84,7 @@ class SupabaseRestClient {
     final response = await dio.post<Object?>(
       '/rest/v1/$table',
       data: data,
-      queryParameters: {if (onConflict != null) 'on_conflict': onConflict},
+      queryParameters: {'on_conflict': ?onConflict},
       options: Options(
         headers: {
           'Prefer': onConflict == null

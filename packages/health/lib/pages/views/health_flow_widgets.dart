@@ -269,7 +269,7 @@ class HealthSectionHeading extends StatelessWidget {
             ],
           ),
         ),
-        if (trailing != null) trailing!,
+        ?trailing,
       ],
     );
   }

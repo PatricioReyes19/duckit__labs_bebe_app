@@ -618,10 +618,6 @@ class HealthFlowController extends ChangeNotifier {
     _error = null;
     notifyListeners();
     try {
-      final coordinator = _initialDataSyncCoordinator;
-      if (coordinator != null && !coordinator.hasHydratedDomains) {
-        await coordinator.domainHydrationStates.firstWhere((ready) => ready);
-      }
       final family = await _getFamilyOverview();
       final results = await Future.wait<Object>([
         _getHealthOverview(family.activeBabyId),

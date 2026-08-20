@@ -67,8 +67,9 @@ class GetAgendaOverview {
     final health = results.length == 2
         ? results[1] as HealthOverviewEntity
         : const HealthOverviewEntity(events: [], measurements: []);
+    final now = DateTime.now();
     final projectedAppointments = health.events
-        .where((event) => event.isAppointment)
+        .where((event) => _isVisibleInAgenda(event, now))
         .map(
           (event) => AgendaEventEntity(
             id: 'health:${event.id}',
@@ -109,5 +110,13 @@ class GetAgendaOverview {
     };
     final detail = event.description.trim();
     return detail.isEmpty ? state : '$state · $detail';
+  }
+
+  static bool _isVisibleInAgenda(HealthEventEntity event, DateTime now) {
+    if (!event.isAppointment) return false;
+    return switch (event.effectiveStatus(now)) {
+      HealthEventStatus.scheduled || HealthEventStatus.due => true,
+      _ => false,
+    };
   }
 }

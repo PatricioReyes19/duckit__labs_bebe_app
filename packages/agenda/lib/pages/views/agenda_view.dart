@@ -141,12 +141,12 @@ class _AgendaContent extends StatelessWidget {
     final spacing = context.theme.spacing;
     final todayEvents = overview.eventsFor(overview.selectedWeekDay);
     final dayRecords = overview.recordsFor(overview.selectedWeekDay);
-    final upcomingEvents = overview.upcomingAfter(overview.selectedWeekDay);
-    final oneTimeUpcomingEvents = upcomingEvents
+    // Las pautas recurrentes se consultan al seleccionar su día en
+    // "Programado". No se replican en futuros: una pauta cada cuatro horas
+    // puede tener cientos de ocurrencias materializadas.
+    final upcomingEvents = overview
+        .upcomingAfter(overview.selectedWeekDay)
         .where((event) => !event.isRecurring)
-        .toList(growable: false);
-    final recurringUpcomingEvents = upcomingEvents
-        .where((event) => event.isRecurring)
         .toList(growable: false);
 
     return BebeAgendaTemplate(
@@ -248,40 +248,13 @@ class _AgendaContent extends StatelessWidget {
           ),
         ],
       ),
-      upcomingSection: upcomingEvents.isEmpty
-          ? _AgendaEventGroup(
-              title: 'Próximos días',
-              emptyMessage:
-                  'No hay próximos eventos para la categoría seleccionada.',
-              events: const [],
-              onEventPressed: onEventPressed,
-            )
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (oneTimeUpcomingEvents.isNotEmpty)
-                  _AgendaEventGroup(
-                    title: 'Próximos días',
-                    emptyMessage: '',
-                    events: oneTimeUpcomingEvents,
-                    scrollable: true,
-                    onEventPressed: onEventPressed,
-                  ),
-                if (oneTimeUpcomingEvents.isNotEmpty &&
-                    recurringUpcomingEvents.isNotEmpty)
-                  SizedBox(height: spacing.spacing2xl),
-                if (recurringUpcomingEvents.isNotEmpty)
-                  _AgendaEventGroup(
-                    title: 'Pautas recurrentes',
-                    emptyMessage: '',
-                    events: recurringUpcomingEvents,
-                    scrollable: true,
-                    collapseRecurring: true,
-                    scrollKeyPrefix: 'agenda-recurring',
-                    onEventPressed: onEventPressed,
-                  ),
-              ],
-            ),
+      upcomingSection: _AgendaEventGroup(
+        title: 'Próximos días',
+        emptyMessage: 'No hay próximos eventos para la categoría seleccionada.',
+        events: upcomingEvents,
+        scrollable: true,
+        onEventPressed: onEventPressed,
+      ),
       reminderBanner: BebeAgendaReminderBanner(
         title: overview.remindersEnabled
             ? 'Recordatorios activos'

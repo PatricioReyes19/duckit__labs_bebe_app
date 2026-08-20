@@ -128,9 +128,8 @@ class FamilyFlowState {
 }
 
 class FamilyFlowBloc extends Bloc<FamilyFlowEvent, FamilyFlowState> {
-  FamilyFlowBloc({String initialBabyId = '', FamilyRepository? repository})
-    : _repository = repository,
-      super(FamilyFlowState(selectedBabyId: initialBabyId)) {
+  FamilyFlowBloc({String initialBabyId = '', this._repository})
+    : super(FamilyFlowState(selectedBabyId: initialBabyId)) {
     on<FamilyFlowBabySelected>(
       (event, emit) => emit(
         state.copyWith(

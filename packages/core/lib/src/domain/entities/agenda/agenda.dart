@@ -15,14 +15,13 @@ class AgendaEventEntity {
     required this.startsAt,
     required this.syncStatus,
     this.caregiver,
-    String? caregiverId,
+    this._caregiverId,
     this.sourceRegisterEventId,
     DateTime? createdAt,
     DateTime? updatedAt,
     this.deletedAt,
     this.syncError,
-  }) : _caregiverId = caregiverId,
-       createdAt = createdAt ?? startsAt,
+  }) : createdAt = createdAt ?? startsAt,
        updatedAt = updatedAt ?? createdAt ?? startsAt;
 
   final String id;

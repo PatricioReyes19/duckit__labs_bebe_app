@@ -10,12 +10,10 @@ export 'settings_state.dart';
 
 class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
   SettingsBloc({
-    required GetAppSettings getAppSettings,
+    required this._getAppSettings,
     required UpdateAppSettings updateAppSettings,
-    required GetCurrentSession getCurrentSession,
-  }) : _getAppSettings = getAppSettings,
-       _updateAppSettings = updateAppSettings,
-       _getCurrentSession = getCurrentSession,
+    required this._getCurrentSession,
+  }) : _updateAppSettings = updateAppSettings,
        super(const SettingsState()) {
     on<SettingsStarted>(_onStarted);
     on<SettingsThemeChanged>(_onThemeChanged);

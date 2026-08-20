@@ -17,11 +17,10 @@ class GetHomeOverview {
     this._familyRepository,
     this._registerRepository,
     this._healthRepository, {
-    required AgendaRepository agendaRepository,
+    required this._agendaRepository,
     GetActiveRegisterEvents? getActiveRegisterEvents,
     HomeClock? clock,
-  }) : _agendaRepository = agendaRepository,
-       _getActiveRegisterEvents =
+  }) : _getActiveRegisterEvents =
            getActiveRegisterEvents ??
            GetActiveRegisterEvents(_registerRepository),
        _clock = clock ?? DateTime.now;

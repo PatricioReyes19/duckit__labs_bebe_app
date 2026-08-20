@@ -187,7 +187,7 @@ void main() {
     'syncs the authenticated profile used to resolve pending invites',
     () async {
       final adapter = _RecordingAdapter(
-        (_, __) => _jsonResponse(200, const {'id': 'user-invited'}),
+        (_, _) => _jsonResponse(200, const {'id': 'user-invited'}),
       );
       final dio = Dio(BaseOptions(baseUrl: configuration.url))
         ..httpClientAdapter = adapter;

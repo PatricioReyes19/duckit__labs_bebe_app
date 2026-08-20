@@ -18,10 +18,9 @@ class RegisterAgendaCoordinator {
     this._registerRepository,
     this._agendaRepository,
     this._agendaSyncService, {
-    required SqliteFamilyRepository familyRepository,
+    required this._familyRepository,
     DateTime Function()? clock,
-  }) : _familyRepository = familyRepository,
-       _clock = clock ?? DateTime.now;
+  }) : _clock = clock ?? DateTime.now;
 
   final SqliteRegisterEventRepository _registerRepository;
   final SqliteAgendaRepository _agendaRepository;

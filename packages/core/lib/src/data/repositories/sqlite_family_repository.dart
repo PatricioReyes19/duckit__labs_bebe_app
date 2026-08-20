@@ -16,10 +16,9 @@ class SqliteFamilyRepository implements FamilyRepository {
   SqliteFamilyRepository(
     this._database, {
     LocalIdGenerator? idGenerator,
-    FamilyRemoteDataSource? remoteDataSource,
+    this._remoteDataSource,
     DateTime Function()? clock,
   }) : _idGenerator = idGenerator ?? _defaultId,
-       _remoteDataSource = remoteDataSource,
        _clock = clock ?? DateTime.now;
 
   final BebeDatabase _database;

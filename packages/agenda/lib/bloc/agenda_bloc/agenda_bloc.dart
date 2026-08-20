@@ -16,14 +16,13 @@ class AgendaBloc extends Bloc<AgendaEvent, AgendaState> {
     required this._getAgendaOverview,
     GetFamilyOverview? getFamilyOverview,
     AgendaEventSyncService? syncService,
-    InitialDataSyncCoordinator? initialDataSyncCoordinator,
+    this._initialDataSyncCoordinator,
     this.babyId,
     AgendaClock? clock,
   }) : _clock = clock ?? DateTime.now,
        // The public DI parameter intentionally omits the private underscore.
        // ignore: prefer_initializing_formals
        _syncService = syncService,
-       _initialDataSyncCoordinator = initialDataSyncCoordinator,
        // El parámetro público omite intencionalmente el prefijo privado.
        // ignore: prefer_initializing_formals
        _getFamilyOverview = getFamilyOverview,

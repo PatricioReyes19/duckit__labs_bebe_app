@@ -11,10 +11,9 @@ class AgendaEventSyncService {
   AgendaEventSyncService(
     this._local,
     this._remote, {
-    ParentSyncBarrier? parentSyncBarrier,
+    this._parentSyncBarrier,
     DateTime Function()? clock,
-  }) : _parentSyncBarrier = parentSyncBarrier,
-       _clock = clock ?? DateTime.now;
+  }) : _clock = clock ?? DateTime.now;
 
   final SqliteAgendaRepository _local;
   final AgendaEventRemoteDataSource _remote;

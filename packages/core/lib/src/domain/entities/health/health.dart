@@ -54,13 +54,12 @@ class HealthEventEntity {
     this.nextAppointmentId,
     this.createdBy,
     this.caregiver,
-    String? caregiverId,
+    this._caregiverId,
     DateTime? createdAt,
     DateTime? updatedAt,
     this.syncStatus = HealthSyncStatus.pending,
     this.syncError,
-  }) : _caregiverId = caregiverId,
-       createdAt = createdAt ?? startsAt,
+  }) : createdAt = createdAt ?? startsAt,
        updatedAt = updatedAt ?? createdAt ?? startsAt;
 
   final String id;

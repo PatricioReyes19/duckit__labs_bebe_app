@@ -10,12 +10,10 @@ part 'session_state.dart';
 
 class SessionBloc extends Bloc<SessionEvent, SessionState> {
   SessionBloc({
-    required ObserveSession observeSession,
+    required this._observeSession,
     required RefreshSession refreshSession,
-    required SignOutSession signOutSession,
-  }) : _observeSession = observeSession,
-       _refreshSession = refreshSession,
-       _signOutSession = signOutSession,
+    required this._signOutSession,
+  }) : _refreshSession = refreshSession,
        super(const SessionInitial()) {
     on<SessionStarted>(_onStarted);
     on<SessionResumed>(_onResumed);
