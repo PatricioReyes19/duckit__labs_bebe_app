@@ -243,6 +243,27 @@ void main() {
     expect(find.text('No pudimos iniciar'), findsOneWidget);
     expect(find.byKey(const Key('splash-clouds-background')), findsOneWidget);
   });
+
+  testWidgets('retry rápido no produce claves duplicadas ni errores de layout', (
+    tester,
+  ) async {
+    await _pumpSplashView(
+      tester,
+      theme: bebeTheme,
+      assetBundle: testAssetBundle,
+      resolver: _ThrowingResolver(),
+      onDestinationResolved: (_) {},
+    );
+
+    for (var retry = 0; retry < 2; retry++) {
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 80));
+      await tester.tap(find.text('Reintentar'));
+      await tester.pump(const Duration(milliseconds: 80));
+    }
+
+    expect(tester.takeException(), isNull);
+  });
 }
 
 Future<void> _pumpBrandContent(

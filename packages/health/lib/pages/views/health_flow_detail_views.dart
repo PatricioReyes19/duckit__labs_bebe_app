@@ -497,6 +497,21 @@ class _ConsultationWizardState extends State<_ConsultationWizard> {
               ),
             ],
           ),
+          if (step == 0 && occurredAt.isAfter(DateTime.now())) ...[
+            const SizedBox(height: 10),
+            HealthPrimaryButton(
+              label: 'Agendar y crear recordatorio',
+              outlined: true,
+              busy: busy,
+              onPressed: _scheduleQuickly,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Puedes agregar pediatra, motivo e indicaciones después de la cita.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
           if (step == 2 && !occurredAt.isAfter(DateTime.now())) ...[
             const SizedBox(height: 10),
             HealthPrimaryButton(
@@ -514,9 +529,13 @@ class _ConsultationWizardState extends State<_ConsultationWizard> {
   Widget _basicStep() => HealthSurface(
     child: Column(
       children: [
-        const HealthSectionHeading(
-          title: 'Datos básicos',
-          subtitle: 'Ingresa la información principal de la consulta.',
+        HealthSectionHeading(
+          title: widget.appointmentKind == HealthAppointmentKind.wellChildControl
+              ? 'Agendar control'
+              : 'Agendar consulta',
+          subtitle:
+              'Fecha y hora son suficientes para crear el recordatorio. '
+              'Los demás datos son opcionales.',
         ),
         const SizedBox(height: 18),
         _DateTimeField(
@@ -527,7 +546,7 @@ class _ConsultationWizardState extends State<_ConsultationWizard> {
         TextFormField(
           controller: pediatrician,
           decoration: const InputDecoration(
-            labelText: 'Pediatra',
+            labelText: 'Pediatra (opcional)',
             prefixIcon: Icon(Icons.person_outline_rounded),
           ),
         ),
@@ -535,10 +554,9 @@ class _ConsultationWizardState extends State<_ConsultationWizard> {
         TextFormField(
           controller: reason,
           decoration: const InputDecoration(
-            labelText: 'Motivo de consulta',
+            labelText: 'Motivo o nota (opcional)',
             prefixIcon: Icon(Icons.medical_services_outlined),
           ),
-          validator: _required,
         ),
       ],
     ),
@@ -614,8 +632,19 @@ class _ConsultationWizardState extends State<_ConsultationWizard> {
   );
 
   void _continue() {
-    if (step == 0 && !(formKey.currentState?.validate() ?? false)) return;
     setState(() => step++);
+  }
+
+  Future<void> _scheduleQuickly() async {
+    if (!occurredAt.isAfter(DateTime.now())) {
+      BebeInAppSnackbar.show(
+        context,
+        message: 'Elige una fecha y hora futuras para agendar la cita.',
+        variant: BebeInAppSnackbarVariant.warning,
+      );
+      return;
+    }
+    await _save(false);
   }
 
   Future<void> _save(bool finishSummary) async {

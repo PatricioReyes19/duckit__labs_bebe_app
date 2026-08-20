@@ -90,6 +90,7 @@ class _SplashViewState extends State<SplashView> {
               ),
             ),
           SplashAuthEntryState() => SplashAuthEntry(
+              key: const ValueKey('splash-auth-entry'),
               onLoginPressed: () {
                 context.read<SplashBloc>().add(
                       const SplashEvent.loginRequested(),
@@ -107,6 +108,7 @@ class _SplashViewState extends State<SplashView> {
             :final canRetry,
           ) =>
             SplashErrorView(
+              key: ValueKey('splash-error-$message-$canRetry'),
               message: message,
               canRetry: canRetry,
               onRetryPressed: () {

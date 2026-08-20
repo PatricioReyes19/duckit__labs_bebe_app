@@ -23,6 +23,7 @@ void main() {
   late _RegisterRepository registerRepository;
   late HealthFlowController controller;
   late BebeTheme bebeTheme;
+  late List<HealthEventEntity> scheduledAppointmentReminders;
 
   setUpAll(() {
     sqfliteFfiInit();
@@ -168,6 +169,7 @@ void main() {
       databaseFactory: databaseFactoryFfi,
       databasePath: inMemoryDatabasePath,
     );
+    scheduledAppointmentReminders = [];
     final syncService = RegisterEventSyncService(
       syncLocalRepository,
       const _OfflineRemoteDataSource(),
@@ -180,6 +182,9 @@ void main() {
       deleteRegisterEvent: DeleteRegisterEvent(registerRepository),
       healthRepository: healthRepository,
       registerSyncService: syncService,
+      scheduleAppointmentReminder: (event) async {
+        scheduledAppointmentReminders.add(event);
+      },
     );
     await controller.load();
   });
@@ -631,6 +636,32 @@ void main() {
     expect(saved.phone, '+56 9 4444 0000');
     expect(saved.consultationCount, 0);
   });
+
+  test(
+    'una cita futura programa el recordatorio sin esperar la sincronización',
+    () async {
+      final future = DateTime.now().add(const Duration(days: 3));
+
+      await controller.saveConsultation(
+        occurredAt: future,
+        pediatrician: '',
+        reason: '',
+        summary: '',
+        treatment: '',
+        followUp: '',
+        vigilance: '',
+        appointmentKind: HealthAppointmentKind.consultation,
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      expect(scheduledAppointmentReminders, hasLength(1));
+      expect(scheduledAppointmentReminders.single.title, 'Consulta pediátrica');
+      expect(
+        scheduledAppointmentReminders.single.status,
+        HealthEventStatus.scheduled,
+      );
+    },
+  );
 }
 
 void _ignoreAction(String _) {}
@@ -662,6 +693,7 @@ class _HealthRepository extends Fake implements HealthRepository {
 
   final HealthOverviewEntity overview;
   Future<HealthOverviewEntity>? nextOverview;
+  var _sequence = 0;
 
   @override
   Stream<void> get changes => const Stream.empty();
@@ -670,12 +702,39 @@ class _HealthRepository extends Fake implements HealthRepository {
   Future<HealthOverviewEntity> getOverview(String babyId) async {
     final pending = nextOverview;
     nextOverview = null;
-    return pending == null ? overview : pending;
+    return pending ?? overview;
   }
 
   @override
   Future<HealthEventEntity?> getEvent(String id) async =>
       overview.events.where((event) => event.id == id).firstOrNull;
+
+  @override
+  Future<HealthEventEntity> createEvent(HealthEventDraft draft) async {
+    final now = DateTime.now();
+    final saved = HealthEventEntity(
+      id: 'health-saved-${++_sequence}',
+      babyId: draft.babyId,
+      type: draft.type,
+      title: draft.title,
+      description: draft.description,
+      startsAt: draft.startsAt,
+      status: draft.status,
+      appointmentKind: draft.appointmentKind,
+      reason: draft.reason,
+      timezone: draft.timezone,
+      attendedAt: draft.attendedAt,
+      completedAt: draft.completedAt,
+      professionalName: draft.professionalName,
+      clinicalSummary: draft.clinicalSummary,
+      professionalAssessment: draft.professionalAssessment,
+      indications: draft.indications,
+      createdAt: now,
+      updatedAt: now,
+    );
+    overview.events.add(saved);
+    return saved;
+  }
 
   @override
   Future<HealthEventEntity?> updateEvent(

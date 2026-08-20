@@ -102,6 +102,7 @@ Future<void> openNotificationSafely(AppNotification notification) async {
 }
 
 Future<void> _closeAccountStorageAndOpenLogin() async {
+  getIt<AuthenticatedStartupCoordinator>().markSessionClosed();
   try {
     await getIt<BebeDatabase>().close();
   } on Object {

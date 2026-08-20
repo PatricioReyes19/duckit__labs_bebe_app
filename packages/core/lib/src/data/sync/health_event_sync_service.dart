@@ -3,15 +3,15 @@ import 'dart:async';
 import '../datasources/remote/health_event_remote_data_source.dart';
 import '../repositories/sqlite_health_repository.dart';
 import 'register_event_sync_service.dart';
+import 'remote_sync_cursor.dart';
 
 class HealthEventSyncService {
   HealthEventSyncService(
     this._local,
     this._remote, {
-    ParentSyncBarrier? parentSyncBarrier,
+    this._parentSyncBarrier,
     DateTime Function()? clock,
-  }) : _parentSyncBarrier = parentSyncBarrier,
-       _clock = clock ?? DateTime.now;
+  }) : _clock = clock ?? DateTime.now;
 
   final SqliteHealthRepository _local;
   final HealthEventRemoteDataSource _remote;
@@ -21,6 +21,7 @@ class HealthEventSyncService {
   RegisterSyncState _state = const RegisterSyncState.idle();
   Future<RegisterSyncState>? _running;
   bool _rerunRequested = false;
+  static const pullPageSize = 200;
 
   RegisterSyncState get state => _state;
   Stream<RegisterSyncState> get states => _states.stream;
@@ -78,8 +79,13 @@ class HealthEventSyncService {
     );
     var failedCount = 0;
     Object? lastError;
-    var newest = await _local.readSyncCursor();
+    final storedTimestamp = await _local.readSyncCursor();
+    final storedId = await _local.readSyncCursorId();
+    var newest = storedTimestamp == null
+        ? null
+        : RemoteSyncCursor(updatedAt: storedTimestamp, id: storedId ?? '');
     var pullCompleted = false;
+    RemoteSyncCursor? completedPullCursor;
     while (pendingCount > 0 && failedCount == 0) {
       final pending = await _local.listPending();
       if (pending.isEmpty) break;
@@ -89,7 +95,10 @@ class HealthEventSyncService {
           final remote = await _remote.push(event);
           await _local.markSynced(event);
           await _local.mergeRemote(remote);
-          newest = _newest(newest, remote.updatedAt);
+          newest = _newest(
+            newest,
+            RemoteSyncCursor(updatedAt: remote.updatedAt, id: remote.id),
+          );
         } on Object catch (error) {
           failedCount += 1;
           lastError = error;
@@ -99,19 +108,52 @@ class HealthEventSyncService {
       pendingCount = await _local.countPending();
     }
     try {
-      final pulled = await _remote.pull(
-        updatedAfter: await _local.readSyncCursor(),
-      );
-      for (final event in pulled) {
-        await _local.mergeRemote(event);
-        newest = _newest(newest, event.updatedAt);
+      final pagedRemote = _remote;
+      if (pagedRemote is PagedHealthEventRemoteDataSource &&
+          (storedTimestamp == null || storedId != null)) {
+        var cursor = storedTimestamp == null
+            ? null
+            : RemoteSyncCursor(updatedAt: storedTimestamp, id: storedId!);
+        while (true) {
+          final page = await pagedRemote.pullPage(
+            after: cursor,
+            limit: pullPageSize,
+          );
+          if (page.isEmpty) break;
+          for (final event in page) {
+            await _local.mergeRemote(event);
+            cursor = RemoteSyncCursor(updatedAt: event.updatedAt, id: event.id);
+            newest = _newest(newest, cursor);
+          }
+          if (page.length < pullPageSize) break;
+        }
+        completedPullCursor = cursor;
+      } else {
+        // Existing clients have only a timestamp cursor. Preserve their
+        // inclusive pull once; after a successful sync the ID cursor enables
+        // keyset paging on future runs.
+        final pulled = await _remote.pull(updatedAfter: storedTimestamp);
+        for (final event in pulled) {
+          await _local.mergeRemote(event);
+          newest = _newest(
+            newest,
+            RemoteSyncCursor(updatedAt: event.updatedAt, id: event.id),
+          );
+        }
       }
       pullCompleted = true;
     } on Object catch (error) {
       failedCount += 1;
       lastError = error;
     }
-    if (pullCompleted && newest != null) await _local.writeSyncCursor(newest);
+    if (pullCompleted) {
+      final cursor = completedPullCursor;
+      if (cursor != null) {
+        await _local.writeSyncCursor(cursor.updatedAt, id: cursor.id);
+      } else if (newest != null) {
+        await _local.writeSyncCursor(newest.updatedAt, id: newest.id);
+      }
+    }
     pendingCount = await _local.countPending();
     if (failedCount == 0 && pendingCount > 0) {
       _rerunRequested = true;
@@ -149,6 +191,18 @@ class HealthEventSyncService {
 
   Future<void> close() => _states.close();
 
-  static DateTime _newest(DateTime? current, DateTime candidate) =>
-      current == null || candidate.isAfter(current) ? candidate : current;
+  static RemoteSyncCursor _newest(
+    RemoteSyncCursor? current,
+    RemoteSyncCursor candidate,
+  ) {
+    if (current == null) return candidate;
+    final timestampComparison = candidate.updatedAt.compareTo(
+      current.updatedAt,
+    );
+    if (timestampComparison > 0 ||
+        (timestampComparison == 0 && candidate.id.compareTo(current.id) > 0)) {
+      return candidate;
+    }
+    return current;
+  }
 }

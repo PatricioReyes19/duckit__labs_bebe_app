@@ -8,6 +8,20 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   sqfliteFfiInit();
 
+  test('UT-ACCOUNT-002: concurrent same-scope opens share one database', () async {
+    final database = BebeDatabase(
+      databaseFactory: databaseFactoryFfi,
+      databasePath: inMemoryDatabasePath,
+    );
+    addTearDown(database.close);
+
+    final opened = await Future.wait(
+      List.generate(5, (_) => database.database),
+    );
+
+    expect(opened, everyElement(same(opened.first)));
+  });
+
   test('IT-ACCOUNT-001: switching A to B opens isolated databases', () async {
     final suffix = DateTime.now().microsecondsSinceEpoch;
     final scopeA = 'bdd001-user-a-$suffix';

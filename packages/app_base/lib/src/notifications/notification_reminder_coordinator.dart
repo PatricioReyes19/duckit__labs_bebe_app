@@ -62,6 +62,14 @@ class NotificationReminderCoordinator {
     await _replaceHealthReminders(accountId, event, _healthReminders(event));
   }
 
+  Future<void> cancelHealth(String eventId) async {
+    final accountId = await _accountId();
+    if (accountId == null) return;
+    await _notificationService.cancelReminders(
+      healthOwner(accountId, eventId),
+    );
+  }
+
   Future<void> _replaceHealthReminders(
     String accountId,
     HealthEventEntity event,
@@ -406,10 +414,14 @@ class NotificationReminderCoordinator {
         ),
       ];
     }
+    final appointmentLabel = event.appointmentKind ==
+            HealthAppointmentKind.consultation
+        ? 'Consulta pediátrica'
+        : 'Control de salud';
     return [
       NotificationReminder(
         id: 'health:${event.id}:24h',
-        title: 'Control de salud mañana',
+        title: '$appointmentLabel mañana',
         body: event.title,
         scheduledAt: startsAt.subtract(const Duration(hours: 24)),
         route: route,
@@ -417,7 +429,7 @@ class NotificationReminderCoordinator {
       ),
       NotificationReminder(
         id: 'health:${event.id}:2h',
-        title: 'Control de salud en 2 horas',
+        title: '$appointmentLabel en 2 horas',
         body: event.title,
         scheduledAt: startsAt.subtract(const Duration(hours: 2)),
         route: route,

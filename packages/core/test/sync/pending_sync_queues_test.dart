@@ -88,6 +88,41 @@ void main() {
     expect(await local.countPending(), 0);
   });
 
+  test('Health pulls remote history through bounded keyset pages', () async {
+    final database = _database();
+    await insertBabyFixture(database);
+    final local = SqliteHealthRepository(database, clock: () => now);
+    final remote = _PagedHealthRemote(
+      List.generate(
+        201,
+        (index) => HealthEventEntity(
+          id: 'remote-health-${index.toString().padLeft(3, '0')}',
+          babyId: 'baby-1',
+          type: HealthEventType.pediatricControl,
+          title: 'Control remoto $index',
+          description: '',
+          startsAt: now.add(Duration(days: index)),
+          status: HealthEventStatus.scheduled,
+          appointmentKind: HealthAppointmentKind.wellChildControl,
+          createdAt: now,
+          updatedAt: now.add(Duration(microseconds: index)),
+          syncStatus: HealthSyncStatus.synced,
+        ),
+      ),
+    );
+    final sync = HealthEventSyncService(local, remote, clock: () => now);
+    addTearDown(sync.close);
+    addTearDown(local.close);
+    addTearDown(database.close);
+
+    final result = await sync.synchronize();
+
+    expect(result.phase, RegisterSyncPhase.synced);
+    expect(remote.pageRequests, 2);
+    expect((await local.getOverview('baby-1')).events, hasLength(201));
+    expect(await local.readSyncCursorId(), 'remote-health-200');
+  });
+
   test(
     'every domain exposes its local pending count without a session',
     () async {
@@ -314,6 +349,48 @@ class _HealthRemote implements HealthEventRemoteDataSource {
   Future<HealthEventEntity> push(HealthEventEntity event) async {
     rows[event.id] = event;
     return event;
+  }
+}
+
+class _PagedHealthRemote implements PagedHealthEventRemoteDataSource {
+  _PagedHealthRemote(this.events);
+
+  final List<HealthEventEntity> events;
+  var pageRequests = 0;
+
+  @override
+  bool get isConfigured => true;
+
+  @override
+  Future<bool> isAuthenticated() async => true;
+
+  @override
+  Future<HealthEventEntity> push(HealthEventEntity event) async => event;
+
+  @override
+  Future<List<HealthEventEntity>> pull({DateTime? updatedAfter}) =>
+      throw StateError('Paged remote must not use the unbounded pull.');
+
+  @override
+  Future<List<HealthEventEntity>> pullPage({
+    RemoteSyncCursor? after,
+    int limit = 200,
+  }) async {
+    pageRequests += 1;
+    final sorted = [...events]
+      ..sort((first, second) {
+        final timestamp = first.updatedAt.compareTo(second.updatedAt);
+        return timestamp == 0 ? first.id.compareTo(second.id) : timestamp;
+      });
+    return sorted
+        .where(
+          (event) =>
+              after == null ||
+              event.updatedAt.isAfter(after.updatedAt) ||
+              (event.updatedAt == after.updatedAt && event.id.compareTo(after.id) > 0),
+        )
+        .take(limit)
+        .toList(growable: false);
   }
 }
 

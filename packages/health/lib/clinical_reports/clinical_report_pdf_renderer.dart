@@ -9,14 +9,20 @@ import 'clinical_photo_loader_stub.dart'
 class ClinicalReportPdfRenderer {
   const ClinicalReportPdfRenderer({this.loadAsset});
 
+  /// PDFs are built in memory and shared as bytes, so retaining every camera
+  /// original can exhaust a mid-range device. This cap bounds that peak while
+  /// preserving a representative set of the selected evidence.
+  static const maxEmbeddedPhotos = 8;
+  static const maxPhotoBytes = 5 * 1024 * 1024;
+
   final Future<ByteData> Function(String key)? loadAsset;
 
   Future<Uint8List> render(ClinicalReportData data) async {
     final fonts = await _loadFonts();
     final photos = <Uint8List>[];
-    for (final path in data.photoPaths) {
+    for (final path in data.photoPaths.take(maxEmbeddedPhotos)) {
       final bytes = await loadClinicalPhoto(path);
-      if (bytes != null) photos.add(bytes);
+      if (bytes != null && bytes.length <= maxPhotoBytes) photos.add(bytes);
     }
     final document = pw.Document(
       title: '${_typeLabel(data.request.type)} - ${data.babyName}',

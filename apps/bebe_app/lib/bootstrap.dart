@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:app_base/app_base.dart';
 import 'package:core/core.dart';
-import 'package:design_system/design_system.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -21,10 +20,9 @@ Future<void> bootstrap() async {
     () async {
       WidgetsFlutterBinding.ensureInitialized();
 
-      // Entrega el primer frame de Flutter inmediatamente. De esta forma el
-      // splash nativo no permanece visible durante Firebase, DI y servicios.
-      runApp(const _BootstrapSplashHandoff());
-      await WidgetsBinding.instance.endOfFrame;
+      // El splash nativo se mantiene hasta que la app esté lista para montar
+      // el router. Así se evita un árbol Flutter de transición entre el
+      // splash nativo y la composición de nubes de `SplashView`.
 
       const environment = AppEnvironment.current;
       environment.ensureValid(platformFlavor: appFlavor);
@@ -65,7 +63,10 @@ Future<void> bootstrap() async {
       try {
         await setupDependencies();
 
-        PaintingBinding.instance.imageCache.maximumSizeBytes = 300 << 20;
+        // Mantener el caché dentro de un presupuesto razonable para equipos
+        // Android de gama media. Las imágenes se pueden recargar; terminar el
+        // proceso por presión de memoria es peor que un cache miss.
+        PaintingBinding.instance.imageCache.maximumSizeBytes = 96 << 20;
 
         final themeBloc = getIt<AppThemeBloc>();
         final sessionBloc = getIt<SessionBloc>()..add(const SessionStarted());
@@ -101,15 +102,14 @@ Future<void> bootstrap() async {
         final themeBloc =
             getIt.isRegistered<AppThemeBloc>() ? getIt<AppThemeBloc>() : null;
 
-        runApp(
-          themeBloc == null
-              ? const AppError()
-              : AppBuilder(
-                  themeBloc: themeBloc,
-                  preconditionView: const AppError(),
-                  app: const SizedBox.shrink(),
-                ),
-        );
+        final app = themeBloc == null
+            ? const AppError()
+            : AppBuilder(
+                themeBloc: themeBloc,
+                preconditionView: const AppError(),
+                app: const SizedBox.shrink(),
+              );
+        runApp(app);
       }
     },
     (error, stackTrace) {
@@ -119,89 +119,4 @@ Future<void> bootstrap() async {
       );
     },
   );
-}
-
-/// Puente visual liviano entre el splash nativo y el flujo de arranque real.
-/// No depende de servicios ni de GetIt, por lo que puede pintarse de inmediato.
-class _BootstrapSplashHandoff extends StatefulWidget {
-  const _BootstrapSplashHandoff();
-
-  @override
-  State<_BootstrapSplashHandoff> createState() =>
-      _BootstrapSplashHandoffState();
-}
-
-class _BootstrapSplashHandoffState extends State<_BootstrapSplashHandoff>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 900),
-  )..repeat(reverse: true);
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      themeMode: ThemeMode.system,
-      theme: ThemeData(
-        brightness: Brightness.light,
-        scaffoldBackgroundColor: const Color(0xFFFAFAFC),
-      ),
-      darkTheme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF0F2A2D),
-      ),
-      home: Scaffold(
-        body: Center(
-          child: AnimatedBuilder(
-            animation: _controller,
-            builder: (context, child) {
-              final progress = Curves.easeInOut.transform(_controller.value);
-              return Opacity(
-                opacity: .86 + (progress * .14),
-                child: Transform.scale(
-                  scale: .97 + (progress * .03),
-                  child: child,
-                ),
-              );
-            },
-            child: Builder(
-              builder: (context) {
-                final isDark = Theme.of(context).brightness == Brightness.dark;
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    BebeBrandMark(
-                      variant: isDark
-                          ? BebeBrandMarkVariant.darkColor
-                          : BebeBrandMarkVariant.light,
-                      size: 112,
-                      excludeFromSemantics: true,
-                    ),
-                    const SizedBox(height: 14),
-                    Text(
-                      AppEnvironment.current.appDisplayName,
-                      style:
-                          Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                color: isDark
-                                    ? const Color(0xFFF4FBFB)
-                                    : const Color(0xFF008C91),
-                                fontWeight: FontWeight.w800,
-                              ),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }

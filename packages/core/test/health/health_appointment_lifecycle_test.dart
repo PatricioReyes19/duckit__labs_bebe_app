@@ -219,4 +219,56 @@ CREATE TABLE health_events (
     expect(migrated.single['event_type'], 'consultation');
     expect(migrated.single['status'], 'completed');
   });
+
+  test('UT-HEALTH-APPT-006 v9 ignores corrupt JSON and keeps migrating', () async {
+    final raw = await databaseFactoryFfi.openDatabase(inMemoryDatabasePath);
+    addTearDown(raw.close);
+    await raw.execute('''
+CREATE TABLE register_events (
+  id TEXT PRIMARY KEY, baby_id TEXT NOT NULL, event_type TEXT NOT NULL,
+  occurred_at INTEGER NOT NULL, created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL, deleted_at INTEGER, caregiver_id TEXT,
+  notes TEXT, details_json TEXT NOT NULL, sync_status TEXT,
+  sync_error TEXT, schema_version INTEGER NOT NULL
+)
+''');
+    await raw.execute('''
+CREATE TABLE health_events (
+  id TEXT PRIMARY KEY, baby_id TEXT NOT NULL, event_type TEXT NOT NULL,
+  title TEXT NOT NULL, description TEXT NOT NULL, starts_at INTEGER NOT NULL,
+  caregiver_id TEXT, status TEXT NOT NULL, created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL, sync_status TEXT, sync_error TEXT
+)
+''');
+    const timestamp = 1787047200000;
+    await raw.insert('register_events', {
+      'id': 'corrupt',
+      'baby_id': 'baby',
+      'event_type': 'clinical_observation',
+      'occurred_at': timestamp,
+      'created_at': timestamp,
+      'updated_at': timestamp,
+      'details_json': '{not-json',
+      'schema_version': 2,
+    });
+    await raw.insert('register_events', {
+      'id': 'valid',
+      'baby_id': 'baby',
+      'event_type': 'clinical_observation',
+      'occurred_at': timestamp,
+      'created_at': timestamp,
+      'updated_at': timestamp,
+      'details_json': '{"observation_type":"medical_consultation"}',
+      'schema_version': 2,
+    });
+
+    await BebeDatabaseSchema.upgradeHealthAppointmentsV9(raw);
+    await BebeDatabaseSchema.upgradeHealthAppointmentsV9(raw);
+
+    final migrated = await raw.query('health_events');
+    expect(migrated, hasLength(1));
+    expect(migrated.single['id'], 'valid');
+    expect(migrated.single['title'], 'Consulta pediátrica');
+    expect(migrated.single['appointment_json'], contains('"timezone":"UTC"'));
+  });
 }

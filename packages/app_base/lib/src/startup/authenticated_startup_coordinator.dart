@@ -16,6 +16,15 @@ typedef RunInitialDataSync = Future<InitialDataSyncState> Function({
   InitialDataSyncContextBarrier? beforeDomainSync,
 });
 
+enum AuthenticatedStartupStatus {
+  idle,
+  openingStorage,
+  synchronizing,
+  resolvingContext,
+  ready,
+  failure,
+}
+
 class AuthenticatedStartupFailure implements Exception {
   const AuthenticatedStartupFailure(this.message);
 
@@ -58,6 +67,13 @@ class AuthenticatedStartupCoordinator {
   final Map<String, Future<EntryResolution>> _inFlight = {};
   Future<void> _tail = Future<void>.value();
   final Map<String, Future<void>> _backgroundHydrations = {};
+  final _statusController = StreamController<AuthenticatedStartupStatus>.broadcast();
+  AuthenticatedStartupStatus _status = AuthenticatedStartupStatus.idle;
+
+  AuthenticatedStartupStatus get status => _status;
+  Stream<AuthenticatedStartupStatus> get statuses => _statusController.stream;
+
+  void markSessionClosed() => _setStatus(AuthenticatedStartupStatus.idle);
 
   Future<EntryResolution> resolve({required AuthUser user}) {
     final existing = _inFlight[user.id];
@@ -90,6 +106,7 @@ class AuthenticatedStartupCoordinator {
         'result': 'authenticated',
       });
 
+      _setStatus(AuthenticatedStartupStatus.openingStorage);
       await _openAccountStorage();
       await _requireCurrentUser(user.id);
       _trace('account_storage_ready', {
@@ -98,10 +115,12 @@ class AuthenticatedStartupCoordinator {
       });
 
       EntryResolution? contextResolution;
+      _setStatus(AuthenticatedStartupStatus.synchronizing);
       final syncState = await _synchronizeInitialData(
         startRealtime: _startRealtime,
         onMilestone: (milestone) => _traceMilestone(milestone, stopwatch),
         beforeDomainSync: () async {
+          _setStatus(AuthenticatedStartupStatus.resolvingContext);
           await _requireCurrentUser(user.id);
           final authoritative = _readAuthoritativeFamilies();
           final families = authoritative == null
@@ -152,8 +171,10 @@ class AuthenticatedStartupCoordinator {
         'result': 'success',
         'destination': resolution.destination.name,
       });
+      _setStatus(AuthenticatedStartupStatus.ready);
       return resolution;
     } on Object catch (error) {
+      _setStatus(AuthenticatedStartupStatus.failure);
       _trace('entry_resolution_failed', {
         'durationMs': stopwatch.elapsedMilliseconds,
         'result': 'failure',
@@ -161,6 +182,12 @@ class AuthenticatedStartupCoordinator {
       });
       rethrow;
     }
+  }
+
+  void _setStatus(AuthenticatedStartupStatus status) {
+    if (_status == status) return;
+    _status = status;
+    _statusController.add(status);
   }
 
   void _scheduleBackgroundHydration(String userId) {

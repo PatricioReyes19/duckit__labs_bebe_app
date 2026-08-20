@@ -19,6 +19,7 @@ class SqliteHealthRepository implements HealthRepository {
        _clock = clock ?? DateTime.now;
 
   static const syncCursorKey = 'health_events.sync.cursor.v1';
+  static const syncCursorIdKey = 'health_events.sync.cursor_id.v1';
 
   final BebeDatabase _database;
   final HealthIdGenerator _idGenerator;
@@ -291,13 +292,36 @@ class SqliteHealthRepository implements HealthRepository {
     return DateTime.tryParse(rows.single['value']! as String)?.toUtc();
   }
 
-  Future<void> writeSyncCursor(DateTime value) async {
+  Future<String?> readSyncCursorId() async {
     final database = await _database.database;
-    await database.insert(
+    final rows = await database.query(
       BebeDatabaseSchema.syncMetadata,
-      {'key': syncCursorKey, 'value': value.toUtc().toIso8601String()},
-      conflictAlgorithm: sqlite.ConflictAlgorithm.replace,
+      columns: ['value'],
+      where: 'key = ?',
+      whereArgs: [syncCursorIdKey],
+      limit: 1,
     );
+    if (rows.isEmpty) return null;
+    final value = (rows.single['value']! as String).trim();
+    return value.isEmpty ? null : value;
+  }
+
+  Future<void> writeSyncCursor(DateTime value, {String? id}) async {
+    final database = await _database.database;
+    await database.transaction((transaction) async {
+      await transaction.insert(
+        BebeDatabaseSchema.syncMetadata,
+        {'key': syncCursorKey, 'value': value.toUtc().toIso8601String()},
+        conflictAlgorithm: sqlite.ConflictAlgorithm.replace,
+      );
+      if (id != null && id.isNotEmpty) {
+        await transaction.insert(
+          BebeDatabaseSchema.syncMetadata,
+          {'key': syncCursorIdKey, 'value': id},
+          conflictAlgorithm: sqlite.ConflictAlgorithm.replace,
+        );
+      }
+    });
   }
 
   static Future<HealthEventEntity?> _findById(

@@ -142,6 +142,12 @@ class _AgendaContent extends StatelessWidget {
     final todayEvents = overview.eventsFor(overview.selectedWeekDay);
     final dayRecords = overview.recordsFor(overview.selectedWeekDay);
     final upcomingEvents = overview.upcomingAfter(overview.selectedWeekDay);
+    final oneTimeUpcomingEvents = upcomingEvents
+        .where((event) => !event.isRecurring)
+        .toList(growable: false);
+    final recurringUpcomingEvents = upcomingEvents
+        .where((event) => event.isRecurring)
+        .toList(growable: false);
 
     return BebeAgendaTemplate(
       state: templateState,
@@ -242,14 +248,40 @@ class _AgendaContent extends StatelessWidget {
           ),
         ],
       ),
-      upcomingSection: _AgendaEventGroup(
-        title: 'Próximos días',
-        emptyMessage: 'No hay próximos eventos para la categoría seleccionada.',
-        events: upcomingEvents,
-        scrollable: true,
-        collapseRecurring: true,
-        onEventPressed: onEventPressed,
-      ),
+      upcomingSection: upcomingEvents.isEmpty
+          ? _AgendaEventGroup(
+              title: 'Próximos días',
+              emptyMessage:
+                  'No hay próximos eventos para la categoría seleccionada.',
+              events: const [],
+              onEventPressed: onEventPressed,
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (oneTimeUpcomingEvents.isNotEmpty)
+                  _AgendaEventGroup(
+                    title: 'Próximos días',
+                    emptyMessage: '',
+                    events: oneTimeUpcomingEvents,
+                    scrollable: true,
+                    onEventPressed: onEventPressed,
+                  ),
+                if (oneTimeUpcomingEvents.isNotEmpty &&
+                    recurringUpcomingEvents.isNotEmpty)
+                  SizedBox(height: spacing.spacing2xl),
+                if (recurringUpcomingEvents.isNotEmpty)
+                  _AgendaEventGroup(
+                    title: 'Pautas recurrentes',
+                    emptyMessage: '',
+                    events: recurringUpcomingEvents,
+                    scrollable: true,
+                    collapseRecurring: true,
+                    scrollKeyPrefix: 'agenda-recurring',
+                    onEventPressed: onEventPressed,
+                  ),
+              ],
+            ),
       reminderBanner: BebeAgendaReminderBanner(
         title: overview.remindersEnabled
             ? 'Recordatorios activos'
@@ -385,6 +417,7 @@ class _AgendaEventGroup extends StatelessWidget {
     required this.events,
     this.scrollable = false,
     this.collapseRecurring = false,
+    this.scrollKeyPrefix = 'agenda-upcoming',
     this.onEventPressed,
   });
 
@@ -393,6 +426,7 @@ class _AgendaEventGroup extends StatelessWidget {
   final List<AgendaEventVm> events;
   final bool scrollable;
   final bool collapseRecurring;
+  final String scrollKeyPrefix;
   final ValueChanged<String>? onEventPressed;
 
   static const _maximumVisibleItems = 5;
@@ -427,11 +461,11 @@ class _AgendaEventGroup extends StatelessWidget {
                   spacing.spacingM * (_maximumVisibleItems - 1);
 
               return SizedBox(
-                key: const ValueKey('agenda-upcoming-scroll-viewport'),
+                key: ValueKey('$scrollKeyPrefix-scroll-viewport'),
                 height: viewportHeight,
                 child: Scrollbar(
                   child: ListView.separated(
-                    key: const ValueKey('agenda-upcoming-scroll-list'),
+                    key: ValueKey('$scrollKeyPrefix-scroll-list'),
                     primary: false,
                     physics: const BouncingScrollPhysics(),
                     padding: EdgeInsets.only(right: spacing.spacingXs),
@@ -479,50 +513,57 @@ class _AgendaEventCard extends StatelessWidget {
         ? recurrenceLabel
         : '${_compactRecurrenceLabel(recurrenceLabel)} · '
               '${item.occurrenceCount}x';
-    return BebeAgendaEventCard(
-      time: BebeTimeBlock(
-        dateLabel: _date(event.startsAt),
-        timeLabel: _time(event.startsAt),
-        size: BebeTimeBlockSize.small,
+    return KeyedSubtree(
+      key: item.isRecurring
+          ? ValueKey(
+              'agenda-recurring-card-${event.sourceRegisterEventId!.trim()}',
+            )
+          : null,
+      child: BebeAgendaEventCard(
+        time: BebeTimeBlock(
+          dateLabel: _date(event.startsAt),
+          timeLabel: _time(event.startsAt),
+          size: BebeTimeBlockSize.small,
+        ),
+        icon: Icon(_eventIconData(event.category)),
+        title: event.title,
+        description: event.description,
+        variant: _eventVariant(event.category),
+        status: visibleRecurrenceLabel == null
+            ? null
+            : BebeStatusBadge(
+                label: visibleRecurrenceLabel,
+                variant: BebeStatusBadgeVariant.information,
+                icon: const Icon(Icons.repeat_rounded),
+                semanticLabel: [
+                  'Evento recurrente',
+                  recurrenceLabel,
+                  if (item.occurrenceCount > 1)
+                    '${item.occurrenceCount} ocurrencias agrupadas',
+                ].join('. '),
+              ),
+        caregiver: event.caregiver == null
+            ? null
+            : BebeCaregiverBadge(
+                label: event.caregiver!.role,
+                avatar: _CaregiverAvatar(initials: event.caregiver!.initials),
+                size: BebeCaregiverBadgeSize.small,
+                variant: event.caregiver!.role == 'Mamá'
+                    ? BebeCaregiverBadgeVariant.brand
+                    : BebeCaregiverBadgeVariant.accent,
+              ),
+        syncIndicator: event.syncStatus == AgendaSyncStatus.synced
+            ? null
+            : _SyncBadge(label: _agendaSyncLabel(event.syncStatus)),
+        semanticLabel: [
+          event.title,
+          event.description,
+          if (recurrenceLabel != null) 'Evento recurrente: $recurrenceLabel',
+          if (item.occurrenceCount > 1)
+            '${item.occurrenceCount} ocurrencias agrupadas',
+        ].join('. '),
+        onPressed: onPressed,
       ),
-      icon: Icon(_eventIconData(event.category)),
-      title: event.title,
-      description: event.description,
-      variant: _eventVariant(event.category),
-      status: visibleRecurrenceLabel == null
-          ? null
-          : BebeStatusBadge(
-              label: visibleRecurrenceLabel,
-              variant: BebeStatusBadgeVariant.information,
-              icon: const Icon(Icons.repeat_rounded),
-              semanticLabel: [
-                'Evento recurrente',
-                recurrenceLabel,
-                if (item.occurrenceCount > 1)
-                  '${item.occurrenceCount} ocurrencias agrupadas',
-              ].join('. '),
-            ),
-      caregiver: event.caregiver == null
-          ? null
-          : BebeCaregiverBadge(
-              label: event.caregiver!.role,
-              avatar: _CaregiverAvatar(initials: event.caregiver!.initials),
-              size: BebeCaregiverBadgeSize.small,
-              variant: event.caregiver!.role == 'Mamá'
-                  ? BebeCaregiverBadgeVariant.brand
-                  : BebeCaregiverBadgeVariant.accent,
-            ),
-      syncIndicator: event.syncStatus == AgendaSyncStatus.synced
-          ? null
-          : _SyncBadge(label: _agendaSyncLabel(event.syncStatus)),
-      semanticLabel: [
-        event.title,
-        event.description,
-        if (recurrenceLabel != null) 'Evento recurrente: $recurrenceLabel',
-        if (item.occurrenceCount > 1)
-          '${item.occurrenceCount} ocurrencias agrupadas',
-      ].join('. '),
-      onPressed: onPressed,
     );
   }
 }

@@ -1,6 +1,7 @@
 import '../../../domain/entities/health/health.dart';
 import '../../models/health_models.dart';
 import '../../network/supabase_rest_client.dart';
+import '../../sync/remote_sync_cursor.dart';
 
 abstract interface class HealthEventRemoteDataSource {
   bool get isConfigured;
@@ -12,8 +13,19 @@ abstract interface class HealthEventRemoteDataSource {
   Future<List<HealthEventEntity>> pull({DateTime? updatedAfter});
 }
 
-class SupabaseHealthEventRemoteDataSource
+/// Optional keyset pagination for health history. The base interface remains
+/// compatible with existing remotes while production Supabase clients avoid
+/// downloading an unbounded account history into memory.
+abstract interface class PagedHealthEventRemoteDataSource
     implements HealthEventRemoteDataSource {
+  Future<List<HealthEventEntity>> pullPage({
+    RemoteSyncCursor? after,
+    int limit = 200,
+  });
+}
+
+class SupabaseHealthEventRemoteDataSource
+    implements PagedHealthEventRemoteDataSource {
   const SupabaseHealthEventRemoteDataSource(this._client);
 
   static const tableName = 'health_events';
@@ -60,5 +72,29 @@ class SupabaseHealthEventRemoteDataSource
         .map(HealthEventModel.fromRemoteJson)
         .map((model) => model.toEntity())
         .toList(growable: false);
+  }
+
+  @override
+  Future<List<HealthEventEntity>> pullPage({
+    RemoteSyncCursor? after,
+    int limit = 200,
+  }) async {
+    final rows = await _client.select(
+      tableName,
+      filters: {if (after != null) 'or': _afterFilter(after)},
+      order: 'updated_at.asc,id.asc',
+      limit: limit,
+    );
+    return rows
+        .map(HealthEventModel.fromRemoteJson)
+        .map((model) => model.toEntity())
+        .toList(growable: false);
+  }
+
+  static String _afterFilter(RemoteSyncCursor cursor) {
+    final timestamp = cursor.updatedAt.toUtc().toIso8601String();
+    final id = cursor.id.replaceAll('\\', '\\\\').replaceAll('"', '\\"');
+    return '(updated_at.gt.$timestamp,'
+        'and(updated_at.eq.$timestamp,id.gt."$id"))';
   }
 }

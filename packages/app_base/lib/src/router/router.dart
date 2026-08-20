@@ -35,6 +35,10 @@ GoRouter createAppRouter({
   required NavigationSessionStore navigationSessionStore,
 }) {
   const startupRouteMapper = StartupRouteMapper();
+  final notificationReminders = NotificationReminderCoordinator(
+    notificationService: getIt<NotificationService>(),
+    getCurrentSession: getIt<GetCurrentSession>(),
+  );
   final healthFlowController = HealthFlowController(
     getFamilyOverview: getIt<GetFamilyOverview>(),
     getHealthOverview: getIt<GetHealthOverview>(),
@@ -45,10 +49,9 @@ GoRouter createAppRouter({
     registerSyncService: getIt<RegisterEventSyncService>(),
     healthSyncService: getIt<HealthEventSyncService>(),
     initialDataSyncCoordinator: getIt<InitialDataSyncCoordinator>(),
-  );
-  final notificationReminders = NotificationReminderCoordinator(
-    notificationService: getIt<NotificationService>(),
-    getCurrentSession: getIt<GetCurrentSession>(),
+    scheduleAppointmentReminder: (event) =>
+        _scheduleHealthReminderWithPermission(notificationReminders, event),
+    cancelAppointmentReminder: notificationReminders.cancelHealth,
   );
 
   return GoRouter(
@@ -689,6 +692,15 @@ Future<void> _scheduleAgendaReminderWithPermission(
         ? () => unawaited(coordinator.openSettings())
         : () => context.push('/notifications'),
   );
+}
+
+Future<void> _scheduleHealthReminderWithPermission(
+  NotificationReminderCoordinator coordinator,
+  HealthEventEntity event,
+) async {
+  final permission = await coordinator.preparePermission();
+  if (!permission.canDeliver) return;
+  await coordinator.scheduleHealth(event);
 }
 
 enum _RegisterReminderStatus { none, scheduled, permissionRequired, failed }

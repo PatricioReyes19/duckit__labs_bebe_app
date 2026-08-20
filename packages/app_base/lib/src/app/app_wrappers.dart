@@ -8,6 +8,7 @@ import 'package:notifications/notifications.dart';
 import '../dependencies/dependencies.dart';
 import '../notifications/notification_reminder_coordinator.dart';
 import 'app_listeners.dart';
+import '../startup/authenticated_startup_coordinator.dart';
 
 /// Aplica preferencias que deben alcanzar a toda la aplicación.
 class AppWrappers extends StatefulWidget {
@@ -22,6 +23,7 @@ class AppWrappers extends StatefulWidget {
 class _AppWrappersState extends State<AppWrappers> {
   StreamSubscription<void>? _settingsSubscription;
   StreamSubscription<SyncUxState>? _syncUxSubscription;
+  StreamSubscription<AuthenticatedStartupStatus>? _startupStatusSubscription;
   final _syncAlertDeduplicator = SyncErrorAlertDeduplicator();
   bool _use24HourFormat = true;
   bool _reduceMotion = false;
@@ -29,6 +31,8 @@ class _AppWrappersState extends State<AppWrappers> {
   double _textScaleFactor = 1;
   String? _lastReminderReconciliationKey;
   bool _reconcilingReminders = false;
+  bool _startupReady = false;
+  SyncUxState? _lastSyncUxState;
   Timer? _persistentSyncAlertTimer;
   String? _persistentSyncErrorKey;
   bool _persistentSyncAlertScheduled = false;
@@ -38,22 +42,21 @@ class _AppWrappersState extends State<AppWrappers> {
     super.initState();
     final repository = getIt<AppSettingsRepository>();
     final syncCoordinator = getIt<InitialDataSyncCoordinator>();
+    final startupCoordinator = getIt<AuthenticatedStartupCoordinator>();
+    _startupReady = startupCoordinator.status == AuthenticatedStartupStatus.ready;
     _settingsSubscription = repository.changes.listen((_) => _loadSettings());
     _syncUxSubscription = syncCoordinator.syncUxStates.listen(_syncChanged);
+    _startupStatusSubscription = startupCoordinator.statuses.listen(
+      _startupStatusChanged,
+    );
     _syncChanged(syncCoordinator.syncUxState);
     unawaited(_loadSettings());
   }
 
   void _syncChanged(SyncUxState state) {
+    _lastSyncUxState = state;
     _updatePersistentSyncAlert(state);
-    final reminderKey = '${state.status.name}:'
-        '${state.lastSuccessfulSyncAt?.microsecondsSinceEpoch}:'
-        '${state.pendingOperations}';
-    if ((state.status == SyncUxStatus.synced ||
-            state.status == SyncUxStatus.pending) &&
-        reminderKey != _lastReminderReconciliationKey) {
-      unawaited(_reconcileReminders(reminderKey));
-    }
+    _reconcileRemindersIfReady(state);
     if (!_syncAlertDeduplicator.shouldAlert(state)) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -71,6 +74,24 @@ class _AppWrappersState extends State<AppWrappers> {
             unawaited(getIt<InitialDataSyncCoordinator>().retry()),
       );
     });
+  }
+
+  void _startupStatusChanged(AuthenticatedStartupStatus status) {
+    _startupReady = status == AuthenticatedStartupStatus.ready;
+    final state = _lastSyncUxState;
+    if (_startupReady && state != null) _reconcileRemindersIfReady(state);
+  }
+
+  void _reconcileRemindersIfReady(SyncUxState state) {
+    if (!_startupReady) return;
+    final reminderKey = '${state.status.name}:'
+        '${state.lastSuccessfulSyncAt?.microsecondsSinceEpoch}:'
+        '${state.pendingOperations}';
+    if ((state.status == SyncUxStatus.synced ||
+            state.status == SyncUxStatus.pending) &&
+        reminderKey != _lastReminderReconciliationKey) {
+      unawaited(_reconcileReminders(reminderKey));
+    }
   }
 
   void _updatePersistentSyncAlert(SyncUxState state) {
@@ -170,6 +191,7 @@ class _AppWrappersState extends State<AppWrappers> {
     _persistentSyncAlertTimer?.cancel();
     unawaited(_settingsSubscription?.cancel());
     unawaited(_syncUxSubscription?.cancel());
+    unawaited(_startupStatusSubscription?.cancel());
     super.dispose();
   }
 

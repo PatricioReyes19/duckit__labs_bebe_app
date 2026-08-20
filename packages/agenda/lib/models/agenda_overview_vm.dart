@@ -104,16 +104,23 @@ class AgendaOverviewVm {
 
   List<AgendaEventVm> upcomingAfter(DateTime day) {
     final endOfDay = DateTime(day.year, day.month, day.day, 23, 59, 59);
-    final result = events
+    final candidates = events
         .where((event) => event.startsAt.isAfter(endOfDay))
-        // Recurring treatments are represented by their series card in
-        // Programado. Showing every projected occurrence here duplicates the
-        // treatment and makes this list grow with its duration.
-        .where((event) => !event.isRecurring)
         .where(_matchesSelectedCategory)
         .toList();
-    result.sort((first, second) => first.startsAt.compareTo(second.startsAt));
-    return result;
+    candidates.sort(
+      (first, second) => first.startsAt.compareTo(second.startsAt),
+    );
+
+    // A recurrence is materialized as many agenda rows for notifications, but
+    // the future-facing UI represents one series by its next occurrence.
+    final representedSeries = <String>{};
+    return candidates.where((event) {
+      final seriesId = event.sourceRegisterEventId?.trim();
+      return seriesId == null ||
+          seriesId.isEmpty ||
+          representedSeries.add(seriesId);
+    }).toList(growable: false);
   }
 
   List<AgendaRegisterEventVm> recordsFor(DateTime day) => registerEvents

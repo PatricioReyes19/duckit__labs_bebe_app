@@ -33,6 +33,25 @@ void main() {
     },
   );
 
+  test(
+    'UT-STARTUP-INV-002: invited caregiver resolves an accessible baby',
+    () async {
+      final harness = _StartupHarness(
+        user: _userB,
+        authoritative: [
+          _family(id: 'shared-circle', babyIds: const ['baby-d']),
+        ],
+        cached: const [],
+      );
+
+      final result = await harness.coordinator.resolve(user: _userB);
+
+      expect(result.destination, EntryDestination.home);
+      expect(result.destination, isNot(EntryDestination.createBaby));
+      expect(harness.activatedBabyIds, ['baby-d']);
+    },
+  );
+
   test('UT-ENTRY-004: confirmed circle without babies creates baby', () async {
     final harness = _StartupHarness(
       authoritative: [_family(babyIds: const [])],

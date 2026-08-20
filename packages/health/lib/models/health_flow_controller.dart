@@ -220,6 +220,13 @@ class HealthPediatricianSummary {
   final RegisterSyncStatus? syncStatus;
 }
 
+/// Hooks owned by the application shell. Salud remains independent from the
+/// notifications package while a locally-persisted appointment can still
+/// request its native reminder immediately.
+typedef HealthAppointmentReminderScheduler =
+    Future<void> Function(HealthEventEntity event);
+typedef HealthAppointmentReminderCanceler = Future<void> Function(String id);
+
 /// Estado compartido por los recorridos secundarios de Salud.
 ///
 /// Los formularios guardan primero en la fuente local de registros. La cola de
@@ -227,26 +234,22 @@ class HealthPediatricianSummary {
 /// explícitamente el modo sin conexión.
 class HealthFlowController extends ChangeNotifier {
   HealthFlowController({
-    required GetFamilyOverview getFamilyOverview,
+    required this._getFamilyOverview,
     required GetHealthOverview getHealthOverview,
-    required GetRegisterEvents getRegisterEvents,
-    required SaveRegisterEvent saveRegisterEvent,
-    required DeleteRegisterEvent deleteRegisterEvent,
-    required HealthRepository healthRepository,
+    required this._getRegisterEvents,
+    required this._saveRegisterEvent,
+    required this._deleteRegisterEvent,
+    required this._healthRepository,
     required RegisterEventSyncService registerSyncService,
     HealthEventSyncService? healthSyncService,
-    InitialDataSyncCoordinator? initialDataSyncCoordinator,
+    this._initialDataSyncCoordinator,
+    this._scheduleAppointmentReminder,
+    this._cancelAppointmentReminder,
     Connectivity? connectivity,
     DateTime Function()? clock,
-  }) : _getFamilyOverview = getFamilyOverview,
-       _getHealthOverview = getHealthOverview,
-       _getRegisterEvents = getRegisterEvents,
-       _saveRegisterEvent = saveRegisterEvent,
-       _deleteRegisterEvent = deleteRegisterEvent,
-       _healthRepository = healthRepository,
+  }) : _getHealthOverview = getHealthOverview,
        _registerSyncService = registerSyncService,
        _healthSyncService = healthSyncService,
-       _initialDataSyncCoordinator = initialDataSyncCoordinator,
        _connectivity = connectivity ?? Connectivity(),
        _clock = clock ?? DateTime.now,
        _registerSyncState = registerSyncService.state,
@@ -302,6 +305,8 @@ class HealthFlowController extends ChangeNotifier {
   final RegisterEventSyncService _registerSyncService;
   final HealthEventSyncService? _healthSyncService;
   final InitialDataSyncCoordinator? _initialDataSyncCoordinator;
+  final HealthAppointmentReminderScheduler? _scheduleAppointmentReminder;
+  final HealthAppointmentReminderCanceler? _cancelAppointmentReminder;
   final Connectivity _connectivity;
   final DateTime Function() _clock;
 
@@ -783,6 +788,7 @@ class HealthFlowController extends ChangeNotifier {
     );
     _selectedHealthEventId = saved.id;
     _selectedRecordId = null;
+    _reconcileAppointmentReminder(saved);
     await _refreshAfterSave();
     return HealthFlowSaveResult(
       kind: HealthFlowSaveKind.consultation,
@@ -810,6 +816,7 @@ class HealthFlowController extends ChangeNotifier {
             : null,
       ),
     );
+    _reconcileAppointmentReminder(updated);
     await load(force: true);
     return updated;
   }
@@ -821,6 +828,7 @@ class HealthFlowController extends ChangeNotifier {
       event.id,
       const HealthEventPatch(status: HealthEventStatus.notAttended),
     );
+    _reconcileAppointmentReminder(updated);
     await load(force: true);
     return updated;
   }
@@ -851,6 +859,7 @@ class HealthFlowController extends ChangeNotifier {
         indications: indications?.trim(),
       ),
     );
+    _reconcileAppointmentReminder(updated);
     await load(force: true);
     return updated;
   }
@@ -862,9 +871,42 @@ class HealthFlowController extends ChangeNotifier {
       event.id,
       startsAt,
     );
+    if (replacement != null) {
+      _cancelReminder(event.id);
+      _reconcileAppointmentReminder(replacement);
+    }
     _selectedHealthEventId = replacement?.id;
     await load(force: true);
     return replacement;
+  }
+
+  void _reconcileAppointmentReminder(HealthEventEntity? event) {
+    if (event == null || !event.isAppointment) return;
+    if (event.status == HealthEventStatus.scheduled &&
+        event.startsAt.isAfter(_clock())) {
+      final schedule = _scheduleAppointmentReminder;
+      if (schedule != null) {
+        unawaited(_runReminderOperation(() => schedule(event)));
+      }
+      return;
+    }
+    _cancelReminder(event.id);
+  }
+
+  void _cancelReminder(String id) {
+    final cancel = _cancelAppointmentReminder;
+    if (cancel != null) unawaited(_runReminderOperation(() => cancel(id)));
+  }
+
+  Future<void> _runReminderOperation(Future<void> Function() operation) async {
+    try {
+      await operation();
+    } on Object catch (error, stackTrace) {
+      // The clinical event is already safe in SQLite. A rejected permission or
+      // a native scheduling failure must not undo the appointment itself.
+      debugPrint('Health appointment reminder update failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
   }
 
   Future<HealthFlowSaveResult> saveObservation({
@@ -940,10 +982,7 @@ class HealthFlowController extends ChangeNotifier {
   }
 
   void _updateConsolidatedSyncState() {
-    final states = [
-      _registerSyncState,
-      if (_healthSyncState case final state?) state,
-    ];
+    final states = [_registerSyncState, ?_healthSyncState];
     final phase = _highestPrioritySyncPhase(states);
     final phaseStates = states.where((state) => state.phase == phase);
     final lastSyncedValues = states
