@@ -97,6 +97,7 @@ class HomeOverviewVm extends Equatable {
             : 'Acompaña: ${upcoming!.caregiver!.role}',
         type: switch (upcoming?.type) {
           domain.HealthEventType.vaccine => HomeUpcomingHealthKind.vaccine,
+          domain.HealthEventType.immunization => HomeUpcomingHealthKind.vaccine,
           domain.HealthEventType.pediatricControl ||
           domain.HealthEventType.growthControl ||
           domain.HealthEventType.consultation =>

@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:sqflite/sqflite.dart';
 
 abstract final class BebeDatabaseSchema {
-  static const version = 9;
+  static const version = 11;
 
   static const registerEvents = 'register_events';
   static const families = 'families';
@@ -162,6 +162,9 @@ CREATE TABLE IF NOT EXISTS $babies (
   name TEXT NOT NULL,
   birth_date INTEGER NOT NULL,
   avatar_asset_path TEXT,
+  is_premature INTEGER NOT NULL DEFAULT 0,
+  lives_in_rapa_nui INTEGER NOT NULL DEFAULT 0,
+  has_rsv_risk INTEGER NOT NULL DEFAULT 0,
   FOREIGN KEY (family_id) REFERENCES $families(id) ON DELETE CASCADE
 )
 ''');
@@ -176,6 +179,7 @@ CREATE TABLE IF NOT EXISTS $familyMembers (
   role TEXT NOT NULL,
   access_description TEXT NOT NULL,
   status TEXT NOT NULL,
+  can_write INTEGER NOT NULL DEFAULT 0,
   appointment_kind TEXT,
   appointment_json TEXT NOT NULL DEFAULT '{}',
   contact TEXT,
@@ -359,6 +363,52 @@ WHERE appointment_kind IS NOT NULL
     }
   }
 
+  /// Persists the explicit write grant returned by `baby_caregivers` and care
+  /// invitation RPCs. Existing rows deliberately start read-only until their
+  /// next authenticated family pull confirms otherwise.
+  static Future<void> upgradeFamilyMemberPermissionsV10(
+    Database database,
+  ) async {
+    final existingTables = (await database.rawQuery(
+      "SELECT name FROM sqlite_master WHERE type = 'table'",
+    )).map((row) => row['name']).whereType<String>().toSet();
+    if (!existingTables.contains(familyMembers)) return;
+    final columns = (await database.rawQuery(
+      'PRAGMA table_info($familyMembers)',
+    )).map((row) => row['name']).whereType<String>().toSet();
+    if (!columns.contains('can_write')) {
+      await database.execute(
+        'ALTER TABLE $familyMembers '
+        'ADD COLUMN can_write INTEGER NOT NULL DEFAULT 0',
+      );
+    }
+  }
+
+  /// Adds explicit eligibility facts. They are opt-in flags: unknown data is
+  /// false, which prevents risk-only immunizations from being suggested.
+  static Future<void> upgradeBabyImmunizationEligibilityV11(
+    Database database,
+  ) async {
+    final tables = (await database.rawQuery(
+      "SELECT name FROM sqlite_master WHERE type = 'table'",
+    )).map((row) => row['name']).whereType<String>().toSet();
+    if (!tables.contains(babies)) return;
+    final columns = (await database.rawQuery(
+      'PRAGMA table_info($babies)',
+    )).map((row) => row['name']).whereType<String>().toSet();
+    for (final column in const [
+      'is_premature',
+      'lives_in_rapa_nui',
+      'has_rsv_risk',
+    ]) {
+      if (!columns.contains(column)) {
+        await database.execute(
+          'ALTER TABLE $babies ADD COLUMN $column INTEGER NOT NULL DEFAULT 0',
+        );
+      }
+    }
+  }
+
   /// Migrates legacy JSON payloads in Dart so this upgrade is compatible with
   /// every SQLite build supported by Android, including builds without JSON1.
   static Future<void> _migrateLegacyMedicalConsultations(
@@ -367,8 +417,14 @@ WHERE appointment_kind IS NOT NULL
     final legacyEvents = await database.query(
       registerEvents,
       columns: const [
-        'id', 'baby_id', 'occurred_at', 'created_at', 'updated_at',
-        'caregiver_id', 'notes', 'details_json',
+        'id',
+        'baby_id',
+        'occurred_at',
+        'created_at',
+        'updated_at',
+        'caregiver_id',
+        'notes',
+        'details_json',
       ],
       where: "event_type = ? AND deleted_at IS NULL",
       whereArgs: const ['clinical_observation'],
@@ -404,42 +460,37 @@ WHERE appointment_kind IS NOT NULL
         _nonEmptyString(details['vigilance']),
       ].whereType<String>().join(' ');
 
-      batch.insert(
-        healthEvents,
-        {
-          'id': event['id'],
-          'baby_id': event['baby_id'],
-          'event_type': 'consultation',
-          'title': title,
-          'description': description,
-          'starts_at': timestamp,
-          'caregiver_id': null,
-          'status': 'completed',
-          'appointment_kind': 'consultation',
-          'appointment_json': jsonEncode({
-            'reason': _stringOrEmpty(details['title']),
-            'timezone': 'UTC',
-            'attended_at': occurredAtIso,
-            'completed_at': occurredAtIso,
-            'professional_name': _stringOrEmpty(details['pediatrician']),
-            'clinical_summary': description,
-            'indications': indications,
-            'notes_before_visit': _stringOrEmpty(event['notes']),
-            'created_by': _stringOrEmpty(event['caregiver_id']),
-          }),
-          'created_at': event['created_at'],
-          'updated_at': event['updated_at'],
-          'sync_status': 'pending',
-          'sync_error': null,
-        },
-        conflictAlgorithm: ConflictAlgorithm.ignore,
-      );
+      batch.insert(healthEvents, {
+        'id': event['id'],
+        'baby_id': event['baby_id'],
+        'event_type': 'consultation',
+        'title': title,
+        'description': description,
+        'starts_at': timestamp,
+        'caregiver_id': null,
+        'status': 'completed',
+        'appointment_kind': 'consultation',
+        'appointment_json': jsonEncode({
+          'reason': _stringOrEmpty(details['title']),
+          'timezone': 'UTC',
+          'attended_at': occurredAtIso,
+          'completed_at': occurredAtIso,
+          'professional_name': _stringOrEmpty(details['pediatrician']),
+          'clinical_summary': description,
+          'indications': indications,
+          'notes_before_visit': _stringOrEmpty(event['notes']),
+          'created_by': _stringOrEmpty(event['caregiver_id']),
+        }),
+        'created_at': event['created_at'],
+        'updated_at': event['updated_at'],
+        'sync_status': 'pending',
+        'sync_error': null,
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
     }
     await batch.commit(noResult: true);
   }
 
-  static String _stringOrEmpty(Object? value) =>
-      value is String ? value : '';
+  static String _stringOrEmpty(Object? value) => value is String ? value : '';
 
   static String? _nonEmptyString(Object? value) {
     if (value is! String) return null;

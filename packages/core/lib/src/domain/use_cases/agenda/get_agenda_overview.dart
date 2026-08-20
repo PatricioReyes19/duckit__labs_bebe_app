@@ -1,12 +1,16 @@
 import 'dart:async';
 
 import '../../entities/agenda/agenda.dart';
+import '../../entities/family/family.dart';
 import '../../entities/health/health.dart';
+import '../../entities/immunization/immunization.dart';
 import '../../entities/register/register.dart';
+import '../../../data/immunization/bundled_immunization_catalog.dart';
 import '../../repositories/agenda/agenda_repository.dart';
 import '../../repositories/register_event/register_event.dart';
 import '../../repositories/settings/app_settings_repository.dart';
 import '../../repositories/health/health_repository.dart';
+import '../family/get_family_overview.dart';
 
 class GetAgendaOverview {
   const GetAgendaOverview(
@@ -14,12 +18,14 @@ class GetAgendaOverview {
     this._registerRepository, [
     this._settingsRepository,
     this._healthRepository,
+    this._getFamilyOverview,
   ]);
 
   final AgendaRepository _repository;
   final RegisterEventRepository _registerRepository;
   final AppSettingsRepository? _settingsRepository;
   final HealthRepository? _healthRepository;
+  final GetFamilyOverview? _getFamilyOverview;
 
   Stream<void> get changes {
     late StreamController<void> controller;
@@ -68,15 +74,17 @@ class GetAgendaOverview {
         ? results[1] as HealthOverviewEntity
         : const HealthOverviewEntity(events: [], measurements: []);
     final now = DateTime.now();
-    final projectedAppointments = health.events
+    final projectedHealthEvents = health.events
         .where((event) => _isVisibleInAgenda(event, now))
         .map(
           (event) => AgendaEventEntity(
             id: 'health:${event.id}',
             babyId: event.babyId,
-            category: AgendaCategory.controls,
+            category: event.isImmunization
+                ? AgendaCategory.vaccines
+                : AgendaCategory.controls,
             title: event.title,
-            description: _appointmentDescription(event),
+            description: _healthEventDescription(event),
             startsAt: event.startsAt,
             caregiver: event.caregiver,
             caregiverId: event.caregiverId,
@@ -90,13 +98,81 @@ class GetAgendaOverview {
             updatedAt: event.updatedAt,
           ),
         );
+    final projectedImmunizations = await _projectImmunizations(
+      babyId: babyId,
+      health: health,
+      now: now,
+    );
     return overview.copyWith(
-      events: [...overview.events, ...projectedAppointments],
+      events: [
+        ...overview.events,
+        ...projectedHealthEvents,
+        ...projectedImmunizations,
+      ],
       registerEvents: records,
     );
   }
 
-  static String _appointmentDescription(HealthEventEntity event) {
+  Future<List<AgendaEventEntity>> _projectImmunizations({
+    required String babyId,
+    required HealthOverviewEntity health,
+    required DateTime now,
+  }) async {
+    final getFamilyOverview = _getFamilyOverview;
+    if (getFamilyOverview == null) return const [];
+    final family = await getFamilyOverview();
+    BabyEntity? baby;
+    for (final candidate in family.babies) {
+      if (candidate.id == babyId) {
+        baby = candidate;
+        break;
+      }
+    }
+    if (baby == null) return const [];
+
+    final catalog = await BundledImmunizationCatalog.load();
+    final schedule = const ImmunizationSchedulePlanner().plan(
+      catalog: catalog,
+      context: ImmunizationEligibilityContext.fromBaby(baby),
+      records: health.events
+          .map((event) => event.immunizationRecord)
+          .whereType<ImmunizationRecord>(),
+      now: now,
+    );
+    return schedule
+        .where((planned) => !planned.isPending)
+        .map(
+          (planned) => AgendaEventEntity(
+            id: 'immunization:${planned.item.id}:${planned.scheduledAt.toUtc().toIso8601String()}',
+            babyId: babyId,
+            category: AgendaCategory.vaccines,
+            title: planned.item.displayName,
+            description:
+                '${planned.item.sourceBadge} · ${planned.item.doseLabel} · ${planned.item.sourceVersion}',
+            startsAt: planned.scheduledAt,
+            syncStatus: AgendaSyncStatus.synced,
+            createdAt: planned.scheduledAt,
+            updatedAt: planned.scheduledAt,
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  static String _healthEventDescription(HealthEventEntity event) {
+    if (event.isImmunization) {
+      final source = switch (event.immunizationSourceType) {
+        ImmunizationSourceType.pniProgrammatic => 'PNI',
+        ImmunizationSourceType.minsalCampaign => 'Campaña MINSAL',
+        ImmunizationSourceType.complementaryPrivate => 'Particular',
+        ImmunizationSourceType.physicianIndicated || null => 'Indicada',
+      };
+      final dose = event.immunizationDoseLabel?.trim();
+      return dose == null || dose.isEmpty ? source : '$source · $dose';
+    }
+    final appointmentKind =
+        event.appointmentKind == HealthAppointmentKind.wellChildControl
+        ? 'Control'
+        : 'Consulta';
     final state = switch (event.effectiveStatus(DateTime.now())) {
       HealthEventStatus.draft => 'Borrador',
       HealthEventStatus.scheduled => 'Programado',
@@ -109,11 +185,12 @@ class GetAgendaOverview {
       HealthEventStatus.rescheduled => 'Reprogramado',
     };
     final detail = event.description.trim();
-    return detail.isEmpty ? state : '$state · $detail';
+    final summary = detail.isEmpty ? state : '$state · $detail';
+    return '$appointmentKind · $summary';
   }
 
   static bool _isVisibleInAgenda(HealthEventEntity event, DateTime now) {
-    if (!event.isAppointment) return false;
+    if (!event.isAppointment && !event.isImmunization) return false;
     return switch (event.effectiveStatus(now)) {
       HealthEventStatus.scheduled || HealthEventStatus.due => true,
       _ => false,

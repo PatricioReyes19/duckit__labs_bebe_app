@@ -48,7 +48,12 @@ class OfflineFirstFamilyRepository implements FamilyRepository {
   Future<FamilyMemberEntity> sendInvitation(FamilyInvitationDraft draft) async {
     // The invitation RPC references the remote baby. Serialize both operations
     // so an invitation cannot race the first family upload.
-    await _syncService.synchronize();
+    final syncState = await _syncService.synchronize();
+    if (syncState.phase != RegisterSyncPhase.synced) {
+      throw StateError(
+        'No se pudo enviar la invitación. Conéctate a Internet e inténtalo nuevamente.',
+      );
+    }
     return _local.sendInvitation(draft);
   }
 
@@ -65,9 +70,8 @@ class OfflineFirstFamilyRepository implements FamilyRepository {
     JoinedCareCircleDraft draft,
   ) async {
     final localResult = await _local.joinCareCircle(draft);
-    final syncState = await _syncService.synchronize();
-    if (syncState.phase != RegisterSyncPhase.synced) return localResult;
-    return _local.getCurrent();
+    _scheduleSync();
+    return localResult;
   }
 
   void _scheduleSync() => scheduleBackgroundSync(

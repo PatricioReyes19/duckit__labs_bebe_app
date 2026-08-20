@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:core/core.dart';
@@ -25,73 +26,188 @@ class VaccinesSectionView extends StatefulWidget {
 }
 
 class _VaccinesSectionViewState extends State<VaccinesSectionView> {
-  int filter = 0;
+  _ImmunizationTab filter = _ImmunizationTab.next;
+
+  @override
+  void initState() {
+    super.initState();
+    // Eligibility facts can change from the Baby profile while this shared
+    // controller remains alive. Refresh on entry without replacing hydrated UI.
+    unawaited(widget.controller.load(force: true));
+  }
 
   @override
   Widget build(BuildContext context) {
     return HealthFlowBody(
       controller: widget.controller,
       builder: (context) {
-        final all = widget.controller.vaccines;
-        final visible = switch (filter) {
-          1 =>
-            all
-                .where((event) => event.status == HealthEventStatus.scheduled)
+        final now = DateTime.now();
+        final scheduled = widget.controller.immunizationSchedule;
+        final applied = widget.controller.vaccines
+            .where((event) => event.status == HealthEventStatus.completed)
+            .toList(growable: false);
+        final planned = switch (filter) {
+          _ImmunizationTab.next =>
+            scheduled
+                .where(
+                  (item) =>
+                      !item.isPending &&
+                      item.item.sourceType !=
+                          ImmunizationSourceType.minsalCampaign,
+                )
                 .toList(growable: false),
-          2 =>
-            all
-                .where((event) => event.status == HealthEventStatus.completed)
+          _ImmunizationTab.pending =>
+            scheduled
+                .where(
+                  (item) =>
+                      item.isPending &&
+                      item.item.sourceType !=
+                          ImmunizationSourceType.minsalCampaign,
+                )
                 .toList(growable: false),
-          _ => all,
+          _ImmunizationTab.campaigns =>
+            scheduled
+                .where(
+                  (item) =>
+                      item.item.sourceType ==
+                      ImmunizationSourceType.minsalCampaign,
+                )
+                .toList(growable: false),
+          _ => const <PlannedImmunization>[],
+        };
+        final otherRecords = applied
+            .where(
+              (event) =>
+                  event.immunizationCatalogItemId == null ||
+                  event.immunizationSourceType ==
+                      ImmunizationSourceType.complementaryPrivate ||
+                  event.immunizationSourceType ==
+                      ImmunizationSourceType.physicianIndicated,
+            )
+            .toList(growable: false);
+        final visibleCount = switch (filter) {
+          _ImmunizationTab.applied => applied.length,
+          _ImmunizationTab.other => otherRecords.length,
+          _ => planned.length,
         };
         return [
-          SegmentedButton<int>(
-            segments: const [
-              ButtonSegment(value: 0, label: Text('Todas')),
-              ButtonSegment(value: 1, label: Text('Próximas')),
-              ButtonSegment(value: 2, label: Text('Aplicadas')),
-            ],
-            selected: {filter},
-            showSelectedIcon: false,
-            onSelectionChanged: (value) => setState(() => filter = value.first),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: SegmentedButton<_ImmunizationTab>(
+              segments: const [
+                ButtonSegment(
+                  value: _ImmunizationTab.next,
+                  label: Text('Próximas'),
+                ),
+                ButtonSegment(
+                  value: _ImmunizationTab.pending,
+                  label: Text('Pendientes'),
+                ),
+                ButtonSegment(
+                  value: _ImmunizationTab.applied,
+                  label: Text('Aplicadas'),
+                ),
+                ButtonSegment(
+                  value: _ImmunizationTab.campaigns,
+                  label: Text('Campañas'),
+                ),
+                ButtonSegment(
+                  value: _ImmunizationTab.other,
+                  label: Text('Otras'),
+                ),
+              ],
+              selected: {filter},
+              showSelectedIcon: false,
+              onSelectionChanged: (value) =>
+                  setState(() => filter = value.first),
+            ),
           ),
           const SizedBox(height: 24),
           HealthSectionHeading(
-            title: filter == 2 ? 'Vacunas aplicadas' : 'Calendario de vacunas',
-            subtitle: '${visible.length} registros para el perfil activo',
+            title: switch (filter) {
+              _ImmunizationTab.next => 'Próximas inmunizaciones',
+              _ImmunizationTab.pending => 'Inmunizaciones pendientes',
+              _ImmunizationTab.applied => 'Inmunizaciones aplicadas',
+              _ImmunizationTab.campaigns => 'Campañas vigentes',
+              _ImmunizationTab.other => 'Registros adicionales',
+            },
+            subtitle: '$visibleCount registros para el perfil activo',
           ),
           const SizedBox(height: 14),
-          if (visible.isEmpty)
+          if (visibleCount == 0)
             const HealthEmptyState(
               title: 'No hay vacunas en esta categoría',
               description:
-                  'Las vacunas registradas o programadas aparecerán aquí.',
+                  'Las dosis del catálogo o los registros aplicados aparecerán aquí.',
               icon: Icons.vaccines_outlined,
             )
-          else
-            for (final event in visible) ...[
-              HealthActionRow(
-                icon: event.status == HealthEventStatus.completed
-                    ? Icons.verified_outlined
-                    : Icons.vaccines_outlined,
-                title: event.title,
-                subtitle:
-                    '${event.description} · ${healthDateLabel(event.startsAt)}',
-                trailing: _HealthEventStatus(
-                  event.effectiveStatus(DateTime.now()),
+          else ...[
+            if (filter == _ImmunizationTab.applied)
+              for (final event in applied) ...[
+                HealthActionRow(
+                  icon:
+                      event.immunizationItemType ==
+                          ImmunizationItemType.monoclonalAntibody
+                      ? Icons.health_and_safety_outlined
+                      : Icons.verified_outlined,
+                  title: event.title,
+                  subtitle:
+                      '${_sourceBadge(event.immunizationSourceType)} · ${event.immunizationSourceVersion ?? 'Registro manual'} · ${healthDateLabel(event.startsAt)}',
+                  trailing: _HealthEventStatus(event.effectiveStatus(now)),
+                  onTap: () {
+                    widget.controller.selectHealthEvent(event);
+                    widget.openFlow(HealthFlowAction.detail);
+                  },
                 ),
-                onTap: () {
-                  widget.controller.selectHealthEvent(event);
-                  widget.openFlow(HealthFlowAction.detail);
-                },
-              ),
-              const SizedBox(height: 12),
-            ],
+                const SizedBox(height: 12),
+              ],
+            if (filter == _ImmunizationTab.other)
+              for (final event in otherRecords) ...[
+                HealthActionRow(
+                  icon: Icons.medical_information_outlined,
+                  title: event.title,
+                  subtitle:
+                      '${_sourceBadge(event.immunizationSourceType)} · ${event.immunizationSourceVersion ?? 'Registro manual'} · ${healthDateLabel(event.startsAt)}',
+                  trailing: _HealthEventStatus(event.effectiveStatus(now)),
+                  onTap: () {
+                    widget.controller.selectHealthEvent(event);
+                    widget.openFlow(HealthFlowAction.detail);
+                  },
+                ),
+                const SizedBox(height: 12),
+              ],
+            if (filter != _ImmunizationTab.applied &&
+                filter != _ImmunizationTab.other)
+              for (final plannedItem in planned) ...[
+                HealthActionRow(
+                  icon:
+                      plannedItem.item.itemType ==
+                          ImmunizationItemType.monoclonalAntibody
+                      ? Icons.health_and_safety_outlined
+                      : Icons.vaccines_outlined,
+                  title: plannedItem.item.displayName,
+                  subtitle:
+                      '${plannedItem.item.sourceBadge} · ${plannedItem.item.sourceVersion} · ${plannedItem.item.doseLabel} · ${healthDateLabel(plannedItem.scheduledAt)}',
+                  trailing: Text(
+                    plannedItem.isPending ? 'Pendiente' : 'Programada',
+                    style: Theme.of(context).textTheme.labelMedium,
+                  ),
+                  onTap: () {
+                    widget.controller.selectPlannedImmunization(plannedItem);
+                    widget.openFlow(HealthFlowAction.register);
+                  },
+                ),
+                const SizedBox(height: 12),
+              ],
+          ],
           const SizedBox(height: 10),
           HealthPrimaryButton(
-            label: 'Registrar vacuna aplicada',
+            label: 'Registrar inmunización aplicada',
             icon: Icons.vaccines_outlined,
-            onPressed: () => widget.openFlow(HealthFlowAction.register),
+            onPressed: () {
+              widget.controller.clearSelectedPlannedImmunization();
+              widget.openFlow(HealthFlowAction.register);
+            },
           ),
           const SizedBox(height: 12),
           HealthPrimaryButton(
@@ -105,6 +221,15 @@ class _VaccinesSectionViewState extends State<VaccinesSectionView> {
     );
   }
 }
+
+enum _ImmunizationTab { next, pending, applied, campaigns, other }
+
+String _sourceBadge(ImmunizationSourceType? sourceType) => switch (sourceType) {
+  ImmunizationSourceType.pniProgrammatic => 'PNI',
+  ImmunizationSourceType.minsalCampaign => 'Campaña MINSAL',
+  ImmunizationSourceType.complementaryPrivate => 'Particular',
+  ImmunizationSourceType.physicianIndicated || null => 'Indicada',
+};
 
 class ControlsSectionView extends StatelessWidget {
   const ControlsSectionView({
@@ -605,6 +730,8 @@ class ClinicalHistorySectionView extends StatelessWidget {
               occurredAt: event.startsAt,
               icon: switch (event.type) {
                 HealthEventType.vaccine => Icons.vaccines_outlined,
+                HealthEventType.immunization =>
+                  Icons.health_and_safety_outlined,
                 HealthEventType.pediatricControl =>
                   Icons.medical_services_outlined,
                 HealthEventType.growthControl => Icons.monitor_weight_outlined,
@@ -694,9 +821,16 @@ class ReportsSectionView extends StatelessWidget {
         final totalFeedingMl = report.feedingVolumeMl;
         final totalSleepMinutes = report.sleepDurationMinutes;
         final clinicalNotesInRange = report.clinicalNotes;
-        final feedingTrend = report.dailyCounts(RegisterEventType.feeding);
-        final sleepTrend = report.dailyCounts(RegisterEventType.sleep);
-        final diaperTrend = report.dailyCounts(RegisterEventType.diaper);
+        final isHourlyTrend = report.range == HealthReportRange.day;
+        final feedingTrend = isHourlyTrend
+            ? report.hourlyCounts(RegisterEventType.feeding)
+            : report.dailyCounts(RegisterEventType.feeding);
+        final sleepTrend = isHourlyTrend
+            ? report.hourlyCounts(RegisterEventType.sleep)
+            : report.dailyCounts(RegisterEventType.sleep);
+        final diaperTrend = isHourlyTrend
+            ? report.hourlyCounts(RegisterEventType.diaper)
+            : report.dailyCounts(RegisterEventType.diaper);
         return [
           if (controller.offlineMode) ...[
             HealthSurface(
@@ -804,6 +938,7 @@ class ReportsSectionView extends StatelessWidget {
                     sleep: sleepTrend,
                     diaper: diaperTrend,
                     generatedAt: report.generatedAt,
+                    isHourly: isHourlyTrend,
                   ),
                   const SizedBox(height: 12),
                   Wrap(
@@ -1338,6 +1473,7 @@ class _ReportsTrendChart extends StatelessWidget {
     required this.sleep,
     required this.diaper,
     required this.generatedAt,
+    required this.isHourly,
   });
 
   final Color primary;
@@ -1347,6 +1483,7 @@ class _ReportsTrendChart extends StatelessWidget {
   final List<double> sleep;
   final List<double> diaper;
   final DateTime generatedAt;
+  final bool isHourly;
 
   @override
   Widget build(BuildContext context) {
@@ -1375,13 +1512,23 @@ class _ReportsTrendChart extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final yInterval = math.max(1, (maximum / 4).ceil()).toDouble();
     final maxY = math.max(yInterval * 4, maximum);
-    final xStep = seriesLength <= 7
+    final xStep = isHourly
+        ? 4
+        : seriesLength <= 7
         ? 1
         : math.max(1, ((seriesLength - 1) / 5).ceil());
     const names = ['Alimentación', 'Sueño', 'Pañales'];
 
-    String dayLabel(int index) {
+    String xLabel(int index) {
       if (index < 0 || index >= seriesLength) return '';
+      if (isHourly) {
+        final end = generatedAt.toLocal();
+        final currentHour = DateTime(end.year, end.month, end.day, end.hour);
+        final hour = currentHour.subtract(
+          Duration(hours: seriesLength - index - 1),
+        );
+        return '${hour.hour.toString().padLeft(2, '0')}:00';
+      }
       if (seriesLength == 1) return 'Hoy';
       final date = generatedAt.toLocal().subtract(
         Duration(days: seriesLength - index - 1),
@@ -1449,7 +1596,10 @@ class _ReportsTrendChart extends StatelessWidget {
               ),
             ),
             bottomTitles: AxisTitles(
-              axisNameWidget: Text('Día', style: textTheme.labelSmall),
+              axisNameWidget: Text(
+                isHourly ? 'Hora' : 'Día',
+                style: textTheme.labelSmall,
+              ),
               axisNameSize: 22,
               sideTitles: SideTitles(
                 showTitles: true,
@@ -1464,7 +1614,7 @@ class _ReportsTrendChart extends StatelessWidget {
                   return Padding(
                     padding: const EdgeInsets.only(top: 6),
                     child: Text(
-                      dayLabel(index),
+                      xLabel(index),
                       style: textTheme.labelSmall?.copyWith(
                         color: colors.onSurfaceVariant,
                       ),

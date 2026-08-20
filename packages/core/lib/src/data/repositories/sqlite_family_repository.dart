@@ -217,6 +217,9 @@ class SqliteFamilyRepository implements FamilyRepository {
       name: babyName,
       birthDate: draft.birthDate.toUtc(),
       avatarAssetPath: draft.avatarAssetPath,
+      isPremature: draft.isPremature,
+      livesInRapaNui: draft.livesInRapaNui,
+      hasRsvRisk: draft.hasRsvRisk,
     );
     final owner = FamilyMemberModel(
       id: ownerId,
@@ -225,6 +228,7 @@ class SqliteFamilyRepository implements FamilyRepository {
       role: 'Administrador/a',
       accessDescription: 'Acceso completo al círculo de cuidado',
       status: FamilyMemberStatus.active,
+      canWrite: true,
     );
 
     await database.transaction((transaction) async {
@@ -243,25 +247,21 @@ class SqliteFamilyRepository implements FamilyRepository {
         owner.toRow(),
         conflictAlgorithm: sqlite.ConflictAlgorithm.abort,
       );
-      await transaction.insert(
-        BebeDatabaseSchema.appSettings,
-        {
-          'id': 'local',
-          'theme_mode': 'system',
-          'high_contrast': 0,
-          'personal_reminders': 1,
-          'family_activity': 1,
-          'daily_summary': 0,
-          'reduce_motion': 0,
-          'wifi_only': 0,
-          'account_name': draft.ownerName.trim(),
-          'account_email': draft.ownerEmail.trim().toLowerCase(),
-          'language': 'Español',
-          'time_format': '24 horas',
-          'text_size': 'Predeterminado',
-        },
-        conflictAlgorithm: sqlite.ConflictAlgorithm.ignore,
-      );
+      await transaction.insert(BebeDatabaseSchema.appSettings, {
+        'id': 'local',
+        'theme_mode': 'system',
+        'high_contrast': 0,
+        'personal_reminders': 1,
+        'family_activity': 1,
+        'daily_summary': 0,
+        'reduce_motion': 0,
+        'wifi_only': 0,
+        'account_name': draft.ownerName.trim(),
+        'account_email': draft.ownerEmail.trim().toLowerCase(),
+        'language': 'Español',
+        'time_format': '24 horas',
+        'text_size': 'Predeterminado',
+      }, conflictAlgorithm: sqlite.ConflictAlgorithm.ignore);
       await _markSnapshotPending(transaction);
     });
     return _overview(database, family);
@@ -275,6 +275,9 @@ class SqliteFamilyRepository implements FamilyRepository {
       name: draft.name.trim(),
       birthDate: draft.birthDate.toUtc(),
       avatarAssetPath: draft.avatarAssetPath,
+      isPremature: draft.isPremature,
+      livesInRapaNui: draft.livesInRapaNui,
+      hasRsvRisk: draft.hasRsvRisk,
     );
     final database = await _database.database;
     await database.insert(
@@ -295,6 +298,10 @@ class SqliteFamilyRepository implements FamilyRepository {
         'birth_date': patch.birthDate!.toUtc().millisecondsSinceEpoch,
       if (patch.avatarAssetPath != null)
         'avatar_asset_path': patch.avatarAssetPath,
+      if (patch.isPremature != null) 'is_premature': patch.isPremature! ? 1 : 0,
+      if (patch.livesInRapaNui != null)
+        'lives_in_rapa_nui': patch.livesInRapaNui! ? 1 : 0,
+      if (patch.hasRsvRisk != null) 'has_rsv_risk': patch.hasRsvRisk! ? 1 : 0,
     };
     if (changes.isNotEmpty) {
       await database.update(
@@ -351,6 +358,7 @@ class SqliteFamilyRepository implements FamilyRepository {
       role: draft.role.trim(),
       accessDescription: draft.accessDescription.trim(),
       status: FamilyMemberStatus.pending,
+      canWrite: draft.canWrite,
       contact: contact,
       invitationCode: await _newInvitationCode(database),
       invitedAt: now,
@@ -472,9 +480,16 @@ class SqliteFamilyRepository implements FamilyRepository {
       id: draft.memberId,
       familyId: draft.familyId,
       name: draft.memberName.trim(),
-      role: draft.memberRole.trim(),
-      accessDescription: 'Puede acompañar y registrar cuidados',
+      role: _restrictiveText(
+        draft.memberRole,
+        fallback: 'Acceso pendiente de confirmación',
+      ),
+      accessDescription: _restrictiveText(
+        draft.memberAccessDescription,
+        fallback: 'Acceso de solo lectura',
+      ),
       status: FamilyMemberStatus.active,
+      canWrite: draft.canWrite,
       contact: draft.memberEmail.trim().toLowerCase(),
     );
     await database.transaction((transaction) async {
@@ -493,29 +508,30 @@ class SqliteFamilyRepository implements FamilyRepository {
         member.toRow(),
         conflictAlgorithm: sqlite.ConflictAlgorithm.replace,
       );
-      await transaction.insert(
-        BebeDatabaseSchema.appSettings,
-        {
-          'id': 'local',
-          'theme_mode': 'system',
-          'high_contrast': 0,
-          'personal_reminders': 1,
-          'family_activity': 1,
-          'daily_summary': 0,
-          'reduce_motion': 0,
-          'wifi_only': 0,
-          'account_name': draft.memberName.trim(),
-          'account_email': draft.memberEmail.trim().toLowerCase(),
-          'language': 'Español',
-          'time_format': '24 horas',
-          'text_size': 'Predeterminado',
-        },
-        conflictAlgorithm: sqlite.ConflictAlgorithm.ignore,
-      );
+      await transaction.insert(BebeDatabaseSchema.appSettings, {
+        'id': 'local',
+        'theme_mode': 'system',
+        'high_contrast': 0,
+        'personal_reminders': 1,
+        'family_activity': 1,
+        'daily_summary': 0,
+        'reduce_motion': 0,
+        'wifi_only': 0,
+        'account_name': draft.memberName.trim(),
+        'account_email': draft.memberEmail.trim().toLowerCase(),
+        'language': 'Español',
+        'time_format': '24 horas',
+        'text_size': 'Predeterminado',
+      }, conflictAlgorithm: sqlite.ConflictAlgorithm.ignore);
       await _writeSyncMetadata(
         transaction,
         _familySyncedAtKey,
         _clock().toUtc().toIso8601String(),
+      );
+      await _writeSyncMetadata(
+        transaction,
+        '$_remoteMembershipKeyPrefix${draft.familyId}',
+        'confirmed',
       );
     });
     return _overview(database, family);
@@ -573,7 +589,6 @@ class SqliteFamilyRepository implements FamilyRepository {
   /// Merges server aggregates without replacing the device-only avatar path or
   /// the active baby selection when that baby still exists.
   Future<void> mergeRemote(List<FamilySyncSnapshot> snapshots) async {
-    if (snapshots.isEmpty) return;
     final database = await _database.database;
     final pendingAtValue = await _readSyncMetadata(
       database,
@@ -582,7 +597,39 @@ class SqliteFamilyRepository implements FamilyRepository {
     final pendingAt = pendingAtValue == null
         ? null
         : DateTime.tryParse(pendingAtValue)?.toUtc();
+    final remoteFamilyIds = snapshots
+        .map((snapshot) => snapshot.overview.id)
+        .toSet();
+    final remoteMembershipRows = pendingAt == null
+        ? await database.query(
+            BebeDatabaseSchema.syncMetadata,
+            columns: const ['key'],
+            where: 'key LIKE ?',
+            whereArgs: ['$_remoteMembershipKeyPrefix%'],
+          )
+        : const <Map<String, Object?>>[];
+    final revokedFamilyIds = remoteMembershipRows
+        .map((row) => row['key'] as String?)
+        .whereType<String>()
+        .map((key) => key.substring(_remoteMembershipKeyPrefix.length))
+        .where((familyId) => !remoteFamilyIds.contains(familyId))
+        .toSet();
     await database.transaction((transaction) async {
+      // A successful Family pull is authoritative for care circles that were
+      // accepted remotely. If their family is absent, RLS no longer grants the
+      // account that membership, so invalidate the local context as well.
+      for (final familyId in revokedFamilyIds) {
+        await transaction.delete(
+          BebeDatabaseSchema.families,
+          where: 'id = ?',
+          whereArgs: [familyId],
+        );
+        await transaction.delete(
+          BebeDatabaseSchema.syncMetadata,
+          where: 'key = ?',
+          whereArgs: ['$_remoteMembershipKeyPrefix$familyId'],
+        );
+      }
       for (final snapshot in snapshots) {
         if (pendingAt != null && pendingAt.isAfter(snapshot.updatedAt)) {
           continue;
@@ -633,6 +680,9 @@ class SqliteFamilyRepository implements FamilyRepository {
             avatarAssetPath: existing.isEmpty
                 ? null
                 : existing.single['avatar_asset_path'] as String?,
+            isPremature: baby.isPremature,
+            livesInRapaNui: baby.livesInRapaNui,
+            hasRsvRisk: baby.hasRsvRisk,
           ).toRow();
           await transaction.insert(
             BebeDatabaseSchema.babies,
@@ -679,6 +729,9 @@ class SqliteFamilyRepository implements FamilyRepository {
         );
       }
     });
+    if (revokedFamilyIds.contains(_activeFamilyId)) {
+      _activeFamilyId = null;
+    }
   }
 
   static Future<FamilyOverviewEntity> _overview(
@@ -714,6 +767,11 @@ class SqliteFamilyRepository implements FamilyRepository {
 
   static String _defaultId(String prefix) =>
       '$prefix-${DateTime.now().microsecondsSinceEpoch}';
+
+  static String _restrictiveText(String value, {required String fallback}) {
+    final normalized = value.trim();
+    return normalized.isEmpty ? fallback : normalized;
+  }
 
   static Future<String> _newInvitationCode(sqlite.Database database) async {
     const alphabet = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -761,12 +819,12 @@ class SqliteFamilyRepository implements FamilyRepository {
     sqlite.DatabaseExecutor database,
     String key,
     String value,
-  ) => database.insert(
-    BebeDatabaseSchema.syncMetadata,
-    {'key': key, 'value': value},
-    conflictAlgorithm: sqlite.ConflictAlgorithm.replace,
-  );
+  ) => database.insert(BebeDatabaseSchema.syncMetadata, {
+    'key': key,
+    'value': value,
+  }, conflictAlgorithm: sqlite.ConflictAlgorithm.replace);
 
   static const _familyPendingAtKey = 'family.snapshot.pending_at';
   static const _familySyncedAtKey = 'family.snapshot.synced_at';
+  static const _remoteMembershipKeyPrefix = 'family.remote_membership.';
 }

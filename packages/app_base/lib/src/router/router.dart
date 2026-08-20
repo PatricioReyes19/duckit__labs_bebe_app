@@ -52,6 +52,13 @@ GoRouter createAppRouter({
     scheduleAppointmentReminder: (event) =>
         _scheduleHealthReminderWithPermission(notificationReminders, event),
     cancelAppointmentReminder: notificationReminders.cancelHealth,
+    reconcileImmunizationReminders: () async {
+      await notificationReminders.reconcileDomainReminders(
+        activeContextRepository: getIt<ActiveContextRepository>(),
+        getAgendaOverview: getIt<GetAgendaOverview>(),
+        getHealthOverview: getIt<GetHealthOverview>(),
+      );
+    },
   );
 
   return GoRouter(
@@ -151,6 +158,42 @@ GoRouter createAppRouter({
                         context.push(HomeDailyHistoryPage.fullPath),
                     openEvent: (context, eventId) {
                       const healthPrefix = 'health:';
+                      const immunizationPrefix = 'immunization:';
+                      if (eventId.startsWith(immunizationPrefix)) {
+                        final payload = eventId.substring(
+                          immunizationPrefix.length,
+                        );
+                        final separator = payload.indexOf(':');
+                        final catalogItemId = separator < 0
+                            ? payload
+                            : payload.substring(0, separator);
+                        PlannedImmunization? planned;
+                        for (final candidate
+                            in healthFlowController.immunizationSchedule) {
+                          if (candidate.item.id == catalogItemId) {
+                            planned = candidate;
+                            break;
+                          }
+                        }
+                        if (planned != null) {
+                          healthFlowController.selectPlannedImmunization(
+                            planned,
+                          );
+                          context.go(
+                            HealthSectionPage.flowLocation(
+                              HealthSectionKind.vaccines,
+                              HealthFlowAction.register,
+                            ),
+                          );
+                        } else {
+                          context.go(
+                            HealthSectionPage.locationFor(
+                              HealthSectionKind.vaccines,
+                            ),
+                          );
+                        }
+                        return;
+                      }
                       if (!eventId.startsWith(healthPrefix)) {
                         context.push(AgendaSubpage.eventDetailPath(eventId));
                         return;

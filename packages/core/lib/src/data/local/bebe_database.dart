@@ -68,48 +68,54 @@ class BebeDatabase {
     return operation;
   }
 
-  Future<sqlite.Database> _openDatabase(String path) =>
-      _databaseFactory.openDatabase(
-        path,
-        options: sqlite.OpenDatabaseOptions(
-          version: BebeDatabaseSchema.version,
-          onConfigure: (database) =>
-              database.execute('PRAGMA foreign_keys = ON'),
-          onCreate: (database, _) async {
-            await BebeDatabaseSchema.create(database);
-            if (_seedDemoData) await BebeSeedData.insert(database);
-          },
-          onUpgrade: (database, oldVersion, _) async {
-            if (oldVersion < 2) {
-              await BebeDatabaseSchema.createApplicationData(database);
-              if (_seedDemoData) await BebeSeedData.insert(database);
-            }
-            if (oldVersion < 3) {
-              await BebeDatabaseSchema.upgradeRegisterEventsForSync(database);
-            }
-            if (oldVersion < 4) {
-              await BebeDatabaseSchema.upgradeAgendaEventsForSync(database);
-            }
-            if (oldVersion < 5) {
-              await BebeDatabaseSchema.upgradeFamilyInvitations(database);
-            }
-            if (oldVersion < 6) {
-              await BebeDatabaseSchema.upgradeHealthAndSettingsForSync(
-                database,
-              );
-            }
-            if (oldVersion < 7) {
-              await BebeDatabaseSchema.upgradeCoreRelationsV7(database);
-            }
-            if (oldVersion < 8) {
-              await BebeDatabaseSchema.upgradePendingSyncIndexesV8(database);
-            }
-            if (oldVersion < 9) {
-              await BebeDatabaseSchema.upgradeHealthAppointmentsV9(database);
-            }
-          },
-        ),
-      );
+  Future<sqlite.Database> _openDatabase(
+    String path,
+  ) => _databaseFactory.openDatabase(
+    path,
+    options: sqlite.OpenDatabaseOptions(
+      version: BebeDatabaseSchema.version,
+      onConfigure: (database) => database.execute('PRAGMA foreign_keys = ON'),
+      onCreate: (database, _) async {
+        await BebeDatabaseSchema.create(database);
+        if (_seedDemoData) await BebeSeedData.insert(database);
+      },
+      onUpgrade: (database, oldVersion, _) async {
+        if (oldVersion < 2) {
+          await BebeDatabaseSchema.createApplicationData(database);
+          if (_seedDemoData) await BebeSeedData.insert(database);
+        }
+        if (oldVersion < 3) {
+          await BebeDatabaseSchema.upgradeRegisterEventsForSync(database);
+        }
+        if (oldVersion < 4) {
+          await BebeDatabaseSchema.upgradeAgendaEventsForSync(database);
+        }
+        if (oldVersion < 5) {
+          await BebeDatabaseSchema.upgradeFamilyInvitations(database);
+        }
+        if (oldVersion < 6) {
+          await BebeDatabaseSchema.upgradeHealthAndSettingsForSync(database);
+        }
+        if (oldVersion < 7) {
+          await BebeDatabaseSchema.upgradeCoreRelationsV7(database);
+        }
+        if (oldVersion < 8) {
+          await BebeDatabaseSchema.upgradePendingSyncIndexesV8(database);
+        }
+        if (oldVersion < 9) {
+          await BebeDatabaseSchema.upgradeHealthAppointmentsV9(database);
+        }
+        if (oldVersion < 10) {
+          await BebeDatabaseSchema.upgradeFamilyMemberPermissionsV10(database);
+        }
+        if (oldVersion < 11) {
+          await BebeDatabaseSchema.upgradeBabyImmunizationEligibilityV11(
+            database,
+          );
+        }
+      },
+    ),
+  );
 
   Future<void> close() async {
     final opening = _openingFuture;

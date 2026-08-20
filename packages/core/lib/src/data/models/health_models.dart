@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import '../../domain/entities/family/family.dart';
 import '../../domain/entities/health/health.dart';
+import '../../domain/entities/immunization/immunization.dart';
 
 class HealthEventModel {
   const HealthEventModel({
@@ -31,6 +32,13 @@ class HealthEventModel {
     this.attachments = const [],
     this.nextAppointmentId,
     this.createdBy,
+    this.immunizationCatalogItemId,
+    this.immunizationNameSnapshot,
+    this.immunizationItemType,
+    this.immunizationSourceType,
+    this.immunizationSourceVersion,
+    this.immunizationDoseLabel,
+    this.lotNumber,
     DateTime? createdAt,
     DateTime? updatedAt,
     this.syncStatus = HealthSyncStatus.pending,
@@ -68,6 +76,13 @@ class HealthEventModel {
   final List<String> attachments;
   final String? nextAppointmentId;
   final String? createdBy;
+  final String? immunizationCatalogItemId;
+  final String? immunizationNameSnapshot;
+  final ImmunizationItemType? immunizationItemType;
+  final ImmunizationSourceType? immunizationSourceType;
+  final String? immunizationSourceVersion;
+  final String? immunizationDoseLabel;
+  final String? lotNumber;
   final DateTime createdAt;
   final DateTime updatedAt;
   final HealthSyncStatus syncStatus;
@@ -103,6 +118,13 @@ class HealthEventModel {
         attachments: entity.attachments,
         nextAppointmentId: entity.nextAppointmentId,
         createdBy: entity.createdBy,
+        immunizationCatalogItemId: entity.immunizationCatalogItemId,
+        immunizationNameSnapshot: entity.immunizationNameSnapshot,
+        immunizationItemType: entity.immunizationItemType,
+        immunizationSourceType: entity.immunizationSourceType,
+        immunizationSourceVersion: entity.immunizationSourceVersion,
+        immunizationDoseLabel: entity.immunizationDoseLabel,
+        lotNumber: entity.lotNumber,
         createdAt: entity.createdAt,
         updatedAt: entity.updatedAt,
         syncStatus: entity.syncStatus,
@@ -142,6 +164,22 @@ class HealthEventModel {
       attachments: _stringList(appointment['attachments']),
       nextAppointmentId: appointment['next_appointment_id'] as String?,
       createdBy: appointment['created_by'] as String?,
+      immunizationCatalogItemId:
+          appointment['immunization_catalog_item_id'] as String?,
+      immunizationNameSnapshot:
+          appointment['immunization_name_snapshot'] as String?,
+      immunizationItemType: _nullableEnumByName(
+        ImmunizationItemType.values,
+        appointment['immunization_item_type'] as String?,
+      ),
+      immunizationSourceType: _nullableEnumByName(
+        ImmunizationSourceType.values,
+        appointment['immunization_source_type'] as String?,
+      ),
+      immunizationSourceVersion:
+          appointment['immunization_source_version'] as String?,
+      immunizationDoseLabel: appointment['immunization_dose_label'] as String?,
+      lotNumber: appointment['lot_number'] as String?,
       createdAt: _remoteDate(json, 'created_at'),
       updatedAt: _remoteDate(json, 'updated_at'),
       syncStatus: HealthSyncStatus.synced,
@@ -197,6 +235,22 @@ class HealthEventModel {
       attachments: _stringList(appointment['attachments']),
       nextAppointmentId: appointment['next_appointment_id'] as String?,
       createdBy: appointment['created_by'] as String?,
+      immunizationCatalogItemId:
+          appointment['immunization_catalog_item_id'] as String?,
+      immunizationNameSnapshot:
+          appointment['immunization_name_snapshot'] as String?,
+      immunizationItemType: _nullableEnumByName(
+        ImmunizationItemType.values,
+        appointment['immunization_item_type'] as String?,
+      ),
+      immunizationSourceType: _nullableEnumByName(
+        ImmunizationSourceType.values,
+        appointment['immunization_source_type'] as String?,
+      ),
+      immunizationSourceVersion:
+          appointment['immunization_source_version'] as String?,
+      immunizationDoseLabel: appointment['immunization_dose_label'] as String?,
+      lotNumber: appointment['lot_number'] as String?,
       createdAt: DateTime.fromMillisecondsSinceEpoch(
         (row['created_at'] as int?) ?? row['starts_at']! as int,
         isUtc: true,
@@ -274,6 +328,13 @@ class HealthEventModel {
     attachments: attachments,
     nextAppointmentId: nextAppointmentId,
     createdBy: createdBy,
+    immunizationCatalogItemId: immunizationCatalogItemId,
+    immunizationNameSnapshot: immunizationNameSnapshot,
+    immunizationItemType: immunizationItemType,
+    immunizationSourceType: immunizationSourceType,
+    immunizationSourceVersion: immunizationSourceVersion,
+    immunizationDoseLabel: immunizationDoseLabel,
+    lotNumber: lotNumber,
     createdAt: createdAt,
     updatedAt: updatedAt,
     syncStatus: syncStatus,
@@ -310,6 +371,19 @@ class HealthEventModel {
     if (attachments.isNotEmpty) 'attachments': attachments,
     if (nextAppointmentId != null) 'next_appointment_id': nextAppointmentId,
     if (createdBy != null) 'created_by': createdBy,
+    if (immunizationCatalogItemId != null)
+      'immunization_catalog_item_id': immunizationCatalogItemId,
+    if (immunizationNameSnapshot != null)
+      'immunization_name_snapshot': immunizationNameSnapshot,
+    if (immunizationItemType != null)
+      'immunization_item_type': immunizationItemType!.name,
+    if (immunizationSourceType != null)
+      'immunization_source_type': immunizationSourceType!.name,
+    if (immunizationSourceVersion != null)
+      'immunization_source_version': immunizationSourceVersion,
+    if (immunizationDoseLabel != null)
+      'immunization_dose_label': immunizationDoseLabel,
+    if (lotNumber != null) 'lot_number': lotNumber,
   };
 }
 

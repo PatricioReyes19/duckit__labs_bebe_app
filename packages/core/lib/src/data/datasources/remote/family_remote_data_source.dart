@@ -53,7 +53,8 @@ class SupabaseFamilyRemoteDataSource implements FamilyRemoteDataSource {
       ),
       _client.select(
         'babies',
-        columns: 'id,family_id,display_name,birth_date,updated_at',
+        columns:
+            'id,family_id,display_name,birth_date,is_premature,lives_in_rapa_nui,has_rsv_risk,updated_at',
         order: 'updated_at.asc',
       ),
       _client.select(
@@ -105,6 +106,9 @@ class SupabaseFamilyRemoteDataSource implements FamilyRemoteDataSource {
                 'birth_date',
                 entity: 'bebé ${baby['id']}',
               ),
+              isPremature: baby['is_premature'] == true,
+              livesInRapaNui: baby['lives_in_rapa_nui'] == true,
+              hasRsvRisk: baby['has_rsv_risk'] == true,
             ),
           )
           .toList(growable: false);
@@ -112,24 +116,39 @@ class SupabaseFamilyRemoteDataSource implements FamilyRemoteDataSource {
       // Old deployments may retain an empty compatibility family after its
       // baby is attached to the canonical local family id.
       if (babyIds.isEmpty) continue;
-      final seenUsers = <String>{};
-      final members = <FamilyMemberEntity>[];
+      final membershipsByUser = <String, List<Map<String, dynamic>>>{};
       for (final membership in memberships) {
         if (!babyIds.contains(membership['baby_id'])) continue;
-        final userId = membership['user_id']! as String;
-        if (!seenUsers.add(userId)) continue;
+        final userId = _requiredText(
+          membership,
+          'user_id',
+          entity: 'membresía',
+        );
+        membershipsByUser.putIfAbsent(userId, () => []).add(membership);
+      }
+      final members = <FamilyMemberEntity>[];
+      for (final entry in membershipsByUser.entries) {
+        final userId = entry.key;
+        final userMemberships = entry.value;
         final profile = profileById[userId];
-        final canWrite = membership['can_write'] as bool? ?? false;
+        // Memberships are per baby. The family summary must not let a write
+        // grant for one baby overstate access to any other baby in the circle.
+        final canWrite = userMemberships.every(
+          (membership) => membership['can_write'] == true,
+        );
         members.add(
           FamilyMemberEntity(
             id: 'member-$userId-$familyId',
             familyId: familyId,
             name: profile?['display_name'] as String? ?? 'Cuidador/a',
-            role: _roleLabel(membership['role'] as String?),
+            role: _mostRestrictiveRole(
+              userMemberships.map((membership) => membership['role']),
+            ),
             accessDescription: canWrite
                 ? 'Puede acompañar y registrar cuidados'
                 : 'Acceso de solo lectura',
             status: FamilyMemberStatus.active,
+            canWrite: canWrite,
             contact: profile?['email'] as String?,
           ),
         );
@@ -175,11 +194,17 @@ class SupabaseFamilyRemoteDataSource implements FamilyRemoteDataSource {
     await _client.rpc('revoke_care_invitation', parameters: {'p_code': code});
   }
 
-  static String _roleLabel(String? role) => switch (role) {
-    'owner' => 'Administrador/a',
-    'viewer' => 'Observador/a',
-    _ => 'Cuidador/a',
-  };
+  static String _mostRestrictiveRole(Iterable<Object?> roles) {
+    final normalized = roles.map((role) => role?.toString()).toSet();
+    if (normalized.contains('viewer')) return 'Observador/a';
+    if (normalized.any((role) => role != 'owner' && role != 'caregiver')) {
+      return 'Acceso pendiente de confirmación';
+    }
+    if (normalized.contains('caregiver')) return 'Cuidador/a';
+    return normalized.contains('owner')
+        ? 'Administrador/a'
+        : 'Acceso pendiente de confirmación';
+  }
 
   static String _requiredText(
     Map<String, dynamic> row,

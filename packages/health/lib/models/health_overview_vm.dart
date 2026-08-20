@@ -97,7 +97,7 @@ class HealthOverviewVm {
       HealthMeasurementType.height,
     );
     final vaccineEvents = scheduled
-        .where((event) => event.type == HealthEventType.vaccine)
+        .where((event) => event.isImmunization)
         .toList(growable: false);
     final nextVaccine = vaccineEvents.isEmpty ? null : vaccineEvents.first;
     return HealthOverviewVm(

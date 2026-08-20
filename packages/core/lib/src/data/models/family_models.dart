@@ -37,6 +37,9 @@ class BabyModel {
     required this.name,
     required this.birthDate,
     this.avatarAssetPath,
+    this.isPremature = false,
+    this.livesInRapaNui = false,
+    this.hasRsvRisk = false,
   });
 
   final String id;
@@ -44,6 +47,9 @@ class BabyModel {
   final String name;
   final DateTime birthDate;
   final String? avatarAssetPath;
+  final bool isPremature;
+  final bool livesInRapaNui;
+  final bool hasRsvRisk;
 
   factory BabyModel.fromEntity(BabyEntity entity) => BabyModel(
     id: entity.id,
@@ -51,6 +57,9 @@ class BabyModel {
     name: entity.name,
     birthDate: entity.birthDate,
     avatarAssetPath: entity.avatarAssetPath,
+    isPremature: entity.isPremature,
+    livesInRapaNui: entity.livesInRapaNui,
+    hasRsvRisk: entity.hasRsvRisk,
   );
 
   factory BabyModel.fromRow(Map<String, Object?> row) => BabyModel(
@@ -62,6 +71,9 @@ class BabyModel {
       isUtc: true,
     ),
     avatarAssetPath: row['avatar_asset_path'] as String?,
+    isPremature: (row['is_premature'] as int? ?? 0) != 0,
+    livesInRapaNui: (row['lives_in_rapa_nui'] as int? ?? 0) != 0,
+    hasRsvRisk: (row['has_rsv_risk'] as int? ?? 0) != 0,
   );
 
   Map<String, Object?> toRow() => {
@@ -70,6 +82,9 @@ class BabyModel {
     'name': name,
     'birth_date': birthDate.toUtc().millisecondsSinceEpoch,
     'avatar_asset_path': avatarAssetPath,
+    'is_premature': isPremature ? 1 : 0,
+    'lives_in_rapa_nui': livesInRapaNui ? 1 : 0,
+    'has_rsv_risk': hasRsvRisk ? 1 : 0,
   };
 
   BabyEntity toEntity() => BabyEntity(
@@ -78,6 +93,9 @@ class BabyModel {
     name: name,
     birthDate: birthDate,
     avatarAssetPath: avatarAssetPath,
+    isPremature: isPremature,
+    livesInRapaNui: livesInRapaNui,
+    hasRsvRisk: hasRsvRisk,
   );
 }
 
@@ -89,6 +107,7 @@ class FamilyMemberModel {
     required this.role,
     required this.accessDescription,
     required this.status,
+    this.canWrite = false,
     this.contact,
     this.invitationCode,
     this.invitedAt,
@@ -101,6 +120,7 @@ class FamilyMemberModel {
   final String role;
   final String accessDescription;
   final FamilyMemberStatus status;
+  final bool canWrite;
   final String? contact;
   final String? invitationCode;
   final DateTime? invitedAt;
@@ -114,6 +134,7 @@ class FamilyMemberModel {
         role: entity.role,
         accessDescription: entity.accessDescription,
         status: entity.status,
+        canWrite: entity.canWrite,
         contact: entity.contact,
         invitationCode: entity.invitationCode,
         invitedAt: entity.invitedAt,
@@ -132,6 +153,7 @@ class FamilyMemberModel {
           'pending' => FamilyMemberStatus.pending,
           final value => throw FormatException('Unknown member status: $value'),
         },
+        canWrite: row['can_write'] == 1 || row['can_write'] == true,
         contact: row['contact'] as String?,
         invitationCode: row['invitation_code'] as String?,
         invitedAt: _dateTimeFromEpoch(row['invited_at']),
@@ -145,6 +167,7 @@ class FamilyMemberModel {
     'role': role,
     'access_description': accessDescription,
     'status': status.name,
+    'can_write': canWrite ? 1 : 0,
     'contact': contact,
     'invitation_code': invitationCode,
     'invited_at': invitedAt?.toUtc().millisecondsSinceEpoch,
@@ -160,6 +183,7 @@ class FamilyMemberModel {
     role: role,
     accessDescription: accessDescription,
     status: status,
+    canWrite: canWrite,
     contact: contact,
     invitationCode: invitationCode,
     invitedAt: invitedAt,
@@ -187,6 +211,9 @@ class FamilySyncSnapshot {
           'id': baby.id,
           'display_name': baby.name,
           'birth_date': baby.birthDate.toUtc().toIso8601String(),
+          'is_premature': baby.isPremature,
+          'lives_in_rapa_nui': baby.livesInRapaNui,
+          'has_rsv_risk': baby.hasRsvRisk,
         },
     ],
   };

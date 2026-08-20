@@ -123,6 +123,17 @@ class _VaccinationFormState extends State<_VaccinationForm> {
   final notes = TextEditingController();
   DateTime occurredAt = DateTime.now();
   bool busy = false;
+  ImmunizationSourceType sourceType = ImmunizationSourceType.physicianIndicated;
+
+  @override
+  void initState() {
+    super.initState();
+    final planned = widget.controller.selectedPlannedImmunization;
+    if (planned == null) return;
+    vaccine.text = planned.item.displayName;
+    dose.text = planned.item.doseLabel;
+    sourceType = planned.item.sourceType;
+  }
 
   @override
   void dispose() {
@@ -137,14 +148,21 @@ class _VaccinationFormState extends State<_VaccinationForm> {
 
   @override
   Widget build(BuildContext context) {
+    final planned = widget.controller.selectedPlannedImmunization;
+    final isMonoclonal =
+        planned?.item.itemType == ImmunizationItemType.monoclonalAntibody;
     return Form(
       key: formKey,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
         children: [
-          const HealthSectionHeading(
-            title: 'Registrar aplicación',
-            subtitle: 'Completa los datos del comprobante de vacunación.',
+          HealthSectionHeading(
+            title: isMonoclonal
+                ? 'Registrar inmunización'
+                : 'Registrar aplicación',
+            subtitle: planned == null
+                ? 'Registra una dosis indicada por un profesional.'
+                : '${planned.item.sourceBadge} · ${planned.item.sourceVersion}',
           ),
           const SizedBox(height: 16),
           HealthSurface(
@@ -158,6 +176,29 @@ class _VaccinationFormState extends State<_VaccinationForm> {
                   ),
                   validator: _required,
                 ),
+                if (planned == null) ...[
+                  const SizedBox(height: 14),
+                  DropdownButtonFormField<ImmunizationSourceType>(
+                    value: sourceType,
+                    decoration: const InputDecoration(
+                      labelText: 'Fuente del registro',
+                      prefixIcon: Icon(Icons.source_outlined),
+                    ),
+                    items: const [
+                      DropdownMenuItem(
+                        value: ImmunizationSourceType.physicianIndicated,
+                        child: Text('Indicada por profesional'),
+                      ),
+                      DropdownMenuItem(
+                        value: ImmunizationSourceType.complementaryPrivate,
+                        child: Text('Complementaria / particular'),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) setState(() => sourceType = value);
+                    },
+                  ),
+                ],
                 const SizedBox(height: 14),
                 TextFormField(
                   controller: dose,
@@ -251,6 +292,8 @@ class _VaccinationFormState extends State<_VaccinationForm> {
         professional: professional.text,
         lot: lot.text,
         notes: notes.text,
+        catalogItem: widget.controller.selectedPlannedImmunization?.item,
+        sourceType: sourceType,
       );
       if (mounted) widget.openFlow(HealthFlowAction.success);
     } on Object catch (error) {
@@ -530,7 +573,8 @@ class _ConsultationWizardState extends State<_ConsultationWizard> {
     child: Column(
       children: [
         HealthSectionHeading(
-          title: widget.appointmentKind == HealthAppointmentKind.wellChildControl
+          title:
+              widget.appointmentKind == HealthAppointmentKind.wellChildControl
               ? 'Agendar control'
               : 'Agendar consulta',
           subtitle:
@@ -1078,7 +1122,7 @@ class _HealthRecordDetailView extends StatelessWidget {
 
   List<Widget> _vaccineDetail(BuildContext context) {
     final selected = controller.selectedHealthEvent;
-    final event = selected?.type == HealthEventType.vaccine
+    final event = selected?.isImmunization == true
         ? selected
         : controller.vaccines.firstOrNull;
     if (event == null) {
@@ -1564,7 +1608,7 @@ class _HealthRecordDetailView extends StatelessWidget {
     if (healthEvent != null) {
       return [
         HealthActionRow(
-          icon: healthEvent.type == HealthEventType.vaccine
+          icon: healthEvent.isImmunization
               ? Icons.vaccines_outlined
               : Icons.medical_services_outlined,
           title: healthEvent.title,

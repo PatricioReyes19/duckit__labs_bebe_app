@@ -242,12 +242,18 @@ void main() {
           memberId: 'user-paula',
           memberName: 'Paula Pérez',
           memberEmail: 'paula@example.com',
+          memberRole: 'Abuela',
+          memberAccessDescription: 'Acceso de solo lectura',
+          canWrite: false,
         ),
       );
 
       expect(joined.activeBaby.name, 'Mateo');
       expect(joined.members, hasLength(1));
       expect(joined.members.single.status, FamilyMemberStatus.active);
+      expect(joined.members.single.role, 'Abuela');
+      expect(joined.members.single.accessDescription, 'Acceso de solo lectura');
+      expect(joined.members.single.canWrite, isFalse);
     },
   );
 
@@ -267,6 +273,34 @@ void main() {
 
     expect((await families.getCurrent()).id, 'family-new');
   });
+
+  test(
+    'a successful remote pull removes a revoked invited care circle',
+    () async {
+      final productionDatabase = BebeDatabase(
+        databaseFactory: databaseFactoryFfi,
+        databasePath: inMemoryDatabasePath,
+      );
+      addTearDown(productionDatabase.close);
+      final repository = SqliteFamilyRepository(productionDatabase);
+      await repository.joinCareCircle(
+        JoinedCareCircleDraft(
+          familyId: 'family-revoked',
+          familyName: 'Familia invitante',
+          babyId: 'baby-revoked',
+          babyName: 'Mateo',
+          babyBirthDate: DateTime.utc(2026, 1, 1),
+          memberId: 'member-revoked',
+          memberName: 'Paula Pérez',
+          memberEmail: 'paula@example.com',
+        ),
+      );
+
+      await repository.mergeRemote(const []);
+
+      expect(await repository.listAvailable(), isEmpty);
+    },
+  );
 
   test('an explicitly activated baby also selects its care circle', () async {
     await families.joinCareCircle(

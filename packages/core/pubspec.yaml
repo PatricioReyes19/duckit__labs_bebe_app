@@ -31,6 +31,8 @@ resolution: workspace
 
 # The following section is specific to Flutter packages.
 flutter:
+  assets:
+    - assets/catalogs/pni_2026.json
 
   # To add assets to your package, add an assets section, like this:
   # assets:

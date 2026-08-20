@@ -394,11 +394,15 @@ class NotificationReminderCoordinator {
     if (event.status != HealthEventStatus.scheduled) return const [];
     final startsAt = event.startsAt.toLocal();
     final route = '/health';
-    if (event.type == HealthEventType.vaccine) {
+    if (event.isImmunization) {
+      final label =
+          event.immunizationItemType == ImmunizationItemType.monoclonalAntibody
+              ? 'Inmunización'
+              : 'Vacuna';
       return [
         NotificationReminder(
           id: 'health:${event.id}:24h',
-          title: 'Vacuna mañana',
+          title: '$label mañana',
           body: event.title,
           scheduledAt: startsAt.subtract(const Duration(hours: 24)),
           route: route,
@@ -406,7 +410,7 @@ class NotificationReminderCoordinator {
         ),
         NotificationReminder(
           id: 'health:${event.id}:due',
-          title: 'Vacuna programada',
+          title: '$label programada',
           body: event.title,
           scheduledAt: startsAt,
           route: route,
@@ -414,10 +418,10 @@ class NotificationReminderCoordinator {
         ),
       ];
     }
-    final appointmentLabel = event.appointmentKind ==
-            HealthAppointmentKind.consultation
-        ? 'Consulta pediátrica'
-        : 'Control de salud';
+    final appointmentLabel =
+        event.appointmentKind == HealthAppointmentKind.consultation
+            ? 'Consulta pediátrica'
+            : 'Control de salud';
     return [
       NotificationReminder(
         id: 'health:${event.id}:24h',
@@ -465,7 +469,10 @@ class NotificationReminderCoordinator {
     HealthEventType type,
     DateTime startsAt,
   ) {
-    final category = type == HealthEventType.vaccine ? 'vaccine' : 'control';
+    final category = switch (type) {
+      HealthEventType.vaccine || HealthEventType.immunization => 'vaccine',
+      _ => 'control',
+    };
     return '$category:${startsAt.toUtc().millisecondsSinceEpoch}';
   }
 

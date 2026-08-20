@@ -105,10 +105,12 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     emit(state.copyWith(themeMode: event.value, errorMessage: null));
 
     try {
-      final saved = await _updateAppSettings(
+      await _updateAppSettings(
         AppSettingsPatch(theme: _domainTheme(event.value)),
       );
-      emit(_toState(saved));
+      // El estado optimista ya contiene el valor persistido. Emitirlo de
+      // nuevo reconstruía toda la pantalla de Ajustes inmediatamente después
+      // del rebuild global de MaterialApp causado por el cambio de tema.
     } on Object catch (error) {
       emit(
         previous.copyWith(

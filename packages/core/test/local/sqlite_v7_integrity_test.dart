@@ -131,6 +131,13 @@ void main() {
         'idx_agenda_source_register',
       }),
     );
+    final familyMemberColumns = await upgraded.rawQuery(
+      'PRAGMA table_info(${BebeDatabaseSchema.familyMembers})',
+    );
+    expect(
+      familyMemberColumns.map((row) => row['name']),
+      contains('can_write'),
+    );
     expect(await upgraded.rawQuery('PRAGMA foreign_key_check'), isEmpty);
   });
 

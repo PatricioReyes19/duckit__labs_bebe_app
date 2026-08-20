@@ -101,6 +101,7 @@ abstract final class BebeSeedData {
       role: 'Mamá',
       accessDescription: 'Puede registrar y ver salud',
       status: FamilyMemberStatus.active,
+      canWrite: true,
     ),
     const FamilyMemberModel(
       id: 'father',
@@ -109,6 +110,7 @@ abstract final class BebeSeedData {
       role: 'Papá',
       accessDescription: 'Puede registrar y ver salud',
       status: FamilyMemberStatus.active,
+      canWrite: true,
     ),
     const FamilyMemberModel(
       id: 'grandmother',
@@ -117,6 +119,7 @@ abstract final class BebeSeedData {
       role: 'Abuela',
       accessDescription: 'Acceso de colaboración',
       status: FamilyMemberStatus.active,
+      canWrite: true,
     ),
     FamilyMemberModel(
       id: 'aunt',
@@ -125,6 +128,7 @@ abstract final class BebeSeedData {
       role: 'Tía',
       accessDescription: 'Invitación pendiente',
       status: FamilyMemberStatus.pending,
+      canWrite: false,
       contact: 'carolina@example.com',
       invitationCode: 'BEBE-CARO26',
       invitedAt: DateTime.utc(2026, 8, 8),

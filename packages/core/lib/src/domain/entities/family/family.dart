@@ -7,6 +7,9 @@ class BabyEntity {
     required this.name,
     required this.birthDate,
     this.avatarAssetPath,
+    this.isPremature = false,
+    this.livesInRapaNui = false,
+    this.hasRsvRisk = false,
   });
 
   final String id;
@@ -14,6 +17,9 @@ class BabyEntity {
   final String name;
   final DateTime birthDate;
   final String? avatarAssetPath;
+  final bool isPremature;
+  final bool livesInRapaNui;
+  final bool hasRsvRisk;
 }
 
 class FamilyMemberEntity {
@@ -24,6 +30,7 @@ class FamilyMemberEntity {
     required this.role,
     required this.accessDescription,
     required this.status,
+    this.canWrite = false,
     this.contact,
     this.invitationCode,
     this.invitedAt,
@@ -36,6 +43,12 @@ class FamilyMemberEntity {
   final String role;
   final String accessDescription;
   final FamilyMemberStatus status;
+
+  /// Permission last confirmed by the care-circle membership on the server.
+  ///
+  /// A missing value is intentionally read-only: local data must never grant a
+  /// capability that was not explicitly granted remotely.
+  final bool canWrite;
   final String? contact;
   final String? invitationCode;
   final DateTime? invitedAt;
@@ -75,20 +88,36 @@ class BabyDraft {
     required this.name,
     required this.birthDate,
     this.avatarAssetPath,
+    this.isPremature = false,
+    this.livesInRapaNui = false,
+    this.hasRsvRisk = false,
   });
 
   final String familyId;
   final String name;
   final DateTime birthDate;
   final String? avatarAssetPath;
+  final bool isPremature;
+  final bool livesInRapaNui;
+  final bool hasRsvRisk;
 }
 
 class BabyPatch {
-  const BabyPatch({this.name, this.birthDate, this.avatarAssetPath});
+  const BabyPatch({
+    this.name,
+    this.birthDate,
+    this.avatarAssetPath,
+    this.isPremature,
+    this.livesInRapaNui,
+    this.hasRsvRisk,
+  });
 
   final String? name;
   final DateTime? birthDate;
   final String? avatarAssetPath;
+  final bool? isPremature;
+  final bool? livesInRapaNui;
+  final bool? hasRsvRisk;
 }
 
 class InitialFamilyDraft {
@@ -99,6 +128,9 @@ class InitialFamilyDraft {
     required this.ownerName,
     required this.ownerEmail,
     this.avatarAssetPath,
+    this.isPremature = false,
+    this.livesInRapaNui = false,
+    this.hasRsvRisk = false,
   });
 
   final String familyName;
@@ -107,6 +139,9 @@ class InitialFamilyDraft {
   final String ownerName;
   final String ownerEmail;
   final String? avatarAssetPath;
+  final bool isPremature;
+  final bool livesInRapaNui;
+  final bool hasRsvRisk;
 }
 
 class FamilyInvitationDraft {
@@ -141,7 +176,9 @@ class JoinedCareCircleDraft {
     required this.memberId,
     required this.memberName,
     required this.memberEmail,
-    this.memberRole = 'Cuidador/a',
+    this.memberRole = 'Acceso pendiente de confirmación',
+    this.memberAccessDescription = 'Acceso de solo lectura',
+    this.canWrite = false,
   });
 
   final String familyId;
@@ -153,4 +190,6 @@ class JoinedCareCircleDraft {
   final String memberName;
   final String memberEmail;
   final String memberRole;
+  final String memberAccessDescription;
+  final bool canWrite;
 }

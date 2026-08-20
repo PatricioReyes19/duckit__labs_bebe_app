@@ -43,7 +43,8 @@ class _AppWrappersState extends State<AppWrappers> {
     final repository = getIt<AppSettingsRepository>();
     final syncCoordinator = getIt<InitialDataSyncCoordinator>();
     final startupCoordinator = getIt<AuthenticatedStartupCoordinator>();
-    _startupReady = startupCoordinator.status == AuthenticatedStartupStatus.ready;
+    _startupReady =
+        startupCoordinator.status == AuthenticatedStartupStatus.ready;
     _settingsSubscription = repository.changes.listen((_) => _loadSettings());
     _syncUxSubscription = syncCoordinator.syncUxStates.listen(_syncChanged);
     _startupStatusSubscription = startupCoordinator.statuses.listen(
@@ -110,8 +111,7 @@ class _AppWrappersState extends State<AppWrappers> {
 
     final errorKey = state.errorKey ?? state.errorScopes.join(',');
     if (_persistentSyncErrorKey == errorKey &&
-        (_persistentSyncAlertTimer != null ||
-            _persistentSyncAlertScheduled)) {
+        (_persistentSyncAlertTimer != null || _persistentSyncAlertScheduled)) {
       return;
     }
     _persistentSyncAlertTimer?.cancel();
@@ -170,15 +170,28 @@ class _AppWrappersState extends State<AppWrappers> {
     try {
       final settings = await getIt<AppSettingsRepository>().get();
       if (!mounted) return;
+      final use24HourFormat = settings.timeFormat != '12 horas';
+      final reduceMotion = settings.reduceMotion;
+      final highContrast = settings.highContrast;
+      final textScaleFactor = switch (settings.textSize.toLowerCase()) {
+        'pequeño' || 'pequeña' => .9,
+        'grande' => 1.15,
+        _ => 1,
+      };
+      // Los cambios de tema y de sincronización también notifican este
+      // repositorio. No deben reconstruir todo MaterialApp/MediaQuery cuando
+      // ninguna preferencia que este wrapper aplica ha cambiado.
+      if (_use24HourFormat == use24HourFormat &&
+          _reduceMotion == reduceMotion &&
+          _highContrast == highContrast &&
+          _textScaleFactor == textScaleFactor) {
+        return;
+      }
       setState(() {
-        _use24HourFormat = settings.timeFormat != '12 horas';
-        _reduceMotion = settings.reduceMotion;
-        _highContrast = settings.highContrast;
-        _textScaleFactor = switch (settings.textSize.toLowerCase()) {
-          'pequeño' || 'pequeña' => .9,
-          'grande' => 1.15,
-          _ => 1,
-        };
+        _use24HourFormat = use24HourFormat;
+        _reduceMotion = reduceMotion;
+        _highContrast = highContrast;
+        _textScaleFactor = textScaleFactor;
       });
     } on Object {
       // Antes de autenticar no existe un ámbito de base local. Se mantienen

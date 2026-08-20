@@ -42,6 +42,9 @@ void main() {
           'baby_age_label': '7 meses',
           'inviter_name': 'María López',
           'inviter_relationship': 'Mamá',
+          'relationship': 'Tía',
+          'access_description': 'Puede acompañar y registrar cuidados',
+          'can_write': true,
         },
       );
       when(
@@ -52,7 +55,19 @@ void main() {
       ).thenAnswer(
         (_) async => const {
           'id': 'invitation-1',
+          'found': true,
           'status': 'accepted',
+          'family_id': 'family-1',
+          'family_name': 'Familia López',
+          'baby_id': 'baby-1',
+          'baby_name': 'Mateo',
+          'baby_birth_date': '2026-01-10',
+          'baby_age_label': '7 meses',
+          'inviter_name': 'María López',
+          'inviter_relationship': 'Mamá',
+          'relationship': 'Abuela',
+          'access_description': 'Acceso de solo lectura',
+          'can_write': false,
         },
       );
       final repository = LocalOnboardingRepository(
@@ -76,6 +91,9 @@ void main() {
       expect(joined.memberId, 'member-user-invited-family-1');
       expect(joined.memberName, 'Ana Pérez');
       expect(joined.memberEmail, 'abuela@example.com');
+      expect(joined.memberRole, 'Abuela');
+      expect(joined.memberAccessDescription, 'Acceso de solo lectura');
+      expect(joined.canWrite, isFalse);
       expect(await repository.isCompleted(), isTrue);
       verify(
         () => client.rpc(
@@ -144,6 +162,7 @@ class _RecordingFamilyRepository implements FamilyRepository {
           role: draft.memberRole,
           accessDescription: 'Puede acompañar y registrar cuidados',
           status: FamilyMemberStatus.active,
+          canWrite: draft.canWrite,
           contact: draft.memberEmail,
         ),
       ],

@@ -341,7 +341,7 @@ class _InvitationReviewView extends StatelessWidget {
                     trailing: invitation.babyAgeLabel,
                   ),
                   const Divider(height: 32),
-                  const _PermissionsList(),
+                  _PermissionsList(invitation: invitation),
                 ],
               ),
             ),
@@ -1363,7 +1363,9 @@ class _PersonRow extends StatelessWidget {
 }
 
 class _PermissionsList extends StatelessWidget {
-  const _PermissionsList();
+  const _PermissionsList({required this.invitation});
+
+  final CareInvitation invitation;
 
   @override
   Widget build(BuildContext context) {
@@ -1372,17 +1374,17 @@ class _PermissionsList extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Lo que podrás hacer',
+          invitation.canWrite ? 'Lo que podrás hacer' : 'Tu acceso',
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
                 color: colors.text.brandDefault,
                 fontWeight: FontWeight.w700,
               ),
         ),
         const SizedBox(height: 10),
-        for (final label in const [
+        for (final label in [
           'Ver historial y línea de tiempo',
-          'Registrar alimentación, sueño, pañal y medicación',
-          'Colaborar según tu membresía',
+          if (invitation.canWrite)
+            'Registrar alimentación, sueño, pañal y medicación',
           'Recibir avisos importantes',
         ])
           Padding(
@@ -1401,7 +1403,9 @@ class _PermissionsList extends StatelessWidget {
           ),
         const SizedBox(height: 6),
         Text(
-          'No podrás gestionar miembros ni eliminar información.',
+          invitation.canWrite
+              ? '${invitation.accessDescription}. No podrás gestionar miembros ni eliminar información.'
+              : '${invitation.accessDescription}. No podrás registrar ni modificar información.',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: colors.text.warningDefault,
               ),

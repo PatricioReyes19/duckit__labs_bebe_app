@@ -51,7 +51,7 @@ void main() {
     await database.close();
   });
 
-  test('projects future medication doses without duplicating them', () async {
+  test('projects only the next medication dose without duplicating it', () async {
     final medication = await registerRepository.save(
       RegisterEventDraft(
         babyId: BebeSeedData.activeBabyId,
@@ -76,15 +76,8 @@ void main() {
     await coordinator.reconcile();
     final thirdPass = await agendaRepository.listDerivedBySource(medication.id);
 
-    expect(firstPass, isNotEmpty);
+    expect(firstPass, hasLength(1));
     expect(firstPass.first.startsAt, now.add(const Duration(hours: 8)));
-    expect(
-      firstPass.last.startsAt.isAfter(now.add(const Duration(days: 80))),
-      isTrue,
-      reason:
-          'Una pauta sin fecha de término debe mantener una ventana móvil '
-          'amplia, no cortarse después de dos semanas.',
-    );
     expect(firstPass.first.title, 'Próxima dosis: Paracetamol');
     expect(
       secondPass.map((event) => event.id).toSet(),

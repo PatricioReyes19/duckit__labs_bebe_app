@@ -111,12 +111,14 @@ abstract class CoreDataModule {
     RegisterEventRepository registerRepository,
     AppSettingsRepository settingsRepository,
     HealthRepository healthRepository,
+    GetFamilyOverview getFamilyOverview,
   ) =>
       GetAgendaOverview(
         repository,
         registerRepository,
         settingsRepository,
         healthRepository,
+        getFamilyOverview,
       );
 
   @lazySingleton

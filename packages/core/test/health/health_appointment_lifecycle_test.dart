@@ -179,6 +179,7 @@ void main() {
 
       expect(projected.category, AgendaCategory.controls);
       expect(projected.title, 'Consulta respiratoria');
+      expect(projected.description, startsWith('Consulta · Programado'));
       expect(
         overview.events.where((event) => event.id == 'health:appointment-2'),
         isEmpty,

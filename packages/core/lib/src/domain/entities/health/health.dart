@@ -1,6 +1,13 @@
 import '../family/family.dart';
+import '../immunization/immunization.dart';
 
-enum HealthEventType { vaccine, pediatricControl, growthControl, consultation }
+enum HealthEventType {
+  vaccine,
+  immunization,
+  pediatricControl,
+  growthControl,
+  consultation,
+}
 
 /// Estado persistido del ciclo de atención.
 ///
@@ -53,6 +60,13 @@ class HealthEventEntity {
     this.attachments = const [],
     this.nextAppointmentId,
     this.createdBy,
+    this.immunizationCatalogItemId,
+    this.immunizationNameSnapshot,
+    this.immunizationItemType,
+    this.immunizationSourceType,
+    this.immunizationSourceVersion,
+    this.immunizationDoseLabel,
+    this.lotNumber,
     this.caregiver,
     this._caregiverId,
     DateTime? createdAt,
@@ -88,6 +102,13 @@ class HealthEventEntity {
   final List<String> attachments;
   final String? nextAppointmentId;
   final String? createdBy;
+  final String? immunizationCatalogItemId;
+  final String? immunizationNameSnapshot;
+  final ImmunizationItemType? immunizationItemType;
+  final ImmunizationSourceType? immunizationSourceType;
+  final String? immunizationSourceVersion;
+  final String? immunizationDoseLabel;
+  final String? lotNumber;
   final FamilyMemberEntity? caregiver;
   final String? _caregiverId;
   final DateTime createdAt;
@@ -98,6 +119,32 @@ class HealthEventEntity {
   String? get caregiverId => _caregiverId ?? caregiver?.id;
 
   bool get isAppointment => appointmentKind != null;
+  bool get isImmunization =>
+      type == HealthEventType.vaccine || type == HealthEventType.immunization;
+
+  ImmunizationRecord? get immunizationRecord {
+    if (!isImmunization || status != HealthEventStatus.completed) return null;
+    return ImmunizationRecord(
+      id: id,
+      babyId: babyId,
+      catalogItemId: immunizationCatalogItemId,
+      nameSnapshot: immunizationNameSnapshot ?? title,
+      doseLabel: immunizationDoseLabel ?? description,
+      administeredAt: attendedAt ?? startsAt,
+      createdBy: createdBy ?? caregiverId ?? 'unknown',
+      itemType:
+          immunizationItemType ??
+          (type == HealthEventType.immunization
+              ? ImmunizationItemType.monoclonalAntibody
+              : ImmunizationItemType.vaccine),
+      sourceType: immunizationSourceType,
+      sourceVersion: immunizationSourceVersion,
+      facility: facility,
+      lotNumber: lotNumber,
+      professional: professionalName,
+      notes: notesBeforeVisit,
+    );
+  }
 
   /// Estado visible según la fecha actual, sin mutar ni sincronizar la fila.
   HealthEventStatus effectiveStatus(DateTime now) {
@@ -150,16 +197,14 @@ class HealthOverviewEntity {
   int get completedVaccines => events
       .where(
         (event) =>
-            event.type == HealthEventType.vaccine &&
-            event.status == HealthEventStatus.completed,
+            event.isImmunization && event.status == HealthEventStatus.completed,
       )
       .length;
 
   int get pendingVaccines => events
       .where(
         (event) =>
-            event.type == HealthEventType.vaccine &&
-            event.status == HealthEventStatus.scheduled,
+            event.isImmunization && event.status == HealthEventStatus.scheduled,
       )
       .length;
 }
@@ -192,6 +237,13 @@ class HealthEventDraft {
     this.attachments = const [],
     this.nextAppointmentId,
     this.createdBy,
+    this.immunizationCatalogItemId,
+    this.immunizationNameSnapshot,
+    this.immunizationItemType,
+    this.immunizationSourceType,
+    this.immunizationSourceVersion,
+    this.immunizationDoseLabel,
+    this.lotNumber,
   });
 
   final String babyId;
@@ -220,6 +272,13 @@ class HealthEventDraft {
   final List<String> attachments;
   final String? nextAppointmentId;
   final String? createdBy;
+  final String? immunizationCatalogItemId;
+  final String? immunizationNameSnapshot;
+  final ImmunizationItemType? immunizationItemType;
+  final ImmunizationSourceType? immunizationSourceType;
+  final String? immunizationSourceVersion;
+  final String? immunizationDoseLabel;
+  final String? lotNumber;
 }
 
 class HealthEventPatch {
@@ -250,6 +309,13 @@ class HealthEventPatch {
     this.attachments,
     this.nextAppointmentId,
     this.createdBy,
+    this.immunizationCatalogItemId,
+    this.immunizationNameSnapshot,
+    this.immunizationItemType,
+    this.immunizationSourceType,
+    this.immunizationSourceVersion,
+    this.immunizationDoseLabel,
+    this.lotNumber,
   }) : assert(caregiverId == null || !clearCaregiver);
 
   final HealthEventType? type;
@@ -278,4 +344,11 @@ class HealthEventPatch {
   final List<String>? attachments;
   final String? nextAppointmentId;
   final String? createdBy;
+  final String? immunizationCatalogItemId;
+  final String? immunizationNameSnapshot;
+  final ImmunizationItemType? immunizationItemType;
+  final ImmunizationSourceType? immunizationSourceType;
+  final String? immunizationSourceVersion;
+  final String? immunizationDoseLabel;
+  final String? lotNumber;
 }

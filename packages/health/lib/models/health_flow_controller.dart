@@ -129,6 +129,30 @@ class HealthReportSnapshot {
           .toDouble();
     });
   }
+
+  /// Serie móvil de 24 horas para el gráfico diario. Cada posición representa
+  /// una hora local, desde la hora actual menos 23 hasta la hora actual.
+  List<double> hourlyCounts(RegisterEventType type) {
+    final source = type == RegisterEventType.sleep
+        ? completedSleeps
+        : ofType(type);
+    final end = generatedAt.toLocal();
+    final currentHour = DateTime(end.year, end.month, end.day, end.hour);
+    final firstHour = currentHour.subtract(const Duration(hours: 23));
+    return List<double>.generate(24, (index) {
+      final hour = firstHour.add(Duration(hours: index));
+      return source
+          .where((event) {
+            final local = event.occurredAt.toLocal();
+            return local.year == hour.year &&
+                local.month == hour.month &&
+                local.day == hour.day &&
+                local.hour == hour.hour;
+          })
+          .length
+          .toDouble();
+    });
+  }
 }
 
 enum HealthFlowSaveKind {
@@ -226,6 +250,7 @@ class HealthPediatricianSummary {
 typedef HealthAppointmentReminderScheduler =
     Future<void> Function(HealthEventEntity event);
 typedef HealthAppointmentReminderCanceler = Future<void> Function(String id);
+typedef HealthImmunizationReminderReconciler = Future<void> Function();
 
 /// Estado compartido por los recorridos secundarios de Salud.
 ///
@@ -245,6 +270,7 @@ class HealthFlowController extends ChangeNotifier {
     this._initialDataSyncCoordinator,
     this._scheduleAppointmentReminder,
     this._cancelAppointmentReminder,
+    this._reconcileImmunizationReminders,
     Connectivity? connectivity,
     DateTime Function()? clock,
   }) : _getHealthOverview = getHealthOverview,
@@ -307,6 +333,7 @@ class HealthFlowController extends ChangeNotifier {
   final InitialDataSyncCoordinator? _initialDataSyncCoordinator;
   final HealthAppointmentReminderScheduler? _scheduleAppointmentReminder;
   final HealthAppointmentReminderCanceler? _cancelAppointmentReminder;
+  final HealthImmunizationReminderReconciler? _reconcileImmunizationReminders;
   final Connectivity _connectivity;
   final DateTime Function() _clock;
 
@@ -331,6 +358,9 @@ class HealthFlowController extends ChangeNotifier {
   String? _selectedHealthEventId;
   String? _selectedRecordId;
   String? _selectedPediatricianName;
+  ImmunizationCatalog? _immunizationCatalog;
+  List<PlannedImmunization> _immunizationSchedule = const [];
+  PlannedImmunization? _selectedPlannedImmunization;
 
   FamilyOverviewEntity? get family => _family;
   BabyEntity? get activeBaby => _family?.activeBaby;
@@ -357,11 +387,16 @@ class HealthFlowController extends ChangeNotifier {
   bool get offlineMode => _manualOfflineMode || !_hasConnectivity;
   bool get networkUnavailable => !_hasConnectivity;
   Object? get error => _error;
+  ImmunizationCatalog? get immunizationCatalog => _immunizationCatalog;
+  List<PlannedImmunization> get immunizationSchedule =>
+      List.unmodifiable(_immunizationSchedule);
+  PlannedImmunization? get selectedPlannedImmunization =>
+      _selectedPlannedImmunization;
 
   List<HealthEventEntity> get vaccines {
     final result =
         _overview?.events
-            .where((event) => event.type == HealthEventType.vaccine)
+            .where((event) => event.isImmunization)
             .toList(growable: false) ??
         const <HealthEventEntity>[];
     return _sortedHealthEvents(result);
@@ -564,6 +599,18 @@ class HealthFlowController extends ChangeNotifier {
   void selectHealthEvent(HealthEventEntity event) {
     _selectedHealthEventId = event.id;
     _selectedRecordId = null;
+    _selectedPlannedImmunization = null;
+  }
+
+  void selectPlannedImmunization(PlannedImmunization planned) {
+    _selectedPlannedImmunization = planned;
+    _selectedHealthEventId = null;
+    _selectedRecordId = null;
+  }
+
+  void clearSelectedPlannedImmunization() {
+    if (_selectedPlannedImmunization == null) return;
+    _selectedPlannedImmunization = null;
   }
 
   void selectMeasurement(HealthMeasurementRecord measurement) {
@@ -626,6 +673,23 @@ class HealthFlowController extends ChangeNotifier {
       _family = family;
       _overview = results[0] as HealthOverviewEntity;
       _records = results[1] as List<RegisteredEvent>;
+      final catalogue = await BundledImmunizationCatalog.load();
+      _immunizationCatalog = catalogue;
+      _immunizationSchedule = const ImmunizationSchedulePlanner().plan(
+        catalog: catalogue,
+        context: ImmunizationEligibilityContext.fromBaby(family.activeBaby),
+        records: _overview!.events
+            .map((event) => event.immunizationRecord)
+            .whereType<ImmunizationRecord>(),
+        now: _clock(),
+      );
+      final selected = _selectedPlannedImmunization;
+      if (selected != null &&
+          !_immunizationSchedule.any(
+            (item) => item.item.id == selected.item.id,
+          )) {
+        _selectedPlannedImmunization = null;
+      }
       _loadedOnce = true;
     } on Object catch (error) {
       _error = error;
@@ -689,19 +753,43 @@ class HealthFlowController extends ChangeNotifier {
     String? professional,
     String? lot,
     String? notes,
+    ImmunizationCatalogItem? catalogItem,
+    ImmunizationSourceType? sourceType,
   }) async {
     final babyId = await _requireBabyId();
-    final title = dose.trim().isEmpty
-        ? vaccineName.trim()
-        : '${vaccineName.trim()} (${dose.trim()})';
+    final normalizedDose = dose.trim();
+    final item = catalogItem;
+    final nameSnapshot = vaccineName.trim();
+    final title = normalizedDose.isEmpty
+        ? nameSnapshot
+        : '$nameSnapshot ($normalizedDose)';
+    final itemType = item?.itemType ?? ImmunizationItemType.vaccine;
+    final resolvedSource =
+        item?.sourceType ??
+        sourceType ??
+        ImmunizationSourceType.physicianIndicated;
     final saved = await _healthRepository.createEvent(
       HealthEventDraft(
         babyId: babyId,
-        type: HealthEventType.vaccine,
+        type: itemType == ImmunizationItemType.monoclonalAntibody
+            ? HealthEventType.immunization
+            : HealthEventType.vaccine,
         title: title,
-        description: 'Aplicada en ${location.trim()}',
+        description: normalizedDose,
         startsAt: occurredAt,
         status: HealthEventStatus.completed,
+        attendedAt: occurredAt,
+        completedAt: _clock(),
+        facility: location.trim(),
+        professionalName: professional?.trim(),
+        notesBeforeVisit: notes?.trim(),
+        immunizationCatalogItemId: item?.id,
+        immunizationNameSnapshot: nameSnapshot,
+        immunizationItemType: itemType,
+        immunizationSourceType: resolvedSource,
+        immunizationSourceVersion: item?.sourceVersion,
+        immunizationDoseLabel: normalizedDose,
+        lotNumber: lot?.trim(),
       ),
     );
     _selectedHealthEventId = saved.id;
@@ -714,8 +802,12 @@ class HealthFlowController extends ChangeNotifier {
         details: {
           'observation_type': 'vaccination',
           'title': title,
-          'description': 'Vacuna aplicada',
+          'description': itemType == ImmunizationItemType.monoclonalAntibody
+              ? 'Inmunización aplicada'
+              : 'Vacuna aplicada',
           'location': location.trim(),
+          if (item != null) 'catalog_item_id': item.id,
+          'source_type': resolvedSource.name,
           if (professional?.trim().isNotEmpty ?? false)
             'professional': professional!.trim(),
           if (lot?.trim().isNotEmpty ?? false) 'lot': lot!.trim(),
@@ -725,6 +817,10 @@ class HealthFlowController extends ChangeNotifier {
       ),
     );
     await _refreshAfterSave();
+    final reconcileReminders = _reconcileImmunizationReminders;
+    if (reconcileReminders != null) {
+      unawaited(_runReminderOperation(reconcileReminders));
+    }
     return HealthFlowSaveResult(
       kind: HealthFlowSaveKind.vaccine,
       savedAt: DateTime.now(),

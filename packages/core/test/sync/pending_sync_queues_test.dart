@@ -260,6 +260,82 @@ void main() {
   );
 
   test(
+    'joining a care circle completes locally without waiting for family sync',
+    () async {
+      final database = _database();
+      final local = SqliteFamilyRepository(database, clock: () => now);
+      final remote = _BlockingFamilyPullRemote();
+      final sync = FamilySyncService(local, remote, clock: () => now);
+      final repository = OfflineFirstFamilyRepository(local, sync);
+      addTearDown(() {
+        if (!remote.releasePull.isCompleted) remote.releasePull.complete();
+      });
+      addTearDown(sync.close);
+      addTearDown(database.close);
+
+      final joined = await repository
+          .joinCareCircle(
+            JoinedCareCircleDraft(
+              familyId: 'family-joined',
+              familyName: 'Familia invitante',
+              babyId: 'baby-joined',
+              babyName: 'Mateo',
+              babyBirthDate: DateTime.utc(2026, 1, 1),
+              memberId: 'member-invited',
+              memberName: 'Paula',
+              memberEmail: 'paula@example.com',
+              memberRole: 'Abuela',
+              memberAccessDescription: 'Acceso de solo lectura',
+              canWrite: false,
+            ),
+          )
+          .timeout(const Duration(seconds: 1));
+
+      expect(joined.id, 'family-joined');
+      expect(joined.members.single.canWrite, isFalse);
+      expect(await local.getCurrent(), isA<FamilyOverviewEntity>());
+      await remote.pullStarted.future.timeout(const Duration(seconds: 1));
+    },
+  );
+
+  test('sending an invitation reports that a connection is required', () async {
+    final database = _database();
+    await insertBabyFixture(database);
+    final local = SqliteFamilyRepository(database, clock: () => now);
+    final sync = FamilySyncService(
+      local,
+      _FamilyRemote(authenticated: false),
+      clock: () => now,
+    );
+    final repository = OfflineFirstFamilyRepository(local, sync);
+    addTearDown(sync.close);
+    addTearDown(database.close);
+
+    await expectLater(
+      repository.sendInvitation(
+        const FamilyInvitationDraft(
+          familyId: 'family-1',
+          babyId: 'baby-1',
+          babyName: 'baby-1',
+          name: 'Paula',
+          contact: 'paula@example.com',
+          role: 'Abuela',
+          accessDescription: 'Acceso de solo lectura',
+          canWrite: false,
+        ),
+      ),
+      throwsA(
+        isA<StateError>().having(
+          (error) => error.message,
+          'message',
+          contains('Conéctate a Internet'),
+        ),
+      ),
+    );
+    expect((await local.getCurrent()).pendingInvitations, 0);
+  });
+
+  test(
     'a Preferences pull failure does not turn synced data pending',
     () async {
       final database = _database(seedDemoData: true);
@@ -387,7 +463,8 @@ class _PagedHealthRemote implements PagedHealthEventRemoteDataSource {
           (event) =>
               after == null ||
               event.updatedAt.isAfter(after.updatedAt) ||
-              (event.updatedAt == after.updatedAt && event.id.compareTo(after.id) > 0),
+              (event.updatedAt == after.updatedAt &&
+                  event.id.compareTo(after.id) > 0),
         )
         .take(limit)
         .toList(growable: false);
@@ -434,6 +511,18 @@ class _BlockingFamilyRemote extends _FamilyRemote {
     if (!pushStarted.isCompleted) pushStarted.complete();
     await releasePush.future;
     return snapshot;
+  }
+}
+
+class _BlockingFamilyPullRemote extends _FamilyRemote {
+  final pullStarted = Completer<void>();
+  final releasePull = Completer<void>();
+
+  @override
+  Future<List<FamilySyncSnapshot>> pull() async {
+    if (!pullStarted.isCompleted) pullStarted.complete();
+    await releasePull.future;
+    return const [];
   }
 }
 

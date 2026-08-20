@@ -82,6 +82,13 @@ class SqliteHealthRepository implements HealthRepository {
       attachments: draft.attachments,
       nextAppointmentId: draft.nextAppointmentId,
       createdBy: draft.createdBy,
+      immunizationCatalogItemId: draft.immunizationCatalogItemId,
+      immunizationNameSnapshot: draft.immunizationNameSnapshot,
+      immunizationItemType: draft.immunizationItemType,
+      immunizationSourceType: draft.immunizationSourceType,
+      immunizationSourceVersion: draft.immunizationSourceVersion,
+      immunizationDoseLabel: draft.immunizationDoseLabel,
+      lotNumber: draft.lotNumber,
       createdAt: now,
       updatedAt: now,
       syncStatus: HealthSyncStatus.pending,
@@ -309,17 +316,15 @@ class SqliteHealthRepository implements HealthRepository {
   Future<void> writeSyncCursor(DateTime value, {String? id}) async {
     final database = await _database.database;
     await database.transaction((transaction) async {
-      await transaction.insert(
-        BebeDatabaseSchema.syncMetadata,
-        {'key': syncCursorKey, 'value': value.toUtc().toIso8601String()},
-        conflictAlgorithm: sqlite.ConflictAlgorithm.replace,
-      );
+      await transaction.insert(BebeDatabaseSchema.syncMetadata, {
+        'key': syncCursorKey,
+        'value': value.toUtc().toIso8601String(),
+      }, conflictAlgorithm: sqlite.ConflictAlgorithm.replace);
       if (id != null && id.isNotEmpty) {
-        await transaction.insert(
-          BebeDatabaseSchema.syncMetadata,
-          {'key': syncCursorIdKey, 'value': id},
-          conflictAlgorithm: sqlite.ConflictAlgorithm.replace,
-        );
+        await transaction.insert(BebeDatabaseSchema.syncMetadata, {
+          'key': syncCursorIdKey,
+          'value': id,
+        }, conflictAlgorithm: sqlite.ConflictAlgorithm.replace);
       }
     });
   }
@@ -392,6 +397,19 @@ LEFT JOIN ${BebeDatabaseSchema.familyMembers} c ON c.id = h.caregiver_id
     attachments: patch.attachments ?? existing.attachments,
     nextAppointmentId: patch.nextAppointmentId ?? existing.nextAppointmentId,
     createdBy: patch.createdBy ?? existing.createdBy,
+    immunizationCatalogItemId:
+        patch.immunizationCatalogItemId ?? existing.immunizationCatalogItemId,
+    immunizationNameSnapshot:
+        patch.immunizationNameSnapshot ?? existing.immunizationNameSnapshot,
+    immunizationItemType:
+        patch.immunizationItemType ?? existing.immunizationItemType,
+    immunizationSourceType:
+        patch.immunizationSourceType ?? existing.immunizationSourceType,
+    immunizationSourceVersion:
+        patch.immunizationSourceVersion ?? existing.immunizationSourceVersion,
+    immunizationDoseLabel:
+        patch.immunizationDoseLabel ?? existing.immunizationDoseLabel,
+    lotNumber: patch.lotNumber ?? existing.lotNumber,
     createdAt: existing.createdAt,
     updatedAt: _nextTimestamp(existing.updatedAt),
     syncStatus: HealthSyncStatus.pending,

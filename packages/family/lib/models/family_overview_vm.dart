@@ -53,6 +53,7 @@ class FamilyOverviewVm {
             name: member.name,
             role: member.role,
             accessDescription: member.accessDescription,
+            canWrite: member.canWrite,
             initials: _initials(member.name),
             avatarVariant: _memberVariant(member.id, member.status),
             status: member.status,
@@ -131,6 +132,7 @@ class FamilyMemberVm {
     required this.name,
     required this.role,
     required this.accessDescription,
+    required this.canWrite,
     required this.initials,
     required this.avatarVariant,
     this.status = FamilyMemberStatus.active,
@@ -140,6 +142,7 @@ class FamilyMemberVm {
   final String name;
   final String role;
   final String accessDescription;
+  final bool canWrite;
   final String initials;
   final FamilyAvatarVariant avatarVariant;
   final FamilyMemberStatus status;

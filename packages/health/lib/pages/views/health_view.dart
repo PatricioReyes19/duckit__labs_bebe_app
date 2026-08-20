@@ -207,6 +207,10 @@ class _UpcomingEventCard extends StatelessWidget {
         const Icon(Icons.vaccines_outlined),
         BebeAgendaEventCardVariant.accent,
       ),
+      HealthEventType.immunization => (
+        const Icon(Icons.health_and_safety_outlined),
+        BebeAgendaEventCardVariant.accent,
+      ),
       HealthEventType.pediatricControl => (
         const Icon(LucideIcons.stethoscope),
         BebeAgendaEventCardVariant.information,

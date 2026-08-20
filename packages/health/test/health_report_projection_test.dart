@@ -70,6 +70,28 @@ void main() {
     expect(recordedZero.feedings, hasLength(1));
   });
 
+  test('UT-REPORT-005: 1d provides 24 hourly buckets for the chart', () {
+    final report = HealthReportSnapshot.project(
+      records: [
+        _event('recent', now, details: const {'amount_ml': 90}),
+        _event(
+          'three-hours-ago',
+          now.subtract(const Duration(hours: 3)),
+          details: const {'amount_ml': 120},
+        ),
+      ],
+      babyId: 'baby-1',
+      range: HealthReportRange.day,
+      now: now,
+    );
+
+    final hourly = report.hourlyCounts(RegisterEventType.feeding);
+
+    expect(hourly, hasLength(24));
+    expect(hourly[20], 1);
+    expect(hourly[23], 1);
+  });
+
   test('UT-REPORT-005/006: deleted and other-baby rows are excluded', () {
     final report = HealthReportSnapshot.project(
       records: [

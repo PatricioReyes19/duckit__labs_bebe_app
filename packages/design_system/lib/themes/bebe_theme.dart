@@ -73,22 +73,36 @@ class BebeTheme {
   final BebeElevation? lightElevation;
   final BebeElevation? darkElevation;
 
+  // ThemeData arma una colección grande de subtemas y extensiones. El tema
+  // cambia de brillo, no de tokens, por lo que reconstruir ambos árboles en
+  // cada cambio global provoca frames largos en pantallas densas como Familia.
+  static final _lightThemeCache = Expando<ThemeData>('bebe.lightTheme');
+  static final _darkThemeCache = Expando<ThemeData>('bebe.darkTheme');
+
   ThemeData lightTheme() {
-    return _buildTheme(
+    final cached = _lightThemeCache[this];
+    if (cached != null) return cached;
+    final theme = _buildTheme(
       brightness: Brightness.light,
       colors: lightColors,
       overlays: lightOverlays,
       elevation: lightElevation,
     );
+    _lightThemeCache[this] = theme;
+    return theme;
   }
 
   ThemeData darkTheme() {
-    return _buildTheme(
+    final cached = _darkThemeCache[this];
+    if (cached != null) return cached;
+    final theme = _buildTheme(
       brightness: Brightness.dark,
       colors: darkColors,
       overlays: darkOverlays,
       elevation: darkElevation,
     );
+    _darkThemeCache[this] = theme;
+    return theme;
   }
 
   ThemeData _buildTheme({

@@ -102,7 +102,7 @@ class ClinicalReportEngine {
   ) {
     final result = <ClinicalReportItem>[
       for (final event in health)
-        if (event.type == HealthEventType.vaccine)
+        if (event.isImmunization)
           ClinicalReportItem(
             occurredAt: event.startsAt,
             title: event.title,
@@ -154,7 +154,7 @@ class ClinicalReportEngine {
   ) {
     final result = <ClinicalReportItem>[
       for (final event in health)
-        if (event.type != HealthEventType.vaccine)
+        if (!event.isImmunization)
           ClinicalReportItem(
             occurredAt: event.startsAt,
             title: event.title,

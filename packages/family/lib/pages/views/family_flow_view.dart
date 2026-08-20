@@ -536,6 +536,9 @@ class _BabyDetailViewState extends State<_BabyDetailView> {
           name: result.name,
           birthDate: result.birthDate,
           avatarAssetPath: avatarPath,
+          isPremature: result.isPremature,
+          livesInRapaNui: result.livesInRapaNui,
+          hasRsvRisk: result.hasRsvRisk,
         ),
       );
       if (!mounted) return;
@@ -566,11 +569,17 @@ class _BabyProfileEditResult {
   const _BabyProfileEditResult({
     required this.name,
     required this.birthDate,
+    required this.isPremature,
+    required this.livesInRapaNui,
+    required this.hasRsvRisk,
     this.photoSourcePath,
   });
 
   final String name;
   final DateTime birthDate;
+  final bool isPremature;
+  final bool livesInRapaNui;
+  final bool hasRsvRisk;
   final String? photoSourcePath;
 }
 
@@ -588,6 +597,9 @@ class _BabyProfileEditSheetState extends State<_BabyProfileEditSheet> {
     text: widget.baby.name,
   );
   late DateTime _birthDate = widget.baby.birthDate.toLocal();
+  late bool _isPremature = widget.baby.isPremature;
+  late bool _livesInRapaNui = widget.baby.livesInRapaNui;
+  late bool _hasRsvRisk = widget.baby.hasRsvRisk;
   String? _photoSourcePath;
   String? _nameError;
 
@@ -668,6 +680,38 @@ class _BabyProfileEditSheetState extends State<_BabyProfileEditSheet> {
                 ),
               ),
             ),
+            SizedBox(height: theme.spacing.spacingL),
+            Text(
+              'Datos clínicos para el calendario de inmunizaciones',
+              style: theme.typography.styles.body.md.semibold,
+            ),
+            SwitchListTile.adaptive(
+              contentPadding: EdgeInsets.zero,
+              value: _isPremature,
+              onChanged: (value) => setState(() => _isPremature = value),
+              title: const Text('Nacimiento prematuro'),
+              subtitle: const Text(
+                'Permite evaluar la dosis neumocócica adicional.',
+              ),
+            ),
+            SwitchListTile.adaptive(
+              contentPadding: EdgeInsets.zero,
+              value: _livesInRapaNui,
+              onChanged: (value) => setState(() => _livesInRapaNui = value),
+              title: const Text('Reside en Rapa Nui'),
+              subtitle: const Text(
+                'Evalúa la dosis de fiebre amarilla del PNI.',
+              ),
+            ),
+            SwitchListTile.adaptive(
+              contentPadding: EdgeInsets.zero,
+              value: _hasRsvRisk,
+              onChanged: (value) => setState(() => _hasRsvRisk = value),
+              title: const Text('Riesgo VRS confirmado por profesional'),
+              subtitle: const Text(
+                'Solo actívalo si el equipo de salud lo ha indicado.',
+              ),
+            ),
             SizedBox(height: theme.spacing.spacingXl),
             BebeButton(
               label: 'Guardar cambios',
@@ -713,6 +757,9 @@ class _BabyProfileEditSheetState extends State<_BabyProfileEditSheet> {
       _BabyProfileEditResult(
         name: name,
         birthDate: _birthDate,
+        isPremature: _isPremature,
+        livesInRapaNui: _livesInRapaNui,
+        hasRsvRisk: _hasRsvRisk,
         photoSourcePath: _photoSourcePath,
       ),
     );

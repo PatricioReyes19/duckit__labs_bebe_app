@@ -3,6 +3,7 @@ export 'register/register.dart';
 export 'agenda/agenda.dart';
 export 'family/family.dart';
 export 'health/health.dart';
+export 'immunization/immunization.dart';
 export 'home/home.dart';
 export 'notifications/push_device.dart';
 export 'notifications/activity_notification.dart';

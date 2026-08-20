@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'dart:io';
 
 import 'package:core/core.dart' as core;
@@ -55,7 +56,7 @@ class LocalOnboardingRepository implements OnboardingRepository {
     await Future<void>.delayed(const Duration(milliseconds: 350));
 
     return switch (normalized) {
-      'MATEO2026' || 'FAMILIA2026' => const InvitationLookupResult.valid(
+      'MATEO2026' || 'FAMILIA2026' => InvitationLookupResult.valid(
           CareInvitation(
             id: 'local-invitation-mateo',
             code: 'MATEO2026',
@@ -63,6 +64,13 @@ class LocalOnboardingRepository implements OnboardingRepository {
             inviterRelationship: 'Mamá',
             babyName: 'Mateo López',
             babyAgeLabel: '8 meses',
+            relationship: 'Abuela',
+            accessDescription: 'Puede acompañar y registrar cuidados',
+            canWrite: true,
+            familyName: 'Círculo de Mateo',
+            familyId: 'local-family-mateo',
+            babyId: 'local-baby-mateo',
+            babyBirthDate: DateTime.utc(2025, 12, 1),
           ),
         ),
       'VENCIDA' => const InvitationLookupResult.invalid(
@@ -86,10 +94,24 @@ class LocalOnboardingRepository implements OnboardingRepository {
   @override
   Future<void> acceptInvitation(CareInvitation invitation) async {
     final client = _remoteClient;
-    if (client != null && await client.isAuthenticated()) {
-      await client.rpc(
+    var acceptedInvitation = invitation;
+    if (client != null) {
+      if (!await client.isAuthenticated()) {
+        throw StateError(
+          'Necesitas conexión y una sesión activa para aceptar la invitación.',
+        );
+      }
+      final payload = await client.rpc(
         'accept_care_invitation',
         parameters: {'p_code': invitation.code},
+      );
+      acceptedInvitation = _acceptedInvitationFromRemote(
+        payload,
+        invitation.code,
+      );
+      developer.log(
+        'care_invitation_acceptance_confirmed',
+        name: 'bebeapp.invitation',
       );
     }
     final user = await _currentUser?.call();
@@ -98,21 +120,31 @@ class LocalOnboardingRepository implements OnboardingRepository {
     if (familyRepository != null) {
       await familyRepository.joinCareCircle(
         core.JoinedCareCircleDraft(
-          familyId: invitation.familyId ?? 'family-${invitation.code}',
-          familyName: 'Círculo de ${invitation.babyName}',
-          babyId: invitation.babyId ?? 'baby-${invitation.code}',
-          babyName: invitation.babyName,
-          babyBirthDate: invitation.babyBirthDate ??
-              _estimatedBirthDate(invitation.babyAgeLabel),
-          memberId: 'member-$userId-${invitation.familyId ?? invitation.code}',
+          familyId: acceptedInvitation.familyId ??
+              _missingCanonicalField('family_id'),
+          familyName: acceptedInvitation.familyName ?? 'Círculo compartido',
+          babyId:
+              acceptedInvitation.babyId ?? _missingCanonicalField('baby_id'),
+          babyName: acceptedInvitation.babyName,
+          babyBirthDate:
+              acceptedInvitation.babyBirthDate ?? _missingCanonicalBirthDate(),
+          memberId:
+              'member-$userId-${acceptedInvitation.familyId ?? invitation.code}',
           memberName: user?.displayName ?? 'Cuidador/a',
           memberEmail: user?.email ?? '',
+          memberRole: acceptedInvitation.relationship,
+          memberAccessDescription: acceptedInvitation.accessDescription,
+          canWrite: acceptedInvitation.canWrite,
         ),
+      );
+      developer.log(
+        'care_invitation_membership_persisted_locally',
+        name: 'bebeapp.invitation',
       );
     }
     await _preferences.setString(
       await _scopedKey(babyNameKey),
-      invitation.babyName,
+      acceptedInvitation.babyName,
     );
     await complete();
   }
@@ -215,14 +247,6 @@ class LocalOnboardingRepository implements OnboardingRepository {
         : '.jpg';
   }
 
-  static DateTime _estimatedBirthDate(String ageLabel) {
-    final months = int.tryParse(
-      RegExp(r'\d+').firstMatch(ageLabel)?.group(0) ?? '',
-    );
-    final now = DateTime.now();
-    return DateTime(now.year, now.month - (months ?? 0), now.day);
-  }
-
   static InvitationLookupResult _invitationResultFromRemote(
     Object? payload,
     String code,
@@ -238,7 +262,21 @@ class LocalOnboardingRepository implements OnboardingRepository {
       };
       return InvitationLookupResult.invalid(failure);
     }
-    final babyId = raw['baby_id']?.toString() ?? '';
+    final familyId = _requiredRemoteText(raw, 'family_id');
+    final babyId = _requiredRemoteText(raw, 'baby_id');
+    final babyName = _requiredRemoteText(raw, 'baby_name');
+    final birthDate = switch (raw['baby_birth_date']) {
+      final String value => _parseRemoteDate(value),
+      _ => null,
+    };
+    if (familyId == null ||
+        babyId == null ||
+        babyName == null ||
+        birthDate == null) {
+      return const InvitationLookupResult.invalid(
+        InvitationFailureReason.notFound,
+      );
+    }
     return InvitationLookupResult.valid(
       CareInvitation(
         id: raw['id']?.toString() ?? code,
@@ -246,17 +284,60 @@ class LocalOnboardingRepository implements OnboardingRepository {
         inviterName: raw['inviter_name']?.toString() ?? 'Tu familiar',
         inviterRelationship:
             raw['inviter_relationship']?.toString() ?? 'Administrador/a',
-        babyName: raw['baby_name']?.toString() ?? 'Bebé',
+        babyName: babyName,
         babyAgeLabel: raw['baby_age_label']?.toString() ?? 'Círculo compartido',
-        familyId: raw['family_id']?.toString() ?? 'family-$babyId',
+        relationship: _restrictiveText(
+          raw['relationship'],
+          fallback: 'Acceso pendiente de confirmación',
+        ),
+        accessDescription: _restrictiveText(
+          raw['access_description'],
+          fallback: 'Acceso de solo lectura',
+        ),
+        canWrite: raw['can_write'] == true,
+        familyName: _optionalRemoteText(raw, 'family_name'),
+        familyId: familyId,
         babyId: babyId,
-        babyBirthDate: switch (raw['baby_birth_date']) {
-          final String value => _parseRemoteDate(value),
-          _ => null,
-        },
+        babyBirthDate: birthDate,
       ),
     );
   }
+
+  static CareInvitation _acceptedInvitationFromRemote(
+    Object? payload,
+    String code,
+  ) {
+    final result = _invitationResultFromRemote(payload, code);
+    final invitation = result.invitation;
+    if (invitation == null) {
+      throw StateError(
+        'La invitación fue aceptada, pero no se pudo confirmar su acceso. '
+        'Actualiza la información del círculo e inténtalo nuevamente.',
+      );
+    }
+    return invitation;
+  }
+
+  static String? _requiredRemoteText(Map<String, Object?> raw, String key) =>
+      _optionalRemoteText(raw, key);
+
+  static String? _optionalRemoteText(Map<String, Object?> raw, String key) {
+    final value = raw[key]?.toString().trim();
+    return value == null || value.isEmpty ? null : value;
+  }
+
+  static String _restrictiveText(Object? value, {required String fallback}) {
+    final normalized = value?.toString().trim() ?? '';
+    return normalized.isEmpty ? fallback : normalized;
+  }
+
+  static Never _missingCanonicalField(String field) => throw StateError(
+        'La invitación no contiene $field. Vuelve a abrirla con conexión.',
+      );
+
+  static Never _missingCanonicalBirthDate() => throw StateError(
+        'La invitación no contiene la fecha de nacimiento. Vuelve a abrirla con conexión.',
+      );
 
   static DateTime? _parseRemoteDate(String value) {
     final dateOnly = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$').firstMatch(value);

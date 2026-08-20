@@ -59,6 +59,10 @@ class CareInvitation {
     required this.inviterRelationship,
     required this.babyName,
     required this.babyAgeLabel,
+    this.relationship = 'Acceso pendiente de confirmación',
+    this.accessDescription = 'Acceso de solo lectura',
+    this.canWrite = false,
+    this.familyName,
     this.familyId,
     this.babyId,
     this.babyBirthDate,
@@ -70,6 +74,14 @@ class CareInvitation {
   final String inviterRelationship;
   final String babyName;
   final String babyAgeLabel;
+
+  /// Role and capabilities confirmed by the invitation service.
+  ///
+  /// Defaults are deliberately restrictive for malformed or legacy payloads.
+  final String relationship;
+  final String accessDescription;
+  final bool canWrite;
+  final String? familyName;
   final String? familyId;
   final String? babyId;
   final DateTime? babyBirthDate;
