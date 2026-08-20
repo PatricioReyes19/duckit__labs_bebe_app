@@ -155,6 +155,17 @@ void main() {
           appointmentKind: HealthAppointmentKind.consultation,
         ),
       );
+      await health.createEvent(
+        HealthEventDraft(
+          babyId: BebeSeedData.activeBabyId,
+          type: HealthEventType.pediatricControl,
+          title: 'Control completado',
+          description: '',
+          startsAt: DateTime.utc(2026, 8, 19, 10),
+          status: HealthEventStatus.completed,
+          appointmentKind: HealthAppointmentKind.wellChildControl,
+        ),
+      );
 
       final overview = await GetAgendaOverview(
         agenda,
@@ -168,6 +179,10 @@ void main() {
 
       expect(projected.category, AgendaCategory.controls);
       expect(projected.title, 'Consulta respiratoria');
+      expect(
+        overview.events.where((event) => event.id == 'health:appointment-2'),
+        isEmpty,
+      );
     },
   );
 

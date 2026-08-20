@@ -43,7 +43,6 @@ class HealthBloc extends Bloc<HealthEvent, HealthState> {
   Future<void> _onLoad(HealthEvent event, Emitter<HealthState> emit) async {
     emit(const HealthState.loading());
     try {
-      await _waitForInitialHydration();
       final resolvedBabyId =
           babyId ?? (await _getFamilyOverview?.call())?.activeBabyId;
       if (resolvedBabyId == null || resolvedBabyId.isEmpty) {
@@ -68,12 +67,6 @@ class HealthBloc extends Bloc<HealthEvent, HealthState> {
         ),
       );
     }
-  }
-
-  Future<void> _waitForInitialHydration() async {
-    final coordinator = _initialDataSyncCoordinator;
-    if (coordinator == null || coordinator.hasHydratedDomains) return;
-    await coordinator.domainHydrationStates.firstWhere((ready) => ready);
   }
 
   @override

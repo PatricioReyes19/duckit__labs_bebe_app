@@ -96,7 +96,6 @@ class AgendaBloc extends Bloc<AgendaEvent, AgendaState> {
     if (showLoading) emit(const AgendaState.loading());
     final syncService = _syncService;
     try {
-      await _waitForInitialHydration();
       if (requestSync && syncService != null) {
         await _synchronize(syncService);
       }
@@ -150,12 +149,6 @@ class AgendaBloc extends Bloc<AgendaEvent, AgendaState> {
     } finally {
       _isSynchronizing = false;
     }
-  }
-
-  Future<void> _waitForInitialHydration() async {
-    final coordinator = _initialDataSyncCoordinator;
-    if (coordinator == null || coordinator.hasHydratedDomains) return;
-    await coordinator.domainHydrationStates.firstWhere((ready) => ready);
   }
 
   Future<void> refreshFromRemote() async {
