@@ -191,7 +191,7 @@ class _AppWrappersState extends State<AppWrappers> {
         _use24HourFormat = use24HourFormat;
         _reduceMotion = reduceMotion;
         _highContrast = highContrast;
-        _textScaleFactor = textScaleFactor;
+        _textScaleFactor = textScaleFactor.toDouble();
       });
     } on Object {
       // Antes de autenticar no existe un ámbito de base local. Se mantienen

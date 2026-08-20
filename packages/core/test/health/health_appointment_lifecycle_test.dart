@@ -54,9 +54,19 @@ void main() {
     expect(restored?.questionsToAsk, ['¿Necesita control?']);
   });
 
-  test('UT-HEALTH-APPT-002 due never becomes not-attended implicitly', () {
-    final today = HealthEventEntity(
+  test('UT-HEALTH-APPT-002 derives due and attendance-pending by time', () {
+    final laterToday = HealthEventEntity(
       id: 'today',
+      babyId: 'baby',
+      type: HealthEventType.pediatricControl,
+      title: 'Control',
+      description: '',
+      startsAt: DateTime(2026, 8, 19, 20),
+      status: HealthEventStatus.scheduled,
+      appointmentKind: HealthAppointmentKind.wellChildControl,
+    );
+    final earlierToday = HealthEventEntity(
+      id: 'earlier-today',
       babyId: 'baby',
       type: HealthEventType.pediatricControl,
       title: 'Control',
@@ -65,23 +75,13 @@ void main() {
       status: HealthEventStatus.scheduled,
       appointmentKind: HealthAppointmentKind.wellChildControl,
     );
-    final yesterday = HealthEventEntity(
-      id: 'yesterday',
-      babyId: 'baby',
-      type: HealthEventType.pediatricControl,
-      title: 'Control',
-      description: '',
-      startsAt: DateTime(2026, 8, 18, 9),
-      status: HealthEventStatus.scheduled,
-      appointmentKind: HealthAppointmentKind.wellChildControl,
-    );
 
     expect(
-      today.effectiveStatus(DateTime(2026, 8, 19, 18)),
+      laterToday.effectiveStatus(DateTime(2026, 8, 19, 18)),
       HealthEventStatus.due,
     );
     expect(
-      yesterday.effectiveStatus(DateTime(2026, 8, 19, 18)),
+      earlierToday.effectiveStatus(DateTime(2026, 8, 19, 18)),
       HealthEventStatus.attendancePending,
     );
   });
@@ -180,10 +180,10 @@ void main() {
       expect(projected.category, AgendaCategory.controls);
       expect(projected.title, 'Consulta respiratoria');
       expect(projected.description, startsWith('Consulta · Programado'));
-      expect(
-        overview.events.where((event) => event.id == 'health:appointment-2'),
-        isEmpty,
+      final completed = overview.events.singleWhere(
+        (event) => event.id == 'health:appointment-2',
       );
+      expect(completed.description, startsWith('Control · Completado'));
     },
   );
 

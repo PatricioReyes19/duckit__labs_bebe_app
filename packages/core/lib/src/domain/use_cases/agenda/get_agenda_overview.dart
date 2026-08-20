@@ -191,6 +191,11 @@ class GetAgendaOverview {
 
   static bool _isVisibleInAgenda(HealthEventEntity event, DateTime now) {
     if (!event.isAppointment && !event.isImmunization) return false;
+    // Las atenciones son parte de la historia clínica: se conservan al volver
+    // a su fecha en Agenda. Los borradores todavía no son citas confirmadas.
+    if (event.isAppointment) {
+      return event.effectiveStatus(now) != HealthEventStatus.draft;
+    }
     return switch (event.effectiveStatus(now)) {
       HealthEventStatus.scheduled || HealthEventStatus.due => true,
       _ => false,

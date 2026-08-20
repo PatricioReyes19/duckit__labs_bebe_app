@@ -838,6 +838,8 @@ class HealthFlowController extends ChangeNotifier {
     String? notes,
     HealthAppointmentKind appointmentKind = HealthAppointmentKind.consultation,
     bool finishSummary = true,
+    bool saveAsDraft = false,
+    String? appointmentId,
   }) async {
     final babyId = await _requireBabyId();
     final now = _clock();
@@ -847,37 +849,69 @@ class HealthFlowController extends ChangeNotifier {
         ? HealthEventStatus.scheduled
         : finishSummary && hasSummary
         ? HealthEventStatus.completed
+        : saveAsDraft
+        ? HealthEventStatus.draft
         : HealthEventStatus.attendedPendingSummary;
-    final saved = await _healthRepository.createEvent(
-      HealthEventDraft(
-        babyId: babyId,
-        type: appointmentKind == HealthAppointmentKind.wellChildControl
-            ? HealthEventType.pediatricControl
-            : HealthEventType.consultation,
-        title: reason.trim().isEmpty
-            ? appointmentKind == HealthAppointmentKind.wellChildControl
-                  ? 'Control de niño sano'
-                  : 'Consulta pediátrica'
-            : reason.trim(),
-        description: summary.trim(),
-        startsAt: occurredAt,
-        status: status,
-        appointmentKind: appointmentKind,
-        reason: reason.trim(),
-        timezone: occurredAt.timeZoneName,
-        attendedAt: isFuture ? null : occurredAt,
-        completedAt: status == HealthEventStatus.completed ? now : null,
-        professionalName: pediatrician.trim(),
-        notesBeforeVisit: notes?.trim(),
-        clinicalSummary: summary.trim(),
-        professionalAssessment: summary.trim(),
-        indications: [
-          treatment.trim(),
-          followUp.trim(),
-          vigilance.trim(),
-        ].where((value) => value.isNotEmpty).join('\n'),
-      ),
-    );
+    final type = appointmentKind == HealthAppointmentKind.wellChildControl
+        ? HealthEventType.pediatricControl
+        : HealthEventType.consultation;
+    final title = reason.trim().isEmpty
+        ? appointmentKind == HealthAppointmentKind.wellChildControl
+              ? 'Control de niño sano'
+              : 'Consulta pediátrica'
+        : reason.trim();
+    final indications = [
+      treatment.trim(),
+      followUp.trim(),
+      vigilance.trim(),
+    ].where((value) => value.isNotEmpty).join('\n');
+    final medicationEntries = _textEntries(treatment);
+    final saved = appointmentId == null
+        ? await _healthRepository.createEvent(
+            HealthEventDraft(
+              babyId: babyId,
+              type: type,
+              title: title,
+              description: summary.trim(),
+              startsAt: occurredAt,
+              status: status,
+              appointmentKind: appointmentKind,
+              reason: reason.trim(),
+              timezone: occurredAt.timeZoneName,
+              attendedAt: isFuture || saveAsDraft ? null : occurredAt,
+              completedAt: status == HealthEventStatus.completed ? now : null,
+              professionalName: pediatrician.trim(),
+              notesBeforeVisit: notes?.trim(),
+              clinicalSummary: summary.trim(),
+              professionalAssessment: summary.trim(),
+              indications: indications,
+              medications: medicationEntries,
+            ),
+          )
+        : await _healthRepository.updateEvent(
+            appointmentId,
+            HealthEventPatch(
+              type: type,
+              title: title,
+              description: summary.trim(),
+              startsAt: occurredAt,
+              status: status,
+              appointmentKind: appointmentKind,
+              reason: reason.trim(),
+              timezone: occurredAt.timeZoneName,
+              attendedAt: isFuture || saveAsDraft ? null : occurredAt,
+              completedAt: status == HealthEventStatus.completed ? now : null,
+              professionalName: pediatrician.trim(),
+              notesBeforeVisit: notes?.trim(),
+              clinicalSummary: summary.trim(),
+              professionalAssessment: summary.trim(),
+              indications: indications,
+              medications: medicationEntries,
+            ),
+          );
+    if (saved == null) {
+      throw StateError('No se encontró el borrador de la atención.');
+    }
     _selectedHealthEventId = saved.id;
     _selectedRecordId = null;
     _reconcileAppointmentReminder(saved);
@@ -929,6 +963,9 @@ class HealthFlowController extends ChangeNotifier {
     required String clinicalSummary,
     String? professionalAssessment,
     String? indications,
+    List<Map<String, Object?>>? medications,
+    List<Map<String, Object?>>? measurements,
+    List<String>? attachments,
   }) async {
     final event = selectedHealthEvent;
     if (event == null || !event.isAppointment) return null;
@@ -949,6 +986,9 @@ class HealthFlowController extends ChangeNotifier {
         clinicalSummary: summary,
         professionalAssessment: professionalAssessment?.trim(),
         indications: indications?.trim(),
+        medications: medications,
+        measurements: measurements,
+        attachments: attachments,
       ),
     );
     _reconcileAppointmentReminder(updated);
@@ -1210,6 +1250,16 @@ class HealthFlowController extends ChangeNotifier {
     final normalized = value.trim();
     return normalized.isEmpty ? null : normalized;
   }
+
+  /// Conserva entradas libres de una línea como datos estructurados mínimos.
+  /// La dosis y frecuencia pueden ir en la misma línea hasta que exista un
+  /// formulario farmacológico específico.
+  static List<Map<String, Object?>> _textEntries(String value) => value
+      .split(RegExp(r'\r?\n'))
+      .map((entry) => entry.trim())
+      .where((entry) => entry.isNotEmpty)
+      .map((entry) => <String, Object?>{'name': entry})
+      .toList(growable: false);
 
   static RegisterSyncStatus _registerSyncStatus(HealthSyncStatus value) =>
       switch (value) {

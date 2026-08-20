@@ -151,15 +151,15 @@ class HealthEventEntity {
     if (status != HealthEventStatus.scheduled) return status;
     final scheduledLocal = startsAt.toLocal();
     final nowLocal = now.toLocal();
+    final today = DateTime(nowLocal.year, nowLocal.month, nowLocal.day);
+    if (scheduledLocal.isBefore(nowLocal)) {
+      return HealthEventStatus.attendancePending;
+    }
     final scheduledDay = DateTime(
       scheduledLocal.year,
       scheduledLocal.month,
       scheduledLocal.day,
     );
-    final today = DateTime(nowLocal.year, nowLocal.month, nowLocal.day);
-    if (scheduledDay.isBefore(today)) {
-      return HealthEventStatus.attendancePending;
-    }
     if (scheduledDay == today) return HealthEventStatus.due;
     return status;
   }

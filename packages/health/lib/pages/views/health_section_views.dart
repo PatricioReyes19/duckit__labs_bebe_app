@@ -187,7 +187,7 @@ class _VaccinesSectionViewState extends State<VaccinesSectionView> {
                       : Icons.vaccines_outlined,
                   title: plannedItem.item.displayName,
                   subtitle:
-                      '${plannedItem.item.sourceBadge} · ${plannedItem.item.sourceVersion} · ${plannedItem.item.doseLabel} · ${healthDateLabel(plannedItem.scheduledAt)}',
+                      '${plannedItem.item.sourceBadge} · ${plannedItem.item.sourceVersion} · ${plannedItem.item.sourceName} · ${plannedItem.item.doseLabel} · ${healthDateLabel(plannedItem.scheduledAt)}',
                   trailing: Text(
                     plannedItem.isPending ? 'Pendiente' : 'Programada',
                     style: Theme.of(context).textTheme.labelMedium,
