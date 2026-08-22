@@ -1,0 +1,35 @@
+# ============================================================
+# Gentleman Guardian Angel - BebeApp
+# ============================================================
+# Project-local configuration.
+# Engineering rules are defined in AGENTS.md.
+# ============================================================
+
+# Primary AI provider
+PROVIDER="codex"
+
+# Files reviewed by GGA
+# Includes Dart/Flutter, Supabase, configuration, native code,
+# scripts and engineering documentation.
+FILE_PATTERNS="*.dart,*.yaml,*.yml,*.json,*.sql,*.md,*.toml,*.gradle,*.kts,*.kt,*.java,*.swift,*.plist,*.xml,*.properties,*.sh,*.ps1"
+
+# Generated sources are excluded.
+# Dart tests are intentionally NOT excluded.
+EXCLUDE_PATTERNS="*.g.dart,*.freezed.dart,*.mocks.dart,*.gen.dart,*.gr.dart"
+
+# Project engineering constitution
+RULES_FILE="AGENTS.md"
+
+# Reject ambiguous AI reviews
+STRICT_MODE="true"
+
+# Maximum provider response time
+TIMEOUT="300"
+
+# Pull request base branch
+PR_BASE_BRANCH="main"
+
+# Optional OpenCode configuration.
+# OpenCode is not currently the primary GGA provider.
+# OPENCODE_VARIANT="high"
+# OPENCODE_AGENT="gga-reviewer"

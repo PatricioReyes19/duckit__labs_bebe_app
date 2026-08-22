@@ -11,7 +11,14 @@ test:
 	melos run test
 
 build_runner:
-	melos run build:runner
+	description: Generate source code in selected packages.
+	exec:
+		command: dart run build_runner build --delete-conflicting-outputs
+		concurrency: 1
+		failFast: true
+	packageFilters:
+		dependsOn:
+			- build_runner
 
 run_app_android:
 	melos run run:app:android
